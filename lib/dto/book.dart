@@ -1,13 +1,16 @@
 class BookText {
   final String name;
+  final String id;
 
   const BookText({
     required this.name,
+    required this.id,
   });
 
   factory BookText.fromJson(Map<String, dynamic> json) {
     return BookText(
       name: json["name"],
+      id: json["_id"],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:typikon/pages/book_page.dart';
 import 'pages/library_page.dart';
 import 'pages/main_page.dart';
+import 'pages/text_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -48,6 +49,18 @@ class MyApp extends StatelessWidget {
                 },
               );
             }
+          case "/reading":
+            if (arguments is String) {
+              return MaterialPageRoute(
+                builder: (context) {
+                  return TextPage(
+                    context,
+                    id: arguments,
+                  );
+                },
+              );
+            }
+            return null;
           case "/":
             return MaterialPageRoute(
               builder: (context) {
