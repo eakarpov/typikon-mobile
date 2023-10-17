@@ -1,3 +1,8 @@
+import 'package:typikon/apiMapper/version.dart';
+import 'package:typikon/dto/version.dart';
+import 'package:typikon/version.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../apiMapper/calendar.dart';
 import '../dto/calendar.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +17,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> with RestorationMixin {
   late Future<CalendarDay> currentDay;
+  late Future<Version> version;
 
   @override
   String? get restorationId => "test";
@@ -37,6 +43,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
             DateTime.now().subtract(const Duration(days: 13))
         )
     );
+    version = getVersion();
   }
 
   @override
@@ -121,12 +128,57 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
     ),
   );
 
+  void onLoadUpdate(BuildContext context) async {
+    Navigator.of(context).pop();
+    final Uri url = Uri.parse('https://typikon.su/app/app.apk');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(
+          url,
+          mode: LaunchMode.externalApplication,
+          webOnlyWindowName: "_blank",
+      );
+    } else {
+      throw new Exception("Cannot launch update");
+    }
+  }
+
+  void showAlert(BuildContext context, Version value) {
+    var major = value.major;
+    var minor = value.minor;
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Обновление'),
+          content: Text('Появилось новое обновление: Версия $major.$minor'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Пропустить'),
+            ),
+            TextButton(
+              onPressed: () => onLoadUpdate(context),
+              child: const Text('Загрузить'),
+            ),
+          ],
+    ));
+  }
+
+  void onGoToLibrary() {
+    Navigator.pushNamed(context, "/library");
+  }
+
   @override
   Widget build(BuildContext context) {
-    var value = _selectedDate.isRegistered ? _selectedDate.value : "not set";
+    DateFormat format = DateFormat("dd.MM.yyyy");
+    String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
+    version.then((value) => {
+      if (value.major > majorVersion || value.minor > minorVersion) {
+        showAlert(context, value)
+      }
+    });
     return Scaffold(
       appBar: AppBar(
-        title: Text(value.toString()),
+        title: Text(value),
         actions: <Widget>[
           IconButton(
             icon: Icon(
@@ -151,9 +203,44 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                     print(list.length.toString());
                     return textSection;
                   } else if (future.hasError) {
-                    return Text('${future.error}');
+                    return Column(
+                      children: [
+                        Text('${future.error}'),
+                        Padding(
+                            padding: EdgeInsets.all(10.0),
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
+                                  child: Text(
+                                    "Добро пожаловать",
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                Text("Приложение в разработке. "
+                                    "В данных момент доступна библиотека книг и текстов. "
+                                    "Ждите новых обновлений."),
+                              ],
+                            ),
+                        ),
+                        TextButton(
+                            onPressed: onGoToLibrary,
+                            child: Text("Посмотреть тексты в библиотеке"),
+                        ),
+                      ],
+                    );
                   }
-                  return const CircularProgressIndicator();
+                  return Container(
+                    color: const Color(0xffCCCCCC),
+                    width: double.infinity,
+                    height: double.infinity,
+                    child: Positioned.fill(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: const CircularProgressIndicator(),
+                      ),
+                    ),
+                  );
                 },
               ),
           ),

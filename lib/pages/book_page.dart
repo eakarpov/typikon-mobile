@@ -65,7 +65,17 @@ class _BookPageState extends State<BookPage> {
                 } else if (future.hasError) {
                   return Text('${future.error}');
                 }
-                return const CircularProgressIndicator();
+                return Container(
+                  color: const Color(0xffCCCCCC),
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(),
+                    ),
+                  ),
+                );
               },
             ),
           ),

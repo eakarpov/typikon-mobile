@@ -9,6 +9,6 @@ Future<Reading> getText(String id) async {
   if (response.statusCode == 200) {
     return Reading.fromJson(jsonDecode(response.body));
   } else {
-    throw Exception('Failed to load album');
+    throw Exception('Не получено чтение');
   }
 }
