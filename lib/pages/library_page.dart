@@ -28,48 +28,47 @@ class _LibraryPageState extends State<LibraryPage> {
       appBar: AppBar(
         title: Text("Библиотека"),
       ),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: FutureBuilder<BookList>(
-              future: bookList,
-              builder: (context, future) {
-                if (future.hasData) {
-                  List<Book> list = future.data!.list;
-                  return ListView.builder(
-                    scrollDirection: Axis.vertical,
-                    itemCount: list.length,
-                    itemBuilder: (context, index) {
-                      final item = list[index];
-                      return Container(
-                        child: ListTile(
-                          title: Text(item.name??"test"),
-                          subtitle: Text(item.author??"test"),
-                          onTap: () => {
-                            Navigator.pushNamed(context, "/library", arguments: item.id)
-                          },
-                        ),
-                      );
-                    },
-                  );
-                } else if (future.hasError) {
-                  return Text('${future.error}');
-                }
-                return Container(
-                  color: const Color(0xffCCCCCC),
-                  width: double.infinity,
-                  height: double.infinity,
-                  child: Positioned.fill(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: const CircularProgressIndicator(),
+      body: Container(
+        color: const Color(0xffffffff),
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height,
+        child: FutureBuilder<BookList>(
+          future: bookList,
+          builder: (context, future) {
+            if (future.hasData) {
+              List<Book> list = future.data!.list;
+              return ListView.builder(
+                scrollDirection: Axis.vertical,
+                itemCount: list.length,
+                itemBuilder: (context, index) {
+                  final item = list[index];
+                  return Container(
+                    child: ListTile(
+                      title: Text(item.name??"test"),
+                      subtitle: Text(item.author??"test"),
+                      onTap: () => {
+                        Navigator.pushNamed(context, "/library", arguments: item.id)
+                      },
                     ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+                  );
+                },
+              );
+            } else if (future.hasError) {
+              return Text('${future.error}');
+            }
+            return Container(
+              color: const Color(0xffffffff),
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              child: Positioned.fill(
+                child: Align(
+                  alignment: Alignment.center,
+                  child: const CircularProgressIndicator(),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

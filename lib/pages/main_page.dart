@@ -39,8 +39,9 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
   void initState() {
     super.initState();
     currentDay = getCalendarDay(
-        DateFormat('dd.MM.yyyy').format(
-            DateTime.now().subtract(const Duration(days: 13))
+        DateFormat('yyyy-MM-dd').format(
+            // DateTime.now().subtract(const Duration(days: 13))
+            DateTime.now()
         )
     );
     version = getVersion();
@@ -108,8 +109,9 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
         _selectedDate.value = newSelectedDate;
       });
       currentDay = getCalendarDay(
-          DateFormat('dd.MM.yyyy').format(
-              newSelectedDate.subtract(const Duration(days: 13))
+          DateFormat('yyyy-MM-dd').format(
+              // newSelectedDate.subtract(const Duration(days: 13))
+              newSelectedDate
           )
       );
     }
@@ -177,6 +179,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
       }
     });
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(value),
         actions: <Widget>[
@@ -192,59 +195,67 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
           )
         ],
       ),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: FutureBuilder<CalendarDay>(
-                future: currentDay,
-                builder: (context, future) {
-                  if (future.hasData) {
-                    List<CalendarDayItem> list = future.data!.list;
-                    print(list.length.toString());
-                    return textSection;
-                  } else if (future.hasError) {
-                    return Column(
-                      children: [
-                        Text('${future.error}'),
-                        Padding(
-                            padding: EdgeInsets.all(10.0),
-                            child: Column(
-                              children: [
-                                Padding(
-                                  padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
-                                  child: Text(
-                                    "Добро пожаловать",
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
+      body: Container(
+        color: const Color(0xffffffff),
+        height:MediaQuery.of(context).size.height,
+        width: MediaQuery.of(context).size.width,
+        child: Column(
+          children: <Widget>[
+            FutureBuilder<CalendarDay>(
+                  future: currentDay,
+                  builder: (context, future) {
+                    if (future.hasData) {
+                      List<CalendarDayItem> list = future.data!.list;
+                      print(list.length.toString());
+                      return textSection;
+                    } else if (future.hasError) {
+                      return Container(
+                          color: const Color(0xffffffff),
+                          height:MediaQuery.of(context).size.height,
+                          width: MediaQuery.of(context).size.width,
+                          child: Column(
+                          children: [
+                            Text('${future.error}'),
+                            Padding(
+                                padding: EdgeInsets.all(10.0),
+                                child: Column(
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
+                                      child: Text(
+                                        "Добро пожаловать",
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    Text("Приложение в разработке. "
+                                        "В данных момент доступна библиотека книг и текстов. "
+                                        "Ждите новых обновлений."),
+                                  ],
                                 ),
-                                Text("Приложение в разработке. "
-                                    "В данных момент доступна библиотека книг и текстов. "
-                                    "Ждите новых обновлений."),
-                              ],
                             ),
+                            TextButton(
+                                onPressed: onGoToLibrary,
+                                child: Text("Посмотреть тексты в библиотеке"),
+                            ),
+                          ],
                         ),
-                        TextButton(
-                            onPressed: onGoToLibrary,
-                            child: Text("Посмотреть тексты в библиотеке"),
+                      );
+                    }
+                    return Container(
+                      color: const Color(0xffffffff),
+                      height:MediaQuery.of(context).size.height,
+                      width: MediaQuery.of(context).size.width,
+                      child: Positioned.fill(
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: const CircularProgressIndicator(),
                         ),
-                      ],
-                    );
-                  }
-                  return Container(
-                    color: const Color(0xffCCCCCC),
-                    width: double.infinity,
-                    height: double.infinity,
-                    child: Positioned.fill(
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: const CircularProgressIndicator(),
                       ),
-                    ),
-                  );
-                },
-              ),
-          ),
-        ],
+                    );
+                  },
+                ),
+          ],
+        ),
       ),
       drawer: Drawer(
         // Add a ListView to the drawer. This ensures the user can scroll
@@ -258,7 +269,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               decoration: BoxDecoration(
                 color: Colors.green,
               ),
-              child: Text('Меню приложения'),
+              child: Text('Типикон (бета $majorVersion.$minorVersion.0)'),
             ),
             ListTile(
               title: const Text('Главная страница'),

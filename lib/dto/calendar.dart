@@ -38,16 +38,16 @@ class CalendarDay {
   });
 
   factory CalendarDay.fromJson(Map<String, dynamic> json) {
-    var list = json['list'];
+    print(json);
+    var list = json['list'] == null ? [] : json["list"];
     List<CalendarDayItem> items = List<CalendarDayItem>.from(
         list
         .map((item) => CalendarDayItem.fromJson(item))
         .toList()
     );
-    print('data2: $items');
     return CalendarDay(
-      page: json['page'],
-      total: json['total'],
+      page: json['page'] == null ? 0 : json['page'],
+      total: json['total'] == null ? 0 : json['total'],
       list: items,
     );
   }

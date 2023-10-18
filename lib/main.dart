@@ -24,11 +24,6 @@ class MyApp extends StatelessWidget {
       ],
       restorationScopeId: "root",
       initialRoute: '/',
-      // routes: {
-      //   '/': (context) => const MainPage(),
-      //   '/library': (context) => const LibraryPage(),
-      //   '/library/:id': (context) => const BookPage(),
-      // },
       onGenerateRoute: (RouteSettings settings) {
         final arguments = settings.arguments;
         switch (settings.name) {
@@ -73,6 +68,12 @@ class MyApp extends StatelessWidget {
       },
       theme: ThemeData(
         primarySwatch: Colors.green,
+        textTheme: TextTheme(
+          // bodyText1: TextStyle(fontSize: 18.0),
+          // bodyText2: TextStyle(fontSize: 16.0),
+          // button: TextStyle(fontSize: 16.0),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFFFFFFF),
       ),
     );
   }

@@ -1,10 +1,10 @@
 class Reading {
   final String name;
-  final String author;
+  final String? author;
   final String readiness;
   final String content;
   final String? ruLink;
-  final String link;
+  final String? link;
   final String type;
   final String updatedAt;
   final List<String> footnotes;

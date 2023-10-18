@@ -39,47 +39,46 @@ class _BookPageState extends State<BookPage> {
           },
         ),
       ),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: FutureBuilder<BookWithTexts>(
-              future: book,
-              builder: (context, future) {
-                if (future.hasData) {
-                  List<BookText> list = future.data!.texts;
-                  return ListView.builder(
-                    scrollDirection: Axis.vertical,
-                    itemCount: list.length,
-                    itemBuilder: (context, index) {
-                      final item = list[index];
-                      return Container(
-                        child: ListTile(
-                          title: Text(item.name),
-                          onTap: () => {
-                            Navigator.pushNamed(context, "/reading", arguments: item.id)
-                          },
-                        ),
-                      );
-                    },
-                  );
-                } else if (future.hasError) {
-                  return Text('${future.error}');
-                }
-                return Container(
-                  color: const Color(0xffCCCCCC),
-                  width: double.infinity,
-                  height: double.infinity,
-                  child: Positioned.fill(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: const CircularProgressIndicator(),
+      body: Container(
+        color: const Color(0xffffffff),
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height,
+        child: FutureBuilder<BookWithTexts>(
+          future: book,
+          builder: (context, future) {
+            if (future.hasData) {
+              List<BookText> list = future.data!.texts;
+              return ListView.builder(
+                scrollDirection: Axis.vertical,
+                itemCount: list.length,
+                itemBuilder: (context, index) {
+                  final item = list[index];
+                  return Container(
+                    child: ListTile(
+                      title: Text(item.name),
+                      onTap: () => {
+                        Navigator.pushNamed(context, "/reading", arguments: item.id)
+                      },
                     ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+                  );
+                },
+              );
+            } else if (future.hasError) {
+              return Text('${future.error}');
+            }
+            return Container(
+              color: const Color(0xffffffff),
+              width: double.infinity,
+              height: double.infinity,
+              child: Positioned.fill(
+                child: Align(
+                  alignment: Alignment.center,
+                  child: const CircularProgressIndicator(),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
