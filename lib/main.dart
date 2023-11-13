@@ -9,8 +9,21 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => MyAppState();
+}
+
+class MyAppState extends State<MyApp> {
+  var _hasSkippedUpdate = false;
+
+  void _handleTapboxChanged(bool val) {
+    setState(() {
+      _hasSkippedUpdate = val;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +72,11 @@ class MyApp extends StatelessWidget {
           case "/":
             return MaterialPageRoute(
               builder: (context) {
-                return MainPage(context);
+                return MainPage(
+                    context,
+                    hasSkippedUpdate: _hasSkippedUpdate,
+                    skipUpdateWindow: _handleTapboxChanged,
+                );
               },
             );
           default:

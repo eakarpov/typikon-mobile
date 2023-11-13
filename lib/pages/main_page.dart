@@ -9,7 +9,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class MainPage extends StatefulWidget {
-  const MainPage(context, {super.key});
+  const MainPage(context, {
+    super.key,
+    required this.hasSkippedUpdate,
+    required this.skipUpdateWindow,
+  });
+
+  final bool hasSkippedUpdate;
+  final ValueChanged<bool> skipUpdateWindow;
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -144,6 +151,11 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
     }
   }
 
+  void onSkipUpdate(BuildContext context) async {
+    widget.skipUpdateWindow(true);
+    Navigator.of(context).pop();
+  }
+
   void showAlert(BuildContext context, Version value) {
     var major = value.major;
     var minor = value.minor;
@@ -154,7 +166,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
           content: Text('Появилось новое обновление: Версия $major.$minor'),
           actions: <Widget>[
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => onSkipUpdate(context),
               child: const Text('Пропустить'),
             ),
             TextButton(
@@ -174,7 +186,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
     DateFormat format = DateFormat("dd.MM.yyyy");
     String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
     version.then((value) => {
-      if (value.major > majorVersion || value.minor > minorVersion) {
+      if (value.major > majorVersion || value.minor > minorVersion && !widget.hasSkippedUpdate) {
         showAlert(context, value)
       }
     });
@@ -284,6 +296,10 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               onTap: () {
                 Navigator.pushNamed(context, "/library");
               },
+            ),
+            if (widget.hasSkippedUpdate) ListTile(
+              title: const Text("Обновить приложение"),
+              onTap: () => onLoadUpdate(context),
             ),
           ],
         ),
