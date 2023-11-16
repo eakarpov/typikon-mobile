@@ -3,6 +3,8 @@ import 'package:typikon/dto/version.dart';
 import 'package:typikon/version.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import "../dto/text.dart";
+import "../apiMapper/reading.dart";
 import '../apiMapper/calendar.dart';
 import '../dto/calendar.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +27,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> with RestorationMixin {
   late Future<CalendarDay> currentDay;
   late Future<Version> version;
+  late Future<ReadingList> lastTexts;
 
   @override
   String? get restorationId => "test";
@@ -51,7 +54,13 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
             DateTime.now()
         )
     );
+    lastTexts = getLastTexts();
     version = getVersion();
+    version.then((value) => {
+      if ((value.major > majorVersion || value.minor > minorVersion) && !widget.hasSkippedUpdate) {
+        showAlert(context, value)
+      }
+    });
   }
 
   @override
@@ -185,11 +194,6 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
   Widget build(BuildContext context) {
     DateFormat format = DateFormat("dd.MM.yyyy");
     String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
-    version.then((value) => {
-      if (value.major > majorVersion || value.minor > minorVersion && !widget.hasSkippedUpdate) {
-        showAlert(context, value)
-      }
-    });
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -207,68 +211,90 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
           )
         ],
       ),
-      body: Container(
-        color: const Color(0xffffffff),
-        height:MediaQuery.of(context).size.height,
-        width: MediaQuery.of(context).size.width,
-        child: Column(
-          children: <Widget>[
+      body: LayoutBuilder(builder: (context, constraints) {
+      return Column(
+        children: <Widget>[
             FutureBuilder<CalendarDay>(
-                  future: currentDay,
-                  builder: (context, future) {
-                    if (future.hasData) {
-                      List<CalendarDayItem> list = future.data!.list;
-                      print(list.length.toString());
-                      return textSection;
-                    } else if (future.hasError) {
-                      return Container(
-                          color: const Color(0xffffffff),
-                          height:MediaQuery.of(context).size.height,
-                          width: MediaQuery.of(context).size.width,
-                          child: Column(
-                          children: [
-                            Text('${future.error}'),
-                            Padding(
-                                padding: EdgeInsets.all(10.0),
-                                child: Column(
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
-                                      child: Text(
-                                        "Добро пожаловать",
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    Text("Приложение в разработке. "
-                                        "В данных момент доступна библиотека книг и текстов. "
-                                        "Ждите новых обновлений."),
-                                  ],
-                                ),
-                            ),
-                            TextButton(
-                                onPressed: onGoToLibrary,
-                                child: Text("Посмотреть тексты в библиотеке"),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
+              future: currentDay,
+              builder: (context, future) {
+                if (future.hasData) {
+                  List<CalendarDayItem> list = future.data!.list;
+                  print(list.length.toString());
+                  return textSection;
+                } else if (future.hasError) {
+                  return SizedBox(
+                    height: 20,
+                    child: Text('${future.error}'),
+                  );
+                }
+                return Container(
+                  color: const Color(0xffffffff),
+                  child: Positioned.fill(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: const CircularProgressIndicator(),
+                      ),
+                    ),
+                );
+              },
+            ),
+            SizedBox(height: 100.0, child: Padding(
+              padding: EdgeInsets.all(10.0),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
+                    child: Text(
+                      "Добро пожаловать",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Text("Приложение в разработке. "
+                      "В данных момент доступна библиотека книг и текстов. "
+                      "Ждите новых обновлений."),
+                ],
+              ),
+            ),
+            ),
+            TextButton(
+              onPressed: onGoToLibrary,
+              child: Text("Посмотреть тексты в библиотеке"),
+            ),
+            Text("Последние добавленные тексты", style: const TextStyle(fontWeight: FontWeight.bold)),
+            FutureBuilder<ReadingList>(
+                future: lastTexts,
+                builder: (context, future) {
+                  if (future.hasData) {
+                    List<Reading> list = future.data!.list;
                     return Container(
-                      color: const Color(0xffffffff),
-                      height:MediaQuery.of(context).size.height,
-                      width: MediaQuery.of(context).size.width,
-                      child: Positioned.fill(
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: const CircularProgressIndicator(),
-                        ),
+                        child: Column(
+                          children: list.map((item) => Container(
+                              child: ListTile(
+                                title: Text(item.name ?? "test"),
+                                subtitle: Text(
+                                    "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}" ?? "test"),
+                                onTap: () => {
+                                  Navigator.pushNamed(context, "/reading", arguments: item.id)
+                                },
+                              ),
+                            )).toList(),
                       ),
                     );
-                  },
-                ),
+                  }
+                  return Container(
+                    color: const Color(0xffffffff),
+                    child: Positioned.fill(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: const CircularProgressIndicator(),
+                      ),
+                    ),
+                  );
+                },
+              ),
           ],
-        ),
-      ),
+        );
+      }),
       drawer: Drawer(
         // Add a ListView to the drawer. This ensures the user can scroll
         // through the options in the drawer if there isn't enough vertical

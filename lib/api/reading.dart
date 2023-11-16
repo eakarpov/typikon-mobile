@@ -5,3 +5,9 @@ Future<http.Response> fetchText(String id) {
     Uri.parse('https://typikon.su/api/v1/texts/$id'),
   );
 }
+
+Future<http.Response> fetchLastTexts() {
+  return http.get(
+    Uri.parse('https://typikon.su/api/v1/texts/last'),
+  );
+}

@@ -1,2 +1,2 @@
 const int majorVersion = 0;
-const int minorVersion = 2;
+const int minorVersion = 3;

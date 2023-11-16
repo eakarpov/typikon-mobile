@@ -12,3 +12,13 @@ Future<Reading> getText(String id) async {
     throw Exception('Не получено чтение');
   }
 }
+
+Future<ReadingList> getLastTexts() async {
+  final response = await fetchLastTexts();
+
+  if (response.statusCode == 200) {
+    return ReadingList.fromJson(jsonDecode(response.body));
+  } else {
+    throw Exception('Не получено чтение');
+  }
+}
