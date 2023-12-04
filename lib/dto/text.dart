@@ -40,8 +40,6 @@ class Reading {
     var link = json["link"];
     var type = json["type"];
     var updatedAtString = json["updatedAt"];
-    // DateTime updatedAt = serializers.deserialize(updatedAtString, specifiedType: specifiedType);
-    DateTime updatedAt = DateTime.parse(updatedAtString);
     return Reading(
       id: id,
       name: name,
@@ -51,7 +49,7 @@ class Reading {
       ruLink: ruLink,
       link: link,
       type: type,
-      updatedAt: updatedAt,
+      updatedAt: (updatedAtString == null) ? DateTime.now() : DateTime.parse(updatedAtString),
       footnotes: [],
     );
   }
