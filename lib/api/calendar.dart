@@ -13,3 +13,12 @@ Future<http.Response> fetchCalendarDay(String dateTime) {
       }),
   );
 }
+
+Future<http.Response> fetchCalendarReadingForDate(int dateTime) {
+  return http.get(
+    Uri.parse('https://typikon.su/api/v1/calendar/$dateTime'),
+    headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+  );
+}

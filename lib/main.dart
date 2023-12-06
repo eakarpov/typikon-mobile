@@ -16,6 +16,7 @@ import 'package:typikon/pages/book_page.dart';
 import 'pages/library_page.dart';
 import 'pages/main_page.dart';
 import 'pages/text_page.dart';
+import 'pages/current_day_memories_page.dart';
 
 int id = 0;
 
@@ -366,6 +367,12 @@ class MyAppState extends State<MyApp> {
               );
             }
             return null;
+          case "/dneslov/memories":
+            return MaterialPageRoute(
+              builder: (context) {
+                return CurrentDayMemoriesPage(context);
+              },
+            );
           case "/":
             return MaterialPageRoute(
               builder: (context) {

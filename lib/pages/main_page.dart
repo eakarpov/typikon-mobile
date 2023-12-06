@@ -7,6 +7,7 @@ import "../dto/text.dart";
 import "../apiMapper/reading.dart";
 import '../apiMapper/calendar.dart';
 import '../dto/calendar.dart';
+import "../dto/day.dart";
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -25,7 +26,7 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> with RestorationMixin {
-  late Future<CalendarDay> currentDay;
+  late Future<DayResult> currentDay;
   late Future<Version> version;
   late Future<ReadingList> lastTexts;
 
@@ -48,11 +49,17 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
   @override
   void initState() {
     super.initState();
-    currentDay = getCalendarDay(
-        DateFormat('yyyy-MM-dd').format(
-            // DateTime.now().subtract(const Duration(days: 13))
-            DateTime.now()
-        )
+    // currentDay = getCalendarDay(
+    //     DateFormat('yyyy-MM-dd').format(
+    //         // DateTime.now().subtract(const Duration(days: 13))
+    //         DateTime.now()
+    //     )
+    // );
+    currentDay = getCalendarReadingForDate(
+        DateTime.now().subtract(const Duration(days: 13)).millisecondsSinceEpoch
+        // DateFormat('yyyy-MM-dd').format(
+        //     DateTime.now().subtract(const Duration(days: 13))
+        // )
     );
     lastTexts = getLastTexts();
     version = getVersion();
@@ -112,6 +119,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
       setState(() {
         _selectedDate.value = picked;
       });
+      currentDay = getCalendarReadingForDate(picked.subtract(const Duration(days: 13)).millisecondsSinceEpoch);
     }
   }
 
@@ -124,27 +132,15 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
       setState(() {
         _selectedDate.value = newSelectedDate;
       });
-      currentDay = getCalendarDay(
-          DateFormat('yyyy-MM-dd').format(
-              // newSelectedDate.subtract(const Duration(days: 13))
-              newSelectedDate
-          )
+      currentDay = getCalendarReadingForDate(
+          newSelectedDate.subtract(const Duration(days: 13)).millisecondsSinceEpoch
+          // DateFormat('yyyy-MM-dd').format(
+          //     newSelectedDate.subtract(const Duration(days: 13))
+              // newSelectedDate
+          // )
       );
     }
   }
-
-  Widget textSection = Container(
-    padding: const EdgeInsets.all(32),
-    child: const Text(
-      'Lake Oeschinen lies at the foot of the Blüemlisalp in the Bernese '
-          'Alps. Situated 1,578 meters above sea level, it is one of the '
-          'larger Alpine Lakes. A gondola ride from Kandersteg, followed by a '
-          'half-hour walk through pastures and pine forest, leads you to the '
-          'lake, which warms to 20 degrees Celsius in the summer. Activities '
-          'enjoyed here include rowing, and riding the summer toboggan run.',
-      softWrap: true,
-    ),
-  );
 
   void onLoadUpdate(BuildContext context) async {
     Navigator.of(context).pop();
@@ -211,90 +207,135 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
           )
         ],
       ),
-      body: LayoutBuilder(builder: (context, constraints) {
-      return Column(
-        children: <Widget>[
-            FutureBuilder<CalendarDay>(
-              future: currentDay,
-              builder: (context, future) {
-                if (future.hasData) {
-                  List<CalendarDayItem> list = future.data!.list;
-                  print(list.length.toString());
-                  return textSection;
-                } else if (future.hasError) {
-                  return SizedBox(
-                    height: 20,
-                    child: Text('${future.error}'),
-                  );
-                }
-                return Container(
-                  color: const Color(0xffffffff),
-                  child: Positioned.fill(
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: const CircularProgressIndicator(),
+      body: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
+            child: SingleChildScrollView(
+              child: Column(mainAxisAlignment: MainAxisAlignment.start,
+                children: <Widget>[
+                  SizedBox(
+                    height: 100.0,
+                    child: Padding(
+                      padding: EdgeInsets.all(10.0),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
+                            child: Text(
+                              "Добро пожаловать",
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Text("Приложение в разработке. "
+                              "В данных момент доступна библиотека книг и текстов. "
+                              "Ждите новых обновлений."),
+                        ],
                       ),
                     ),
-                );
-              },
-            ),
-            SizedBox(height: 100.0, child: Padding(
-              padding: EdgeInsets.all(10.0),
-              child: Column(
-                children: [
+                  ),
                   Padding(
                     padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
                     child: Text(
-                      "Добро пожаловать",
+                      "Чтения Пролога на выбранную дату",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  Text("Приложение в разработке. "
-                      "В данных момент доступна библиотека книг и текстов. "
-                      "Ждите новых обновлений."),
-                ],
-              ),
-            ),
-            ),
-            TextButton(
-              onPressed: onGoToLibrary,
-              child: Text("Посмотреть тексты в библиотеке"),
-            ),
-            Text("Последние добавленные тексты", style: const TextStyle(fontWeight: FontWeight.bold)),
-            FutureBuilder<ReadingList>(
-                future: lastTexts,
-                builder: (context, future) {
-                  if (future.hasData) {
-                    List<Reading> list = future.data!.list;
-                    return Container(
-                        child: Column(
-                          children: list.map((item) => Container(
-                              child: ListTile(
-                                title: Text(item.name ?? "test"),
-                                subtitle: Text(
-                                    "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}" ?? "test"),
-                                onTap: () => {
-                                  Navigator.pushNamed(context, "/reading", arguments: item.id)
-                                },
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
+                    child: FutureBuilder<DayResult>(
+                      future: currentDay,
+                      builder: (context, future) {
+                        if (future.hasData) {
+                          if (future.data == null) return SizedBox.shrink();
+                          DayTexts? data = future.data?.data;
+                          if (data == null) return SizedBox.shrink();
+                          DayTextsParts? song6 = data?.song6;
+                          if (song6 == null) return SizedBox.shrink();
+                          List<DayTextsPart>? list = song6?.items;
+                          if (list == null) return SizedBox.shrink();
+                          return ListView.builder(
+                                  shrinkWrap: true,
+                                  scrollDirection: Axis.vertical,
+                                  itemCount: list.length,
+                                  itemBuilder: (context, index) {
+                                    final item = list[index];
+                                    return Container(
+                                      child: ListTile(
+                                        title: Text(item.text?.name ?? "Без названия"),
+                                        onTap: () => {
+                                          Navigator.pushNamed(context, "/reading", arguments: item.text?.id)
+                                        },
+                                      ),
+                                    );
+                                  },
+                            );
+                        } else if (future.hasError) {
+                          return SizedBox(
+                            height: 20,
+                            child: Text('${future.error}'),
+                          );
+                        }
+                        return SizedBox(
+                          height: 20,
+                          child: Container(
+                            color: const Color(0xffffffff),
+                            child: Positioned.fill(
+                              child: Align(
+                                alignment: Alignment.center,
+                                child: const CircularProgressIndicator(),
                               ),
-                            )).toList(),
-                      ),
-                    );
-                  }
-                  return Container(
-                    color: const Color(0xffffffff),
-                    child: Positioned.fill(
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: const CircularProgressIndicator(),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onGoToLibrary,
+                    child: Text("Посмотреть тексты в библиотеке"),
+                  ),
+                  Text("Последние добавленные тексты", style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
+                    child: FutureBuilder<ReadingList>(
+                        future: lastTexts,
+                        builder: (context, future) {
+                          if (future.hasData) {
+                            List<Reading> list = future.data!.list;
+                            return ListView.builder(
+                                  shrinkWrap: true,
+                                  scrollDirection: Axis.vertical,
+                                  itemCount: list.length,
+                                  itemBuilder: (context, index) {
+                                    final item = list[index];
+                                    return Container(
+                                      child: ListTile(
+                                        title: Text(item.name ?? "test"),
+                                        subtitle: Text(
+                                            "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}" ?? "test"),
+                                        onTap: () => {
+                                          Navigator.pushNamed(context, "/reading", arguments: item.id)
+                                        },
+                                      ),
+                                    );
+                                  },
+                            );
+                          }
+                          return Container(
+                            color: const Color(0xffffffff),
+                            child: Positioned.fill(
+                              child: Align(
+                                alignment: Alignment.center,
+                                child: const CircularProgressIndicator(),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                  );
-                },
-              ),
-          ],
-        );
-      }),
+                  ],
+                ),
+            ),
+      ),
       drawer: Drawer(
         // Add a ListView to the drawer. This ensures the user can scroll
         // through the options in the drawer if there isn't enough vertical
@@ -321,6 +362,13 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               selected: ModalRoute.of(context)?.settings.name == "/library",
               onTap: () {
                 Navigator.pushNamed(context, "/library");
+              },
+            ),
+            ListTile(
+              title: const Text('Памяти на день'),
+              selected: ModalRoute.of(context)?.settings.name == "/dneslov/memories",
+              onTap: () {
+                Navigator.pushNamed(context, "/dneslov/memories");
               },
             ),
             if (widget.hasSkippedUpdate) ListTile(
