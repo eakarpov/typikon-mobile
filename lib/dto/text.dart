@@ -13,6 +13,7 @@ class Reading {
   final String type;
   final DateTime updatedAt;
   final List<String> footnotes;
+  final String? dneslovId;
 
   const Reading({
     required this.id,
@@ -25,6 +26,7 @@ class Reading {
     required this.type,
     required this.updatedAt,
     required this.footnotes,
+    required this.dneslovId,
   });
 
   factory Reading.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class Reading {
     var ruLink = json["ruLink"];
     var link = json["link"];
     var type = json["type"];
+    var dneslovId = json["dneslovId"];
     var updatedAtString = json["updatedAt"];
     return Reading(
       id: id,
@@ -51,6 +54,7 @@ class Reading {
       type: type,
       updatedAt: (updatedAtString == null) ? DateTime.now() : DateTime.parse(updatedAtString),
       footnotes: [],
+      dneslovId: dneslovId,
     );
   }
 }

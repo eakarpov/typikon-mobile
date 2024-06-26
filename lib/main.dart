@@ -2,6 +2,8 @@ import "dart:ui";
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter_redux/flutter_redux.dart';
+import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import "package:background_fetch/background_fetch.dart";
@@ -17,6 +19,11 @@ import 'pages/library_page.dart';
 import 'pages/main_page.dart';
 import 'pages/text_page.dart';
 import 'pages/current_day_memories_page.dart';
+import 'pages/settings_page.dart';
+import "package:typikon/store/rootReducer.dart";
+import "package:typikon/store/index.dart";
+import "package:typikon/store/actions/actions.dart";
+import "package:typikon/store/store.dart";
 
 int id = 0;
 
@@ -105,7 +112,8 @@ Future<void> main() async {
   //   // if you have configured a lower frequency.
   //   frequency: Duration(minutes: 15),
   // );
-  runApp(const MyApp());
+  final store = await createReduxStore();
+  runApp(MyApp(store));
   // Register to receive BackgroundFetch events after app is terminated.
   // Requires {stopOnTerminate: false, enableHeadless: true}
   BackgroundFetch.registerHeadlessTask(backgroundFetchHeadlessTask);
@@ -198,7 +206,9 @@ Future _checkVersionAndNotify(String type) async {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final Store<AppState> store;
+
+  MyApp(this.store);
 
   @override
   State<MyApp> createState() => MyAppState();
@@ -222,6 +232,10 @@ class MyAppState extends State<MyApp> {
     _requestPermissions();
     _configureDidReceiveLocalNotificationSubject();
     _configureSelectNotificationSubject();
+    // store = Store<AppState>(
+    //     appReducer,
+    //     initialState: AppState.init(),
+    // );
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -325,77 +339,95 @@ class MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Typikon',
-      localizationsDelegates: [
-        GlobalMaterialLocalizations.delegate
-      ],
-      supportedLocales: [
-        const Locale('ru'),
-      ],
-      restorationScopeId: "root",
-      initialRoute: '/',
-      onGenerateRoute: (RouteSettings settings) {
-        final arguments = settings.arguments;
-        switch (settings.name) {
-          case '/library':
-            if (arguments is String) {
-              return MaterialPageRoute(
-                builder: (context) {
-                  return BookPage(
-                    context,
-                    id: arguments,
-                  );
+    return StoreProvider(
+        store: widget.store,
+        child: StoreBuilder<AppState>(
+            onInit: (store) => store.dispatch(FetchItemsAction()),
+            builder: (context, store) {
+              return MaterialApp(
+                title: 'Typikon',
+                localizationsDelegates: [
+                  GlobalMaterialLocalizations.delegate
+                ],
+                supportedLocales: [
+                  const Locale('ru'),
+                ],
+                restorationScopeId: "root",
+                initialRoute: '/',
+                onGenerateRoute: (RouteSettings settings) {
+                  final arguments = settings.arguments;
+                  switch (settings.name) {
+                    case '/library':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return BookPage(
+                              context,
+                              id: arguments,
+                            );
+                          },
+                        );
+                      } else {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return LibraryPage(context);
+                          },
+                        );
+                      }
+                    case "/reading":
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return TextPage(
+                              context,
+                              id: arguments,
+                            );
+                          },
+                        );
+                      }
+                      return null;
+                    case "/settings":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return SettingsPage(
+                            context,
+                          );
+                        },
+                      );
+                    case "/dneslov/memories":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return CurrentDayMemoriesPage(context);
+                        },
+                      );
+                    case "/":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return MainPage(
+                            context,
+                            hasSkippedUpdate: _hasSkippedUpdate,
+                            skipUpdateWindow: _handleTapboxChanged,
+                          );
+                        },
+                      );
+                    default:
+                      return null;
+                  }
                 },
+                theme: ThemeData(
+                  primarySwatch: Colors.green,
+                  textTheme: TextTheme(
+                    // bodyText1: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+                    // bodyText2: TextStyle(fontFamily: "OldStandard", fontSize: 16, fontStyle: FontStyle.italic),
+                    // bodyText1: TextStyle(fontSize: 18.0),
+                    // bodyText2: TextStyle(fontSize: 16.0),
+                    // button: TextStyle(fontSize: 16.0),
+                  ),
+                  scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+                ),
               );
-            } else {
-              return MaterialPageRoute(
-                builder: (context) {
-                  return LibraryPage(context);
-                },
-              );
-            }
-          case "/reading":
-            if (arguments is String) {
-              return MaterialPageRoute(
-                builder: (context) {
-                  return TextPage(
-                    context,
-                    id: arguments,
-                  );
-                },
-              );
-            }
-            return null;
-          case "/dneslov/memories":
-            return MaterialPageRoute(
-              builder: (context) {
-                return CurrentDayMemoriesPage(context);
-              },
-            );
-          case "/":
-            return MaterialPageRoute(
-              builder: (context) {
-                return MainPage(
-                    context,
-                    hasSkippedUpdate: _hasSkippedUpdate,
-                    skipUpdateWindow: _handleTapboxChanged,
-                );
-              },
-            );
-          default:
-            return null;
-        }
-      },
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        textTheme: TextTheme(
-          // bodyText1: TextStyle(fontSize: 18.0),
-          // bodyText2: TextStyle(fontSize: 16.0),
-          // button: TextStyle(fontSize: 16.0),
+            },
         ),
-        scaffoldBackgroundColor: const Color(0xFFFFFFFF),
-      ),
     );
   }
 }

@@ -7,20 +7,18 @@ class CalendarMetaItem {
 
   factory CalendarMetaItem.fromJson(Map<String, dynamic> json) {
     return CalendarMetaItem(
-      slug: (json["slug"] == null) ? "" : json["slug"],
+      slug: (json["slug"] == null) ? "" : (json["slug"]["text"] == null) ? "" : json["slug"]["text"],
     );
   }
 }
 
 class CalendarMeta {
   final int page;
-  final int per;
   final int total;
   final List<CalendarMetaItem> list;
 
   const CalendarMeta({
     required this.page,
-    required this.per,
     required this.total,
     required this.list,
   });
@@ -34,7 +32,6 @@ class CalendarMeta {
     );
     return CalendarMeta(
       page: json['page'],
-      per: json['per'],
       total: json['total'],
       list: items,
     );

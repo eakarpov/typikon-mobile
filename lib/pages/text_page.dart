@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:redux/redux.dart';
+import 'package:flutter_redux/flutter_redux.dart';
 
+import 'package:typikon/store/models/models.dart';
 import 'package:typikon/dto/book.dart';
 import 'package:typikon/dto/text.dart';
+import 'package:typikon/dto/dneslov/images.dart';
 import '../apiMapper/reading.dart';
+import "../apiMapper/dneslov/images.dart";
 
 class TextPage extends StatefulWidget {
   final String id;
@@ -17,16 +23,29 @@ class TextPage extends StatefulWidget {
 
 class _TextPageState extends State<TextPage> {
   late Future<Reading> reading;
+  late Future<DneslovImageListD> dneslovImages;
 
   @override
   void initState() {
     super.initState();
     reading = getText(widget.id);
+    reading.then((value) => {
+      if (value!.dneslovId != null) {
+        dneslovImages = fetchDneslovImagesD(value!.dneslovId!)
+      }
+    });
   }
 
   void onClick(String link) {
     Uri myUrl = Uri.parse(link);
     launchUrl(myUrl);
+  }
+
+  Widget imageCard(value) {
+    print(value);
+    return Image(
+      image: NetworkImage(value),
+    );
   }
 
   @override
@@ -80,7 +99,40 @@ class _TextPageState extends State<TextPage> {
                           ),
                         ],
                       ),
-                      Text(content),
+                      Text(content,
+                          textAlign: TextAlign.justify,
+                          style: TextStyle(fontFamily: "OldStandard", fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble())
+                      ),
+                      if (future.data!.dneslovId != null) FutureBuilder<DneslovImageListD>(
+                          future: dneslovImages,
+                          builder: (context, future) {
+                            if (future.hasData) {
+                              print(future.data!.list.map((item) => item.url));
+                              return CarouselSlider(
+                                options: CarouselOptions(height: 400.0),
+                                items: future.data!.list.map((item) {
+                                  return Builder(
+                                    builder: (BuildContext context) {
+                                      return Container(
+                                          width: MediaQuery.of(context).size.width,
+                                          margin: EdgeInsets.symmetric(horizontal: 5.0),
+                                          decoration: BoxDecoration(
+                                          ),
+                                          child: Image(
+                                            image: NetworkImage(item.thumb_url),
+                                          ),
+                                      );
+                                    },
+                                  );
+                                }).toList(),
+                              );
+                              // return Column(
+                              //   children: future.data!.list.map((item) => imageCard(item.url)).toList(),
+                              // );
+                            }
+                            return Text("");
+                          }
+                      ),
                     ],
                   ),
                 ),

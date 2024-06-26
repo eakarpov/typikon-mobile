@@ -6,10 +6,12 @@ import 'package:typikon/dto/dneslov/calendarMeta.dart';
 
 Future<CalendarDayD> getCalendarDayD(String dateTime) async {
   final calendarResponse = await fetchCalendaries();
+  print(calendarResponse.body);
 
   final calendarMeta = CalendarMeta.fromJson(jsonDecode(calendarResponse.body));
 
   final calendarString = calendarMeta.list.fold("", (previousValue, element) => previousValue + element.slug + ",");
+  print(calendarString);
 
   final response = await fetchCalendarDay(dateTime, calendarString);
 

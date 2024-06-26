@@ -213,7 +213,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               child: Column(mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
                   SizedBox(
-                    height: 100.0,
+                    height: 120.0,
                     child: Padding(
                       padding: EdgeInsets.all(10.0),
                       child: Column(
@@ -226,8 +226,8 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                             ),
                           ),
                           Text("Приложение в разработке. "
-                              "В данных момент доступна библиотека книг и текстов. "
-                              "Ждите новых обновлений."),
+                              "В данных момент доступна библиотека книг и текстов, "
+                              "а также просмотр памятей на день. Ждите новых обновлений!", textAlign: TextAlign.justify,),
                         ],
                       ),
                     ),
@@ -365,10 +365,24 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               },
             ),
             ListTile(
+              title: const Text('Чтение на выбранный день'),
+              selected: ModalRoute.of(context)?.settings.name == "/calculator",
+              onTap: () {
+                Navigator.pushNamed(context, "/calculator");
+              },
+            ),
+            ListTile(
               title: const Text('Памяти на день'),
               selected: ModalRoute.of(context)?.settings.name == "/dneslov/memories",
               onTap: () {
                 Navigator.pushNamed(context, "/dneslov/memories");
+              },
+            ),
+            ListTile(
+              title: const Text('Настройки'),
+              selected: ModalRoute.of(context)?.settings.name == "/settings",
+              onTap: () {
+                Navigator.pushNamed(context, "/settings");
               },
             ),
             if (widget.hasSkippedUpdate) ListTile(

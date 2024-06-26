@@ -46,6 +46,9 @@ dependencies:
   background_fetch: ^1.2.1
   shared_preferences: ^2.2.2
   built_value: ^8.7.0
+  carousel_slider: ^4.2.1
+  redux: ^5.0.0
+  flutter_redux: ^0.10.0
 
 dev_dependencies:
   flutter_test:
@@ -101,6 +104,13 @@ flutter:
   #       - asset: fonts/TrajanPro.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
-  #
+  fonts:
+    - family: OldStandard
+      fonts:
+        - asset: assets/fonts/OldStandard-Regular.otf
+        - asset: assets/fonts/OldStandard-Bold.otf
+        - asset: assets/fonts/OldStandard-BoldItalic.otf
+        - asset: assets/fonts/OldStandard-Italic.otf
+
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
