@@ -17,8 +17,12 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
   @override
   Future<void> call(Store<AppState> store, action, NextDispatcher next) async {
     if (action is ChangeFontSizeAction) {
-      print(action);
-      await _saveStateToPrefs(store.state, action.fontSize); // TODO - after store update save to storage, not before!!
+      await _saveStateToPrefs(store.state); // TODO - after store update save to storage, not before!!
+      store.dispatch(AppSaveAdditional());
+    }
+
+    if (action is AppSaveAdditional) {
+      await _saveStateToPrefs(store.state);
     }
 
     if (action is FetchItemsAction) {
@@ -29,16 +33,13 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     next(action);
   }
 
-  Future _saveStateToPrefs(AppState state, int newFontSize) async {
-    // state.settings.fontSize = newFontSize;
+  Future _saveStateToPrefs(AppState state) async {
     var stateString = json.encode(state.toJson());
-    print(stateString);
     await preferences.setString(APP_STATE_KEY, stateString);
   }
 
   Future _loadStateFromPrefs(Store<AppState> store) async {
     var stateString = preferences.getString(APP_STATE_KEY);
-    print(stateString);
     if (stateString == null) return;
     AppState state = AppState.fromJson(json.decode(stateString));
     store.dispatch(ChangeFontSizeAction(state.settings.fontSize));

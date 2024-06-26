@@ -186,6 +186,10 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
     Navigator.pushNamed(context, "/library");
   }
 
+  void onGoToCalculator() {
+    Navigator.pushNamed(context, "/calculator");
+  }
+
   @override
   Widget build(BuildContext context) {
     DateFormat format = DateFormat("dd.MM.yyyy");
@@ -292,6 +296,10 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                   TextButton(
                     onPressed: onGoToLibrary,
                     child: Text("Посмотреть тексты в библиотеке"),
+                  ),
+                  TextButton(
+                    onPressed: onGoToCalculator,
+                    child: Text("Прочитать собранные чтения дня Триоди и Минеи (работает в пределах Цветной Триоди)"),
                   ),
                   Text("Последние добавленные тексты", style: const TextStyle(fontWeight: FontWeight.bold)),
                   ConstrainedBox(

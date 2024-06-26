@@ -13,13 +13,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import "version.dart";
-import "apiMapper/version.dart";
+
+import "package:typikon/apiMapper/version.dart";
 import 'package:typikon/pages/book_page.dart';
-import 'pages/library_page.dart';
-import 'pages/main_page.dart';
-import 'pages/text_page.dart';
-import 'pages/current_day_memories_page.dart';
-import 'pages/settings_page.dart';
+import 'package:typikon/pages/library_page.dart';
+import 'package:typikon/pages/main_page.dart';
+import 'package:typikon/pages/text_page.dart';
+import 'package:typikon/pages/current_day_memories_page.dart';
+import 'package:typikon/pages/settings_page.dart';
+import 'package:typikon/pages/calculator_page.dart';
 import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
 import "package:typikon/store/actions/actions.dart";
@@ -390,6 +392,14 @@ class MyAppState extends State<MyApp> {
                       return MaterialPageRoute(
                         builder: (context) {
                           return SettingsPage(
+                            context,
+                          );
+                        },
+                      );
+                    case "/calculator":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return CalculatorPage(
                             context,
                           );
                         },

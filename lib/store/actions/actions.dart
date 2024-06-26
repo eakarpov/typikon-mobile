@@ -16,6 +16,8 @@ class AppNotLoadedAction {}
 
 class AppLoadedAction {}
 
+class AppSaveAdditional {}
+
 class ChangeFontSizeAction {
   final int fontSize;
 
