@@ -5,6 +5,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
+import "package:typikon/components/fusion_text.dart";
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/dto/book.dart';
 import 'package:typikon/dto/text.dart';
@@ -99,9 +100,12 @@ class _TextPageState extends State<TextPage> {
                           ),
                         ],
                       ),
-                      Text(content,
-                          textAlign: TextAlign.justify,
-                          style: TextStyle(fontFamily: "OldStandard", fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble())
+                      Column(
+                        children: content.split("\n\n").map((itemContent) =>
+                            FusionTextWidgets(
+                              text: itemContent,
+                            ),
+                        ).toList(),
                       ),
                       if (future.data!.dneslovId != null) FutureBuilder<DneslovImageListD>(
                           future: dneslovImages,

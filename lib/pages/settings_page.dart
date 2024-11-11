@@ -16,9 +16,6 @@ typedef OnFontSizeChange = Function(int fontSize);
 class _SettingsPageState extends State<SettingsPage> {
 
   void onPress() {
-    print(111);
-    print('adadads');
-    print(StoreProvider.of<AppState>(context).state.settings.fontSize);
     StoreProvider.of<AppState>(context).dispatch(ChangeFontSizeAction(StoreProvider.of<AppState>(context).state.settings.fontSize + 1));
   }
 
