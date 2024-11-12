@@ -218,7 +218,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               child: Column(mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
                   SizedBox(
-                    height: 150.0,
+                    height: 200.0,
                     child: Padding(
                       padding: EdgeInsets.all(10.0),
                       child: Column(
@@ -230,7 +230,8 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
-                          Text("В данных момент доступна библиотека книг и текстов, "
+                          Text("В данных момент доступна библиотека книг и текстов, подборка чтений по дням Цветной Триоди,"
+                              "календарные чтения на каждый день года, поиск по названию текста,"
                               "а также просмотр памятей на день. Ждите новых обновлений!", textAlign: TextAlign.justify,),
                         ],
                       ),
@@ -380,6 +381,20 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               selected: ModalRoute.of(context)?.settings.name == "/library",
               onTap: () {
                 Navigator.pushNamed(context, "/library");
+              },
+            ),
+            ListTile(
+              title: const Text('Пятидесятница', style: TextStyle(fontSize: 14.0),),
+              selected: ModalRoute.of(context)?.settings.name == "/penticostarion",
+              onTap: () {
+                Navigator.pushNamed(context, "/penticostarion");
+              },
+            ),
+            ListTile(
+              title: const Text('Триодион', style: TextStyle(fontSize: 14.0),),
+              selected: ModalRoute.of(context)?.settings.name == "/triodion",
+              onTap: () {
+                Navigator.pushNamed(context, "/triodion");
               },
             ),
             ListTile(

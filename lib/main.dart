@@ -27,6 +27,10 @@ import 'package:typikon/pages/months_page.dart';
 import 'package:typikon/pages/month_page.dart';
 import 'package:typikon/pages/days_page.dart';
 import 'package:typikon/pages/search_page.dart';
+import 'package:typikon/pages/triodion_page.dart';
+import 'package:typikon/pages/penticostarion_page.dart';
+import 'package:typikon/pages/saint_page.dart';
+import 'package:typikon/pages/place_page.dart';
 
 import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
@@ -411,17 +415,39 @@ class MyAppState extends State<MyApp> {
                         },
                       );
                     case "/saints":
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return SaintPage(
+                              context,
+                              id: arguments,
+                            );
+                          },
+                        );
+                      }
+                    case "/places":
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return PlacePage(
+                              context,
+                              id: arguments,
+                            );
+                          },
+                        );
+                      }
+                    case "/triodion":
                       return MaterialPageRoute(
                         builder: (context) {
-                          return CalculatorPage(
+                          return TriodionPage(
                             context,
                           );
                         },
                       );
-                    case "/places":
+                    case "/penticostarion":
                       return MaterialPageRoute(
                         builder: (context) {
-                          return CalculatorPage(
+                          return PenticostarionPage(
                             context,
                           );
                         },

@@ -55,7 +55,7 @@ class _BookPageState extends State<BookPage> {
                   final item = list[index];
                   return Container(
                     child: ListTile(
-                      title: Text(item.name),
+                      title: Text(item.name, style: TextStyle(fontFamily: "OldStandard")),
                       onTap: () => {
                         Navigator.pushNamed(context, "/reading", arguments: item.id)
                       },

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import "package:searchable_listview/searchable_listview.dart";
 
 import 'package:typikon/dto/search.dart';
 import "package:typikon/apiMapper/search.dart";

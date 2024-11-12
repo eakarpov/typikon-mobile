@@ -2,11 +2,12 @@ import "dart:ui";
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 
-List<InlineSpan> buildSaints(String text, double size) {
+List<InlineSpan> buildSaints(String text, double size, BuildContext context) {
   final regex = RegExp(r"\{st\|(.+)}");
 
   final matches = regex.allMatches(text);
@@ -31,17 +32,21 @@ List<InlineSpan> buildSaints(String text, double size) {
     }
 
     if (match.group(1) != null) {
+      List<String> matchStrings = (match.group(1) as String).split("|");
       widgets.add(
         TextSpan(
-          // text: match.group(1),
+          text: matchStrings[1],
+          recognizer: TapGestureRecognizer()..onTap = () {
+            Navigator.pushNamed(context, "/saints", arguments: matchStrings[0]);
+          },
           style: TextStyle(
             fontFamily: "OldStandard",
             fontSize: size,
             color: Colors.blue,
           ),
-          children: [
-            TextSpan(text: (match.group(1) as String).split("|")[1]),
-          ],
+          // children: [
+          //   TextSpan(text: (match.group(1) as String).split("|")[1]),
+          // ],
         ),
       );
     }

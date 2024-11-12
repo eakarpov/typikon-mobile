@@ -146,6 +146,7 @@ class _CalculatorPageState extends State<CalculatorPage> with RestorationMixin {
         child: FutureBuilder<CalendarDay>(
           future: currentDay,
           builder: (context, future) {
+            print(future);
             if (future.hasData) {
               return SingleChildScrollView(
                 child: Padding(
@@ -318,6 +319,8 @@ class _CalculatorPageState extends State<CalculatorPage> with RestorationMixin {
                     ),
                 ),
               );
+            } else if (future.hasError) {
+              return Center(child: Text('Для этой даты формирование выдачи недоступно'));
             }
             return Container(
               color: const Color(0xffffffff),

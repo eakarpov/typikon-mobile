@@ -76,6 +76,7 @@ class _TextPageState extends State<TextPage> {
             if (future.hasData) {
               String content = future.data!.content;
               String name = future.data!.name;
+              print(future.data!.dneslovId);
               return SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -100,10 +101,33 @@ class _TextPageState extends State<TextPage> {
                           ),
                         ],
                       ),
+                      Row(
+                        children: [
+                          if (future.data!.dneslovId != null) TextButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, "/saints", arguments: future.data!.dneslovId);
+                              },
+                              child: Text("Страница святого")
+                          ),
+                          if (future.data!.bookId != null) TextButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, "/library", arguments: future.data!.bookId);
+                              },
+                              child: Text("Книга")
+                          ),
+                          if (future.data!.dayId != null) TextButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, "/days", arguments: future.data!.dayId);
+                              },
+                              child: Text("День")
+                          ),
+                        ],
+                      ),
                       Column(
                         children: content.split("\n\n").map((itemContent) =>
                             FusionTextWidgets(
                               text: itemContent,
+                              footnotes: future.data?.footnotes??[],
                             ),
                         ).toList(),
                       ),

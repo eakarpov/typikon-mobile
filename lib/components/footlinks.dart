@@ -2,12 +2,19 @@ import "dart:ui";
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
+
 import "package:typikon/components/places.dart";
 
-List<InlineSpan> buildFootlinks(String text, double size) {
+List<InlineSpan> buildFootlinks(
+    String text,
+    double size,
+    BuildContext context,
+    List<String> footnotes,
+) {
   final regex = RegExp(r"\{(\d+)}");
 
   final matches = regex.allMatches(text);
@@ -30,6 +37,7 @@ List<InlineSpan> buildFootlinks(String text, double size) {
           children: buildPlaces(
             beforeText,
             size,
+            context,
           ),
         ),
       );
@@ -38,17 +46,35 @@ List<InlineSpan> buildFootlinks(String text, double size) {
     if (match.group(1) != null) {
       widgets.add(
         TextSpan(
-          // text: match.group(1),
+          text: " [${match.group(1)}]",
+          recognizer: TapGestureRecognizer()..onTap = () {
+            showModalBottomSheet<void>(
+              context: context,
+              builder: (BuildContext context) {
+                String footnote = footnotes[int.parse(match.group(1)??"0")]??"test";
+                return Container(
+                  height: 100,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(footnote),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
           style: TextStyle(
             fontFamily: "OldStandard",
             fontSize: size,
             color: Colors.blue,
           ),
-          children: [
-            TextSpan(text: " ["),
-            TextSpan(text: match.group(1)),
-            TextSpan(text: "]"),
-          ],
+          // children: [
+            // TextSpan(text: " [${match.group(1)}]"),
+          // ],
         ),
       );
     }
@@ -69,6 +95,7 @@ List<InlineSpan> buildFootlinks(String text, double size) {
         children: buildPlaces(
           remainingText,
           size,
+          context,
         ),
       ),
     );

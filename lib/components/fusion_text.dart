@@ -11,9 +11,14 @@ import 'package:typikon/components/footlinks.dart';
 
 class FusionTextWidgets extends StatelessWidget {
   final String text;
+  final List<String> footnotes;
   static final regex = RegExp(r"\{k\|(.+)}");
 
-  const FusionTextWidgets({Key? key, required this.text}) : super(key: key);
+  const FusionTextWidgets({
+    Key? key,
+    required this.text,
+    required this.footnotes,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +41,9 @@ class FusionTextWidgets extends StatelessWidget {
             ),
             children: buildFootlinks(
                 beforeText,
-                StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
+                StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
+                context,
+                footnotes,
             ),
           ),
         );
@@ -75,7 +82,9 @@ class FusionTextWidgets extends StatelessWidget {
           ),
           children: buildFootlinks(
               remainingText,
-              StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
+              StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
+              context,
+              footnotes,
           ),
         ),
       );
