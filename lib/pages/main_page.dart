@@ -372,6 +372,13 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               },
             ),
             ListTile(
+              title: const Text('Избранное', style: TextStyle(fontSize: 14.0),),
+              selected: ModalRoute.of(context)?.settings.name == "/favourite",
+              onTap: () {
+                Navigator.pushNamed(context, "/favourite");
+              },
+            ),
+            ListTile(
               title: const Text('Поиск', style: TextStyle(fontSize: 14.0),),
               selected: ModalRoute.of(context)?.settings.name == "/search",
               onTap: () {

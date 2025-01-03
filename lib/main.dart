@@ -31,6 +31,7 @@ import 'package:typikon/pages/triodion_page.dart';
 import 'package:typikon/pages/penticostarion_page.dart';
 import 'package:typikon/pages/saint_page.dart';
 import 'package:typikon/pages/place_page.dart';
+import 'package:typikon/pages/favourite_page.dart';
 
 import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
@@ -488,6 +489,14 @@ class MyAppState extends State<MyApp> {
                           },
                         );
                       }
+                    case "/favourites":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return FavouritePage(
+                            context,
+                          );
+                        },
+                      );
                     case "/dneslov/memories":
                       return MaterialPageRoute(
                         builder: (context) {
