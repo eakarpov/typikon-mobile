@@ -1,63 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/library.dart';
-import 'package:typikon/dto/book.dart';
 import 'package:typikon/dto/library.dart';
 
-class BookPage extends StatefulWidget {
-  final String id;
+import '../apiMapper/months.dart';
+import '../dto/month.dart';
 
-  const BookPage(context, {super.key, required this.id});
+class MonthsPage extends StatefulWidget {
+  const MonthsPage(context, {super.key});
 
   @override
-  State<BookPage> createState() => _BookPageState();
+  State<MonthsPage> createState() => _MonthsPageState();
 }
 
-class _BookPageState extends State<BookPage> {
-  late Future<BookWithTexts> book;
+class _MonthsPageState extends State<MonthsPage> {
+  late Future<MonthList> months;
 
   @override
   void initState() {
     super.initState();
-    book = getBook(widget.id);
+    months = getMonths();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: FutureBuilder<BookWithTexts>(
-          future: book,
-          builder: (context, future) {
-            if (future.hasData) {
-              String name = future.data!.name;
-              return Text(name);
-            } else if (future.hasError) {
-              return Text('${future.error}');
-            }
-            return const CircularProgressIndicator();
-          },
-        ),
+        title: Text("Выберите месяц"),
       ),
       body: Container(
         color: const Color(0xffffffff),
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<BookWithTexts>(
-          future: book,
+        child: FutureBuilder<MonthList>(
+          future: months,
           builder: (context, future) {
             if (future.hasData) {
-              List<BookText> list = future.data!.texts;
+              List<Month> list = future.data!.list;
               return ListView.builder(
                 scrollDirection: Axis.vertical,
                 itemCount: list.length,
                 itemBuilder: (context, index) {
                   final item = list[index];
+                  String locale = Localizations.localeOf(context).languageCode;
+                  DateTime now = DateTime.now();
+                  DateTime newDate =  DateTime.utc(now.year, item.value ?? 0);
+                  String month = DateFormat.MMMM(locale).format(newDate);
                   return Container(
                     child: ListTile(
-                      title: Text(item.name, style: TextStyle(fontFamily: "OldStandard")),
+                      title: Text(month),
                       onTap: () => {
-                        Navigator.pushNamed(context, "/reading", arguments: item.id)
+                        Navigator.pushNamed(context, "/months", arguments: item.id)
                       },
                     ),
                   );
@@ -68,8 +61,8 @@ class _BookPageState extends State<BookPage> {
             }
             return Container(
               color: const Color(0xffffffff),
-              width: double.infinity,
-              height: double.infinity,
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
               child: Positioned.fill(
                 child: Align(
                   alignment: Alignment.center,

@@ -2,6 +2,7 @@ import 'package:typikon/apiMapper/version.dart';
 import 'package:typikon/dto/version.dart';
 import 'package:typikon/version.dart';
 import 'package:url_launcher/url_launcher.dart';
+import "package:google_fonts/google_fonts.dart";
 
 import "../dto/text.dart";
 import "../apiMapper/reading.dart";
@@ -217,7 +218,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               child: Column(mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
                   SizedBox(
-                    height: 120.0,
+                    height: 170.0,
                     child: Padding(
                       padding: EdgeInsets.all(10.0),
                       child: Column(
@@ -229,12 +230,16 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
-                          Text("Приложение в разработке. "
-                              "В данных момент доступна библиотека книг и текстов, "
+                          Text("В данных момент доступна библиотека книг и текстов, подборка чтений по дням Цветной Триоди,"
+                              "календарные чтения на каждый день года, поиск по названию текста,"
                               "а также просмотр памятей на день. Ждите новых обновлений!", textAlign: TextAlign.justify,),
                         ],
                       ),
                     ),
+                  ),
+                  TextButton(
+                    onPressed: onGoToLibrary,
+                    child: Text("Посмотреть тексты в библиотеке"),
                   ),
                   Padding(
                     padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
@@ -260,11 +265,15 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                                   shrinkWrap: true,
                                   scrollDirection: Axis.vertical,
                                   itemCount: list.length,
+                                  physics: new NeverScrollableScrollPhysics(),
                                   itemBuilder: (context, index) {
                                     final item = list[index];
                                     return Container(
                                       child: ListTile(
-                                        title: Text(item.text?.name ?? "Без названия"),
+                                        title: Text(
+                                            item.text?.name ?? "Без названия",
+                                          style: TextStyle(fontFamily: "OldStandard", color: Colors.red),
+                                        ),
                                         onTap: () => {
                                           Navigator.pushNamed(context, "/reading", arguments: item.text?.id)
                                         },
@@ -293,14 +302,10 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                       },
                     ),
                   ),
-                  TextButton(
-                    onPressed: onGoToLibrary,
-                    child: Text("Посмотреть тексты в библиотеке"),
-                  ),
-                  TextButton(
-                    onPressed: onGoToCalculator,
-                    child: Text("Прочитать собранные чтения дня Триоди и Минеи (работает в пределах Цветной Триоди)"),
-                  ),
+                  // TextButton(
+                  //   onPressed: onGoToCalculator,
+                  //   child: Text("Прочитать собранные чтения дня Триоди и Минеи (работает в пределах Цветной Триоди)"),
+                  // ),
                   Text("Последние добавленные тексты", style: const TextStyle(fontWeight: FontWeight.bold)),
                   ConstrainedBox(
                     constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
@@ -312,12 +317,13 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                             return ListView.builder(
                                   shrinkWrap: true,
                                   scrollDirection: Axis.vertical,
+                                  physics: new NeverScrollableScrollPhysics(),
                                   itemCount: list.length,
                                   itemBuilder: (context, index) {
                                     final item = list[index];
                                     return Container(
                                       child: ListTile(
-                                        title: Text(item.name ?? "test"),
+                                        title: Text(item.name ?? "test", style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),
                                         subtitle: Text(
                                             "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}" ?? "test"),
                                         onTap: () => {
@@ -356,45 +362,73 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               decoration: BoxDecoration(
                 color: Colors.green,
               ),
-              child: Text('Типикон (бета $majorVersion.$minorVersion.0)'),
+              child: Text('Типикон ($majorVersion.$minorVersion.0)'),
             ),
             ListTile(
-              title: const Text('Главная страница'),
+              title: const Text('Главная страница', style: TextStyle(fontSize: 14.0),),
               selected: ModalRoute.of(context)?.settings.name == "/",
               onTap: () {
                 Navigator.pushNamed(context, "/");
               },
             ),
             ListTile(
-              title: const Text('Библиотека'),
+              title: const Text('Поиск', style: TextStyle(fontSize: 14.0),),
+              selected: ModalRoute.of(context)?.settings.name == "/search",
+              onTap: () {
+                Navigator.pushNamed(context, "/search");
+              },
+            ),
+            ListTile(
+              title: const Text('Библиотека', style: TextStyle(fontSize: 14.0),),
               selected: ModalRoute.of(context)?.settings.name == "/library",
               onTap: () {
                 Navigator.pushNamed(context, "/library");
               },
             ),
             ListTile(
-              title: const Text('Чтение на выбранный день'),
+              title: const Text('Пятидесятница', style: TextStyle(fontSize: 14.0),),
+              selected: ModalRoute.of(context)?.settings.name == "/penticostarion",
+              onTap: () {
+                Navigator.pushNamed(context, "/penticostarion");
+              },
+            ),
+            ListTile(
+              title: const Text('Триодион', style: TextStyle(fontSize: 14.0),),
+              selected: ModalRoute.of(context)?.settings.name == "/triodion",
+              onTap: () {
+                Navigator.pushNamed(context, "/triodion");
+              },
+            ),
+            ListTile(
+              title: const Text('Чтения на календарный день', style: TextStyle(fontSize: 14.0),),
+              selected: ModalRoute.of(context)?.settings.name == "/months",
+              onTap: () {
+                Navigator.pushNamed(context, "/months");
+              },
+            ),
+            ListTile(
+              title: const Text('Калькулятор чтений на день', style: TextStyle(fontSize: 14.0),),
               selected: ModalRoute.of(context)?.settings.name == "/calculator",
               onTap: () {
                 Navigator.pushNamed(context, "/calculator");
               },
             ),
             ListTile(
-              title: const Text('Памяти на день'),
+              title: const Text('Памяти на день', style: TextStyle(fontSize: 14.0),),
               selected: ModalRoute.of(context)?.settings.name == "/dneslov/memories",
               onTap: () {
                 Navigator.pushNamed(context, "/dneslov/memories");
               },
             ),
             ListTile(
-              title: const Text('Настройки'),
+              title: const Text('Настройки', style: TextStyle(fontSize: 14.0),),
               selected: ModalRoute.of(context)?.settings.name == "/settings",
               onTap: () {
                 Navigator.pushNamed(context, "/settings");
               },
             ),
             if (widget.hasSkippedUpdate) ListTile(
-              title: const Text("Обновить приложение"),
+              title: const Text("Обновить приложение", style: TextStyle(fontSize: 14.0),),
               onTap: () => onLoadUpdate(context),
             ),
           ],

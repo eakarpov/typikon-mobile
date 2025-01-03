@@ -14,6 +14,8 @@ class Reading {
   final DateTime updatedAt;
   final List<String> footnotes;
   final String? dneslovId;
+  final String? bookId;
+  final String? dayId;
 
   const Reading({
     required this.id,
@@ -27,9 +29,11 @@ class Reading {
     required this.updatedAt,
     required this.footnotes,
     required this.dneslovId,
+    required this.bookId,
+    required this.dayId,
   });
 
-  factory Reading.fromJson(Map<String, dynamic> json) {
+  factory Reading.fromJson(Map<String, dynamic> json, Map<String, dynamic>? jsonDay) {
     var serializers = (Serializers().toBuilder()..add(Iso8601DateTimeSerializer())).build();
     var specifiedType = const FullType(DateTime);
 
@@ -43,6 +47,9 @@ class Reading {
     var type = json["type"];
     var dneslovId = json["dneslovId"];
     var updatedAtString = json["updatedAt"];
+    var bookId = json["bookId"];
+    List<String> footnotes = json["footnotes"] == null ? List<String>.empty() : List<String>.from(json["footnotes"] as List);
+    var dayId = jsonDay != null ? jsonDay["id"] : null;
     return Reading(
       id: id,
       name: name,
@@ -53,8 +60,10 @@ class Reading {
       link: link,
       type: type,
       updatedAt: (updatedAtString == null) ? DateTime.now() : DateTime.parse(updatedAtString),
-      footnotes: [],
+      footnotes: footnotes,
       dneslovId: dneslovId,
+      bookId: bookId,
+      dayId: dayId,
     );
   }
 }
@@ -70,7 +79,7 @@ class ReadingList {
     var list = json;
     List<Reading> items = List<Reading>.from(
         list
-            .map((item) => Reading.fromJson(item))
+            .map((item) => Reading.fromJson(item, null))
             .toList()
     );
     return ReadingList(

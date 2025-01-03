@@ -11,7 +11,6 @@ class CalendarDayPartItem {
     var text = json == null ? null : json["text"];
     var name = text == null ? "" : text["name"];
     var content = text == null ? "" : text["content"];
-    print(name);
     return CalendarDayPartItem(
       name: name,
       content: content,

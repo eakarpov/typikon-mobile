@@ -5,6 +5,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
+import "package:typikon/components/fusion_text.dart";
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/dto/book.dart';
 import 'package:typikon/dto/text.dart';
@@ -75,6 +76,7 @@ class _TextPageState extends State<TextPage> {
             if (future.hasData) {
               String content = future.data!.content;
               String name = future.data!.name;
+              print(future.data!.dneslovId);
               return SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -99,15 +101,40 @@ class _TextPageState extends State<TextPage> {
                           ),
                         ],
                       ),
-                      Text(content,
-                          textAlign: TextAlign.justify,
-                          style: TextStyle(fontFamily: "OldStandard", fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble())
+                      Row(
+                        children: [
+                          if (future.data!.dneslovId != null) TextButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, "/saints", arguments: future.data!.dneslovId);
+                              },
+                              child: Text("Страница святого")
+                          ),
+                          if (future.data!.bookId != null) TextButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, "/library", arguments: future.data!.bookId);
+                              },
+                              child: Text("Книга")
+                          ),
+                          if (future.data!.dayId != null) TextButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, "/days", arguments: future.data!.dayId);
+                              },
+                              child: Text("День")
+                          ),
+                        ],
+                      ),
+                      Column(
+                        children: content.split("\n\n").map((itemContent) =>
+                            FusionTextWidgets(
+                              text: itemContent,
+                              footnotes: future.data?.footnotes??[],
+                            ),
+                        ).toList(),
                       ),
                       if (future.data!.dneslovId != null) FutureBuilder<DneslovImageListD>(
                           future: dneslovImages,
                           builder: (context, future) {
                             if (future.hasData) {
-                              print(future.data!.list.map((item) => item.url));
                               return CarouselSlider(
                                 options: CarouselOptions(height: 400.0),
                                 items: future.data!.list.map((item) {

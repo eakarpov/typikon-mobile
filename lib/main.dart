@@ -2,6 +2,7 @@ import "dart:ui";
 import 'dart:async';
 import 'dart:io';
 
+import "package:google_fonts/google_fonts.dart";
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,15 @@ import 'package:typikon/pages/text_page.dart';
 import 'package:typikon/pages/current_day_memories_page.dart';
 import 'package:typikon/pages/settings_page.dart';
 import 'package:typikon/pages/calculator_page.dart';
+import 'package:typikon/pages/months_page.dart';
+import 'package:typikon/pages/month_page.dart';
+import 'package:typikon/pages/days_page.dart';
+import 'package:typikon/pages/search_page.dart';
+import 'package:typikon/pages/triodion_page.dart';
+import 'package:typikon/pages/penticostarion_page.dart';
+import 'package:typikon/pages/saint_page.dart';
+import 'package:typikon/pages/place_page.dart';
+
 import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
 import "package:typikon/store/actions/actions.dart";
@@ -404,6 +414,80 @@ class MyAppState extends State<MyApp> {
                           );
                         },
                       );
+                    case "/saints":
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return SaintPage(
+                              context,
+                              id: arguments,
+                            );
+                          },
+                        );
+                      }
+                    case "/places":
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return PlacePage(
+                              context,
+                              id: arguments,
+                            );
+                          },
+                        );
+                      }
+                    case "/triodion":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return TriodionPage(
+                            context,
+                          );
+                        },
+                      );
+                    case "/penticostarion":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return PenticostarionPage(
+                            context,
+                          );
+                        },
+                      );
+                    case "/search":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return SearchPage(
+                            context,
+                          );
+                        },
+                      );
+                    case "/days":
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return DaysPage(
+                              context,
+                              id: arguments,
+                            );
+                          },
+                        );
+                      }
+                    case "/months":
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return MonthPage(
+                              context,
+                              id: arguments,
+                            );
+                          },
+                        );
+                      } else {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return MonthsPage(context);
+                          },
+                        );
+                      }
                     case "/dneslov/memories":
                       return MaterialPageRoute(
                         builder: (context) {
@@ -425,15 +509,23 @@ class MyAppState extends State<MyApp> {
                   }
                 },
                 theme: ThemeData(
-                  primarySwatch: Colors.green,
-                  textTheme: TextTheme(
-                    // bodyText1: TextStyle(fontFamily: "OldStandard", fontSize: 16),
-                    // bodyText2: TextStyle(fontFamily: "OldStandard", fontSize: 16, fontStyle: FontStyle.italic),
-                    // bodyText1: TextStyle(fontSize: 18.0),
-                    // bodyText2: TextStyle(fontSize: 16.0),
-                    // button: TextStyle(fontSize: 16.0),
+                  // primarySwatch: Colors.green,
+                  colorSchemeSeed: Colors.green,
+                  textTheme: GoogleFonts.latoTextTheme(
+                    Theme.of(context).textTheme,
                   ),
+                  // textTheme: TextTheme(
+                  //   // bodyText1: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+                  //   // bodyText2: TextStyle(fontFamily: "OldStandard", fontSize: 16, fontStyle: FontStyle.italic),
+                  //   // bodyText1: TextStyle(fontSize: 18.0),
+                  //   // bodyText2: TextStyle(fontSize: 16.0),
+                  //   // button: TextStyle(fontSize: 16.0),
+                  // ),
                   scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+                  appBarTheme: AppBarTheme(
+                      backgroundColor: Colors.green,
+                      titleTextStyle: TextStyle(fontSize: 18.0)
+                  )
                 ),
               );
             },
