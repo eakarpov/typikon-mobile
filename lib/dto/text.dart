@@ -48,7 +48,7 @@ class Reading {
     var dneslovId = json["dneslovId"];
     var updatedAtString = json["updatedAt"];
     var bookId = json["bookId"];
-    List<String> footnotes = List<String>.from(json["footnotes"] as List);
+    List<String> footnotes = json["footnotes"] == null ? List<String>.empty() : List<String>.from(json["footnotes"] as List);
     var dayId = jsonDay != null ? jsonDay["id"] : null;
     return Reading(
       id: id,

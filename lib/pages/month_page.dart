@@ -30,12 +30,15 @@ class _MonthPageState extends State<MonthPage> {
           future: month,
           builder: (context, future) {
             if (future.hasData) {
-              String name = future.data!.alias??"";
-              return Text(name);
+              String locale = Localizations.localeOf(context).languageCode;
+              DateTime now = DateTime.now();
+              DateTime newDate =  DateTime.utc(now.year, future.data!.value ?? 0);
+              String month = DateFormat.MMMM(locale).format(newDate);
+              return Text(month);
             } else if (future.hasError) {
               return Text('${future.error}');
             }
-            return const CircularProgressIndicator();
+            return const Text("");
           },
         ),
       ),

@@ -218,7 +218,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               child: Column(mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
                   SizedBox(
-                    height: 200.0,
+                    height: 170.0,
                     child: Padding(
                       padding: EdgeInsets.all(10.0),
                       child: Column(
@@ -236,6 +236,10 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                         ],
                       ),
                     ),
+                  ),
+                  TextButton(
+                    onPressed: onGoToLibrary,
+                    child: Text("Посмотреть тексты в библиотеке"),
                   ),
                   Padding(
                     padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
@@ -261,6 +265,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                                   shrinkWrap: true,
                                   scrollDirection: Axis.vertical,
                                   itemCount: list.length,
+                                  physics: new NeverScrollableScrollPhysics(),
                                   itemBuilder: (context, index) {
                                     final item = list[index];
                                     return Container(
@@ -297,14 +302,10 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                       },
                     ),
                   ),
-                  TextButton(
-                    onPressed: onGoToLibrary,
-                    child: Text("Посмотреть тексты в библиотеке"),
-                  ),
-                  TextButton(
-                    onPressed: onGoToCalculator,
-                    child: Text("Прочитать собранные чтения дня Триоди и Минеи (работает в пределах Цветной Триоди)"),
-                  ),
+                  // TextButton(
+                  //   onPressed: onGoToCalculator,
+                  //   child: Text("Прочитать собранные чтения дня Триоди и Минеи (работает в пределах Цветной Триоди)"),
+                  // ),
                   Text("Последние добавленные тексты", style: const TextStyle(fontWeight: FontWeight.bold)),
                   ConstrainedBox(
                     constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
@@ -316,6 +317,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
                             return ListView.builder(
                                   shrinkWrap: true,
                                   scrollDirection: Axis.vertical,
+                                  physics: new NeverScrollableScrollPhysics(),
                                   itemCount: list.length,
                                   itemBuilder: (context, index) {
                                     final item = list[index];

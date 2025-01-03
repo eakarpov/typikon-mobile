@@ -135,7 +135,6 @@ class _TextPageState extends State<TextPage> {
                           future: dneslovImages,
                           builder: (context, future) {
                             if (future.hasData) {
-                              print(future.data!.list.map((item) => item.url));
                               return CarouselSlider(
                                 options: CarouselOptions(height: 400.0),
                                 items: future.data!.list.map((item) {

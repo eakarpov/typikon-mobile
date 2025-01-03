@@ -30,7 +30,15 @@ class _DaysPageState extends State<DaysPage> {
     // String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
     return Scaffold(
       appBar: AppBar(
-        title: Text("Чтение на день"),
+        title: FutureBuilder<DayTexts>(
+            future: day,
+            builder: (context, future) {
+              if (future.hasData) {
+                return Text("Чтение на день: ${future.data!.name}");
+              }
+              return Text("");
+            },
+        ),
       ),
       body: Container(
         color: const Color(0xffffffff),
@@ -40,8 +48,6 @@ class _DaysPageState extends State<DaysPage> {
           future: day,
           builder: (context, future) {
             if (future.hasData) {
-              print(future.data!.song6);
-              print(widget.id);
               return SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),

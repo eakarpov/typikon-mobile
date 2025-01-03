@@ -42,9 +42,13 @@ class _MonthsPageState extends State<MonthsPage> {
                 itemCount: list.length,
                 itemBuilder: (context, index) {
                   final item = list[index];
+                  String locale = Localizations.localeOf(context).languageCode;
+                  DateTime now = DateTime.now();
+                  DateTime newDate =  DateTime.utc(now.year, item.value ?? 0);
+                  String month = DateFormat.MMMM(locale).format(newDate);
                   return Container(
                     child: ListTile(
-                      title: Text(item.alias??"test"),
+                      title: Text(month),
                       onTap: () => {
                         Navigator.pushNamed(context, "/months", arguments: item.id)
                       },
