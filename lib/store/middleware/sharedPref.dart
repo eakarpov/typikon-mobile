@@ -18,7 +18,9 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
   Future<void> call(Store<AppState> store, action, NextDispatcher next) async {
     if (
       action is ChangeFontSizeAction ||
-      action is ChangeBackgroundColorAction
+      action is ChangeFontColorAction ||
+      action is ChangeBackgroundColorAction ||
+      action is ChangeCommonDateAction
     ) {
       // await _saveStateToPrefs(store.state); // TODO - after store update save to storage, not before!!
       store.dispatch(AppSaveAdditional());
@@ -29,7 +31,6 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     }
 
     if (action is FetchItemsAction) {
-      print("here it is");
       await _loadStateFromPrefs(store);
     }
 
@@ -46,6 +47,8 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     if (stateString == null) return;
     AppState state = AppState.fromJson(json.decode(stateString));
     store.dispatch(ChangeFontSizeAction(state.settings.fontSize));
+    store.dispatch(ChangeFontColorAction(state.settings.fontColor));
     store.dispatch(ChangeBackgroundColorAction(state.settings.backgroundColor));
+    store.dispatch(ChangeCommonDateAction(state.common.date));
   }
 }

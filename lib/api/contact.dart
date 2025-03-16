@@ -7,6 +7,7 @@ Future<http.Response> sendFeedback(String email, String theme, String value, Str
     'theme': theme,
     'value': value,
     'captcha': captcha,
+    'isMobile': true,
   };
   return http.post(
     Uri.parse('https://typikon.su/api/contact'),

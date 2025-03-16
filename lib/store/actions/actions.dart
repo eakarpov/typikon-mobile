@@ -22,6 +22,17 @@ class AppLoadedAction {}
 
 class AppSaveAdditional {}
 
+class ChangeCommonDateAction {
+  final DateTime date;
+
+  ChangeCommonDateAction(this.date);
+
+  @override
+  String toString() {
+    return 'ChangeCommonDateAction{date: $date}';
+  }
+}
+
 class ChangeFontSizeAction {
   final int fontSize;
 
@@ -30,6 +41,17 @@ class ChangeFontSizeAction {
   @override
   String toString() {
     return 'ChangeFontSizeAction{fontSize: $fontSize}';
+  }
+}
+
+class ChangeFontColorAction {
+  final Color fontColor;
+
+  ChangeFontColorAction(this.fontColor);
+
+  @override
+  String toString() {
+    return 'ChangeFontColorAction{fontColor: ${HexColor.toHex(fontColor)}}';
   }
 }
 

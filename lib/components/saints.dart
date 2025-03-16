@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
+import 'package:typikon/store/models/models.dart';
 
 List<InlineSpan> buildSaints(String text, double size, BuildContext context) {
   final regex = RegExp(r"\{st\|(.+)}");
@@ -25,7 +26,7 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context) {
           style: TextStyle(
             fontFamily: "OldStandard",
             fontSize: size,
-            color: Colors.black,
+            color: StoreProvider.of<AppState>(context).state.settings.fontColor,
           ),
         ),
       );
@@ -62,7 +63,7 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context) {
         style: TextStyle(
           fontFamily: "OldStandard",
           fontSize: size,
-          color: Colors.black,
+          color: StoreProvider.of<AppState>(context).state.settings.fontColor,
         ),
       ),
     );

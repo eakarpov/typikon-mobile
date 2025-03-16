@@ -165,7 +165,10 @@ class _TextPageState extends State<TextPage> {
                         padding: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
                         child: Text(
                             name,
-                            style: const TextStyle(fontWeight: FontWeight.bold)
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                            )
                         ),
                       ),
                       Column(
@@ -202,9 +205,10 @@ class _TextPageState extends State<TextPage> {
                               //   children: future.data!.list.map((item) => imageCard(item.url)).toList(),
                               // );
                             }
-                            return Text("");
+                            return Image.asset("assets/images/trinity.jpeg");
                           }
                       ),
+                      if (future.data!.dneslovId == null) Image.asset("assets/images/trinity.jpeg"),
                     ],
                   ),
                 ),

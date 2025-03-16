@@ -62,8 +62,10 @@ class _SaintPageState extends State<SaintPage> {
             builder: (context, future) {
               if (future.hasData) {
                 String name = future.data!.id??"";
-                DneslovMemo memo = future.data!.memory!.memoes.first;
-                return Text(memo.title, style: TextStyle(fontFamily: 'OldStandard'));
+                DneslovMemo? memo = future.data!.memory!.memoes.length > 0
+                    ? future.data!.memory!.memoes.first
+                    : null;
+                return Text(memo != null ? memo.title : "", style: TextStyle(fontFamily: 'OldStandard'));
               } else if (future.hasError) {
                 return Text('${future.error}');
               }
@@ -135,10 +137,12 @@ class _SaintPageState extends State<SaintPage> {
               if (future.hasData) {
                 List<Reading> texts = future.data!.texts;
                 List<Reading> mentions = future.data!.mentions;
-                DneslovMemo memo = future.data!.memory!.memoes.first;
+                DneslovMemo? memo = future.data!.memory!.memoes.length > 0
+                    ? future.data!.memory!.memoes.first
+                    : null;
                 return TabBarView(
                       children: [
-                        Markdown(data: memo.description),
+                        Markdown(data: memo != null ? memo.description : ""),
                         ListView.builder(
                           scrollDirection: Axis.vertical,
                           itemCount: texts.length,

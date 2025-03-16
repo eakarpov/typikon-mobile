@@ -6,7 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
-
+import 'package:typikon/store/models/models.dart';
 import "package:typikon/components/places.dart";
 
 List<InlineSpan> buildFootlinks(
@@ -32,7 +32,7 @@ List<InlineSpan> buildFootlinks(
           style: TextStyle(
             fontFamily: "OldStandard",
             fontSize: size,
-            color: Colors.black,
+            color: StoreProvider.of<AppState>(context).state.settings.fontColor,
           ),
           children: buildPlaces(
             beforeText,
@@ -90,7 +90,7 @@ List<InlineSpan> buildFootlinks(
         style: TextStyle(
           fontFamily: "OldStandard",
           fontSize: size,
-          color: Colors.black,
+          color: StoreProvider.of<AppState>(context).state.settings.fontColor,
         ),
         children: buildPlaces(
           remainingText,
