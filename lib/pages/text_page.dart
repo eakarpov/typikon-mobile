@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter_redux/flutter_redux.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import "package:typikon/components/fusion_text.dart";
 import 'package:typikon/store/models/models.dart';
@@ -26,6 +27,8 @@ class _TextPageState extends State<TextPage> {
   late Future<Reading> reading;
   late Future<DneslovImageListD> dneslovImages;
 
+  bool isFavourite = false;
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +36,14 @@ class _TextPageState extends State<TextPage> {
     reading.then((value) => {
       if (value!.dneslovId != null) {
         dneslovImages = fetchDneslovImagesD(value!.dneslovId!)
+      }
+    });
+    SharedPreferences.getInstance().then((prefs){
+      List<String>? liked = prefs.getStringList("favourites") ?? [];
+      if (liked.contains(widget.id)) {
+        setState(() {
+          isFavourite = true;
+        });
       }
     });
   }
@@ -43,10 +54,36 @@ class _TextPageState extends State<TextPage> {
   }
 
   Widget imageCard(value) {
-    print(value);
     return Image(
       image: NetworkImage(value),
     );
+  }
+
+  void onLike() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? liked = prefs.getStringList("favourites");
+    if (liked == null) {
+      List<String> newLiked = [];
+      newLiked.add(widget.id);
+      prefs.setStringList("favourites", newLiked);
+      setState(() {
+        isFavourite = true;
+      });
+    } else {
+      if (liked.contains(widget.id)) {
+        List<String> newLiked = liked.where((e) => e != widget.id).toList();
+        prefs.setStringList("favourites", newLiked);
+        setState(() {
+          isFavourite = false;
+        });
+      } else {
+        liked.add(widget.id);
+        prefs.setStringList("favourites", liked);
+        setState(() {
+          isFavourite = true;
+        });
+      }
+    }
   }
 
   @override
@@ -58,16 +95,59 @@ class _TextPageState extends State<TextPage> {
           builder: (context, future) {
             if (future.hasData) {
               String name = future.data!.name;
-              return Text(name);
+              return Text(name, style: TextStyle(fontFamily: "OldStandard"));
             } else if (future.hasError) {
               return Text('${future.error}');
             }
             return const CircularProgressIndicator();
           },
         ),
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(40.0), // here the desired height
+          child: FutureBuilder(future: reading, builder: (context, future) {
+            if (future.hasData) {
+              return Row(
+                children: <Widget>[
+                  if (future.data!.ruLink != null) TextButton(
+                    onPressed: () => onClick(future.data!.ruLink as String),
+                    child: Text("РУ", style: TextStyle(color: Colors.white),),
+                  ),
+                  if (future.data!.link != null) TextButton(
+                    onPressed: () => onClick(future.data!.link as String),
+                    child: Text("ЦС", style: TextStyle(color: Colors.white),),
+                  ),
+                  if (future.data!.dneslovId != null) IconButton(
+                      onPressed: () => Navigator.pushNamed(context, "/saints", arguments: future.data!.dneslovId),
+                      icon: Icon(Icons.person, color: Colors.white),
+                  ),
+                  if (future.data!.bookId != null) IconButton(
+                      onPressed: () => Navigator.pushNamed(context, "/library", arguments: future.data!.bookId),
+                      icon: Icon(Icons.menu_book, color: Colors.white),
+                  ),
+                  if (future.data!.dayId != null) IconButton(
+                      onPressed: () => Navigator.pushNamed(context, "/days", arguments: future.data!.dayId),
+                      icon: Icon(Icons.calendar_month, color: Colors.white),
+                  ),
+                ],
+              );
+            }
+            return Row(children: []);
+          }),
+        ),
+        actions: <Widget>[
+          IconButton(
+              onPressed: onLike,
+              icon: isFavourite ? Icon(
+                Icons.favorite,
+                color: Colors.pink,
+              ) : Icon(
+                Icons.favorite_outline,
+              )
+          )
+        ],
       ),
       body: Container(
-        color: const Color(0xffffffff),
+        color: StoreProvider.of<AppState>(context).state.settings.backgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<Reading>(
@@ -76,7 +156,6 @@ class _TextPageState extends State<TextPage> {
             if (future.hasData) {
               String content = future.data!.content;
               String name = future.data!.name;
-              print(future.data!.dneslovId);
               return SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -88,40 +167,6 @@ class _TextPageState extends State<TextPage> {
                             name,
                             style: const TextStyle(fontWeight: FontWeight.bold)
                         ),
-                      ),
-                      Row(
-                        children: [
-                          if (future.data!.ruLink != null) TextButton(
-                              onPressed: () => onClick(future.data!.ruLink as String),
-                              child: Text("Русский текст")
-                          ),
-                          if (future.data!.link != null) TextButton(
-                              onPressed: () => onClick(future.data!.link as String),
-                              child: Text("Оригинальный текст")
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          if (future.data!.dneslovId != null) TextButton(
-                              onPressed: () {
-                                Navigator.pushNamed(context, "/saints", arguments: future.data!.dneslovId);
-                              },
-                              child: Text("Страница святого")
-                          ),
-                          if (future.data!.bookId != null) TextButton(
-                              onPressed: () {
-                                Navigator.pushNamed(context, "/library", arguments: future.data!.bookId);
-                              },
-                              child: Text("Книга")
-                          ),
-                          if (future.data!.dayId != null) TextButton(
-                              onPressed: () {
-                                Navigator.pushNamed(context, "/days", arguments: future.data!.dayId);
-                              },
-                              child: Text("День")
-                          ),
-                        ],
                       ),
                       Column(
                         children: content.split("\n\n").map((itemContent) =>
@@ -171,11 +216,9 @@ class _TextPageState extends State<TextPage> {
               color: const Color(0xffffffff),
               width: double.infinity,
               height: double.infinity,
-              child: Positioned.fill(
-                child: Align(
-                  alignment: Alignment.center,
-                  child: const CircularProgressIndicator(),
-                ),
+              child: Align(
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(),
               ),
             );
           },

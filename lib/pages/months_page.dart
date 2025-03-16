@@ -26,7 +26,7 @@ class _MonthsPageState extends State<MonthsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Выберите месяц"),
+        title: Text("Выберите месяц", style: TextStyle(fontFamily: "OldStandard")),
       ),
       body: Container(
         color: const Color(0xffffffff),

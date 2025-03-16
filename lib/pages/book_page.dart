@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/library.dart';
 import 'package:typikon/dto/book.dart';
 import 'package:typikon/dto/library.dart';
+import 'package:typikon/components/dneslov/roundels.dart';
 
 class BookPage extends StatefulWidget {
   final String id;
@@ -53,13 +54,9 @@ class _BookPageState extends State<BookPage> {
                 itemCount: list.length,
                 itemBuilder: (context, index) {
                   final item = list[index];
-                  return Container(
-                    child: ListTile(
-                      title: Text(item.name, style: TextStyle(fontFamily: "OldStandard")),
-                      onTap: () => {
-                        Navigator.pushNamed(context, "/reading", arguments: item.id)
-                      },
-                    ),
+                  return Roundels(
+                    context,
+                    item: item,
                   );
                 },
               );

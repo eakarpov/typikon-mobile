@@ -1,3 +1,7 @@
+import 'dart:ui';
+
+import 'package:typikon/models/color.dart';
+
 // abstract class AppActions {
 //   ActionDispatcher<Settings> changeFontSizeAction;
 //
@@ -26,5 +30,16 @@ class ChangeFontSizeAction {
   @override
   String toString() {
     return 'ChangeFontSizeAction{fontSize: $fontSize}';
+  }
+}
+
+class ChangeBackgroundColorAction {
+  final Color backgroundColor;
+
+  ChangeBackgroundColorAction(this.backgroundColor);
+
+  @override
+  String toString() {
+    return 'ChangeBackgroundColorAction{backgroundColor: ${HexColor.toHex(backgroundColor)}}';
   }
 }

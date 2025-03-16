@@ -10,7 +10,7 @@ class SearchBookText {
   factory SearchBookText.fromJson(Map<String, dynamic> json) {
     return SearchBookText(
       name: json["name"],
-      id: json["id"],
+      id: json["_id"],
     );
   }
 }

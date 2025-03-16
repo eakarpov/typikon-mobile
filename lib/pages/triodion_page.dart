@@ -32,7 +32,7 @@ class _TriodionPageState extends State<TriodionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Период Постной Триоди"),
+        title: Text("Период Постной Триоди", style: TextStyle(fontFamily: "OldStandard")),
       ),
       body: Container(
         color: const Color(0xffffffff),

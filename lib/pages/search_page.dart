@@ -33,7 +33,7 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Поиск по названию текста")
+        title: Text("Поиск по названию текста", style: TextStyle(fontFamily: "OldStandard"))
       ),
       body: Column(
         mainAxisSize: MainAxisSize.max,

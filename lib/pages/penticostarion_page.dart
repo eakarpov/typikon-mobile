@@ -33,7 +33,7 @@ class _PenticostarionPageState extends State<PenticostarionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Период Цветной Триоди"),
+        title: Text("Период Цветной Триоди", style: TextStyle(fontFamily: "OldStandard")),
       ),
       body: Container(
         color: const Color(0xffffffff),

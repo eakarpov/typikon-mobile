@@ -128,7 +128,7 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> with Re
     String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
     return Scaffold(
       appBar: AppBar(
-        title: Text(value),
+        title: Text(value, style: TextStyle(fontFamily: "OldStandard")),
         actions: <Widget>[
           IconButton(
             icon: Icon(
@@ -158,7 +158,10 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> with Re
                       final item = list[index];
                       return Container(
                         child: ListTile(
-                          onTap: () => onOpenEventDneslov(item, future.data!.calendarString),
+                          onTap: () => {
+                            Navigator.pushNamed(
+                                context, "/saints", arguments: item.slug)
+                          },
                           leading: Text(item.saintTitle??"св"),
                           title: Text(item.title??""),
                           subtitle: Text(item.happenedAt??""),

@@ -12,6 +12,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:workmanager/workmanager.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import "version.dart";
 
@@ -32,6 +33,7 @@ import 'package:typikon/pages/penticostarion_page.dart';
 import 'package:typikon/pages/saint_page.dart';
 import 'package:typikon/pages/place_page.dart';
 import 'package:typikon/pages/favourite_page.dart';
+import 'package:typikon/pages/contact_page.dart';
 
 import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
@@ -102,6 +104,8 @@ Future<void> main() async {
     },
     onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
   );
+
+  await dotenv.load(fileName: ".env");
   // Workmanager().initialize(
   //     callbackDispatcher, // The top level function, aka callbackDispatcher
   //     isInDebugMode: true // If enabled it will post a notification whenever the task is running. Handy for debugging tasks
@@ -360,7 +364,9 @@ class MyAppState extends State<MyApp> {
               return MaterialApp(
                 title: 'Typikon',
                 localizationsDelegates: [
-                  GlobalMaterialLocalizations.delegate
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
                 ],
                 supportedLocales: [
                   const Locale('ru'),
@@ -497,6 +503,14 @@ class MyAppState extends State<MyApp> {
                           );
                         },
                       );
+                    case "/contact":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return ContactPage(
+                            context,
+                          );
+                        },
+                      );
                     case "/dneslov/memories":
                       return MaterialPageRoute(
                         builder: (context) {
@@ -520,16 +534,26 @@ class MyAppState extends State<MyApp> {
                 theme: ThemeData(
                   // primarySwatch: Colors.green,
                   colorSchemeSeed: Colors.green,
-                  textTheme: GoogleFonts.latoTextTheme(
-                    Theme.of(context).textTheme,
-                  ),
-                  // textTheme: TextTheme(
-                  //   // bodyText1: TextStyle(fontFamily: "OldStandard", fontSize: 16),
-                  //   // bodyText2: TextStyle(fontFamily: "OldStandard", fontSize: 16, fontStyle: FontStyle.italic),
-                  //   // bodyText1: TextStyle(fontSize: 18.0),
-                  //   // bodyText2: TextStyle(fontSize: 16.0),
-                  //   // button: TextStyle(fontSize: 16.0),
+                  // textTheme: GoogleFonts.latoTextTheme(
+                  //   Theme.of(context).textTheme,
                   // ),
+                  textTheme: TextTheme(
+                    displayLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+                    displayMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+                    displaySmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+                    headlineLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+                    headlineMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+                    headlineSmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+                    labelLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+                    labelMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+                    labelSmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+                    titleLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+                    titleMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+                    titleSmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+                    bodyLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+                    bodyMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+                    bodySmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+                  ),
                   scaffoldBackgroundColor: const Color(0xFFFFFFFF),
                   appBarTheme: AppBarTheme(
                       backgroundColor: Colors.green,

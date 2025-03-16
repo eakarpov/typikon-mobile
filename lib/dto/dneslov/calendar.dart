@@ -7,6 +7,7 @@ class CalendarDayDItem {
   final String? saintTitle;
   final String slug;
   final int eventId;
+  final int id;
 
   const CalendarDayDItem({
     required this.title,
@@ -15,6 +16,7 @@ class CalendarDayDItem {
     required this.saintTitle,
     required this.slug,
     required this.eventId,
+    required this.id,
   });
 
   factory CalendarDayDItem.fromJson(Map<String, dynamic> json) {
@@ -24,8 +26,10 @@ class CalendarDayDItem {
       saintTitle = orders[key];
     }
     var slug = json["slug"];
+    var id = json["id"];
     var eventId = json["event_id"];
     return CalendarDayDItem(
+      id: id,
       title: json["title"],
       description: json["description"],
       happenedAt: json["happened_at"],

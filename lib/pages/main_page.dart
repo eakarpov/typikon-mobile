@@ -3,6 +3,7 @@ import 'package:typikon/dto/version.dart';
 import 'package:typikon/version.dart';
 import 'package:url_launcher/url_launcher.dart';
 import "package:google_fonts/google_fonts.dart";
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import "../dto/text.dart";
 import "../apiMapper/reading.dart";
@@ -198,7 +199,7 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(value),
+        title: Text(value, style: TextStyle(fontFamily: "OldStandard")),
         actions: <Widget>[
           IconButton(
             icon: Icon(
@@ -212,157 +213,186 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
           )
         ],
       ),
-      body: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
-            child: SingleChildScrollView(
-              child: Column(mainAxisAlignment: MainAxisAlignment.start,
-                children: <Widget>[
-                  SizedBox(
-                    height: 170.0,
-                    child: Padding(
-                      padding: EdgeInsets.all(10.0),
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
-                            child: Text(
-                              "Добро пожаловать",
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Text("В данных момент доступна библиотека книг и текстов, подборка чтений по дням Цветной Триоди,"
-                              "календарные чтения на каждый день года, поиск по названию текста,"
-                              "а также просмотр памятей на день. Ждите новых обновлений!", textAlign: TextAlign.justify,),
-                        ],
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: onGoToLibrary,
-                    child: Text("Посмотреть тексты в библиотеке"),
-                  ),
+      body: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: <Widget>[
+            Padding(
+              padding: EdgeInsets.all(10.0),
+              child: Column(
+                children: [
                   Padding(
                     padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
                     child: Text(
-                      "Чтения Пролога на выбранную дату",
+                      "Добро пожаловать",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
-                    child: FutureBuilder<DayResult>(
-                      future: currentDay,
-                      builder: (context, future) {
-                        if (future.hasData) {
-                          if (future.data == null) return SizedBox.shrink();
-                          DayTexts? data = future.data?.data;
-                          if (data == null) return SizedBox.shrink();
-                          DayTextsParts? song6 = data?.song6;
-                          if (song6 == null) return SizedBox.shrink();
-                          List<DayTextsPart>? list = song6?.items;
-                          if (list == null) return SizedBox.shrink();
-                          return ListView.builder(
-                                  shrinkWrap: true,
-                                  scrollDirection: Axis.vertical,
-                                  itemCount: list.length,
-                                  physics: new NeverScrollableScrollPhysics(),
-                                  itemBuilder: (context, index) {
-                                    final item = list[index];
-                                    return Container(
-                                      child: ListTile(
-                                        title: Text(
-                                            item.text?.name ?? "Без названия",
-                                          style: TextStyle(fontFamily: "OldStandard", color: Colors.red),
-                                        ),
-                                        onTap: () => {
-                                          Navigator.pushNamed(context, "/reading", arguments: item.text?.id)
-                                        },
-                                      ),
-                                    );
-                                  },
-                            );
-                        } else if (future.hasError) {
-                          return SizedBox(
-                            height: 20,
-                            child: Text('${future.error}'),
-                          );
-                        }
-                        return SizedBox(
-                          height: 20,
-                          child: Container(
-                            color: const Color(0xffffffff),
-                            child: Positioned.fill(
-                              child: Align(
-                                alignment: Alignment.center,
-                                child: const CircularProgressIndicator(),
-                              ),
-                            ),
-                          ),
+                  Text("В данных момент доступна библиотека книг и текстов, подборка чтений по дням Цветной Триоди, "
+                      "календарные чтения на каждый день года, поиск по названию текста, "
+                      "а также просмотр памятей на день. Ждите новых обновлений!", textAlign: TextAlign.justify,),
+                ],
+              ),
+            ),
+            // TextButton(
+            //   onPressed: onGoToLibrary,
+            //   child: Text("Посмотреть тексты в библиотеке"),
+            // ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
+              child: Text(
+                "Чтения Пролога на выбранную дату",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            Container(
+              child: FutureBuilder<DayResult>(
+                  future: currentDay,
+                  builder: (context, future) {
+                    if (future.hasData) {
+                      if (future.data == null) return SizedBox.shrink();
+                      DayTexts? data = future.data?.data;
+                      if (data == null) return SizedBox.shrink();
+                      DayTextsParts? song6 = data?.song6;
+                      if (song6 == null) return SizedBox.shrink();
+                      List<DayTextsPart>? list = song6?.items;
+                      if (list == null) return SizedBox.shrink();
+                      return ListView.builder(
+                              shrinkWrap: true,
+                              scrollDirection: Axis.vertical,
+                              itemCount: list.length,
+                              physics: new NeverScrollableScrollPhysics(),
+                              itemBuilder: (context, index) {
+                                final item = list[index];
+                                return Container(
+                                  child: ListTile(
+                                    title: Text(
+                                        item.text?.name ?? "Без названия",
+                                      style: TextStyle(fontFamily: "OldStandard", color: Colors.red),
+                                    ),
+                                    onTap: () => {
+                                      Navigator.pushNamed(context, "/reading", arguments: item.text?.id)
+                                    },
+                                  ),
+                                );
+                              },
                         );
-                      },
-                    ),
-                  ),
-                  // TextButton(
-                  //   onPressed: onGoToCalculator,
-                  //   child: Text("Прочитать собранные чтения дня Триоди и Минеи (работает в пределах Цветной Триоди)"),
-                  // ),
-                  Text("Последние добавленные тексты", style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
-                    child: FutureBuilder<ReadingList>(
-                        future: lastTexts,
-                        builder: (context, future) {
-                          if (future.hasData) {
-                            List<Reading> list = future.data!.list;
-                            return ListView.builder(
-                                  shrinkWrap: true,
-                                  scrollDirection: Axis.vertical,
-                                  physics: new NeverScrollableScrollPhysics(),
-                                  itemCount: list.length,
-                                  itemBuilder: (context, index) {
-                                    final item = list[index];
-                                    return Container(
-                                      child: ListTile(
-                                        title: Text(item.name ?? "test", style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),
-                                        subtitle: Text(
-                                            "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}" ?? "test"),
-                                        onTap: () => {
-                                          Navigator.pushNamed(context, "/reading", arguments: item.id)
-                                        },
-                                      ),
-                                    );
-                                  },
-                            );
-                          }
-                          return Container(
-                            color: const Color(0xffffffff),
-                            child: Positioned.fill(
-                              child: Align(
-                                alignment: Alignment.center,
-                                child: const CircularProgressIndicator(),
-                              ),
-                            ),
-                          );
-                        },
+                    } else if (future.hasError) {
+                      return Container(
+                        child: Text('${future.error}'),
+                      );
+                    }
+                    return Container(
+                      color: const Color(0xffffffff),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Align(
+                            alignment: Alignment.center,
+                            child: const CircularProgressIndicator(),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
             ),
+            // TextButton(
+            //   onPressed: onGoToCalculator,
+            //   child: Text("Прочитать собранные чтения дня Триоди и Минеи (работает в пределах Цветной Триоди)"),
+            // ),
+            Text("Последние добавленные тексты", style: const TextStyle(fontWeight: FontWeight.bold)),
+            Container(
+              child: FutureBuilder<ReadingList>(
+                future: lastTexts,
+                builder: (context, future) {
+                  if (future.hasData) {
+                    List<Reading> list = future.data!.list;
+                    return ListView.builder(
+                          shrinkWrap: true,
+                          scrollDirection: Axis.vertical,
+                          physics: new NeverScrollableScrollPhysics(),
+                          itemCount: list.length,
+                          itemBuilder: (context, index) {
+                            final item = list[index];
+                            return Container(
+                              child: ListTile(
+                                title: Text(item.name ?? "test", style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),
+                                subtitle: Text(
+                                    "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}" ?? "test"),
+                                onTap: () => {
+                                  Navigator.pushNamed(context, "/reading", arguments: item.id)
+                                },
+                              ),
+                            );
+                          },
+                    );
+                  }
+                  return Container(
+                    color: const Color(0xffffffff),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: const CircularProgressIndicator(),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Column(
+              children: [
+                Text("Цель и обоснование проекта", style: TextStyle(fontWeight: FontWeight.bold)),
+                Text("Цель проекта заключается в собрании церковнославянского корпуса текстов уставных чтений и создании его последования, основываясь на Типиконе."),
+                Text("Большая часть текстов отекстована в русском переводе и доступна для поиска. Тем не менее, даже в русскоязычном варианте не дается представления о том, что предлагает Типикон для чтения верующих в тот или иной день церковного года. В рамках данного проекта производится работа по отекстовке корпуса уставных чтений, соотнесение их с чтением в определенный день церковного года и сопоставление с корпусом русских текстов уставных чтений."),
+                Text("Что такое уставные чтения?", style: TextStyle(fontWeight: FontWeight.bold)),
+                Text("Уставные чтения — сборники нравоучительно-повествовательного характера, состоящие в основном из произведений дидактического и тор жественного красноречия, агиографических сочинений, а также полемических слов, толкований, кратких нравоучительных сентенций."),
+                Text("О предмете уставных чтений", style: TextStyle(fontWeight: FontWeight.bold)),
+                Text("протопресвитер Василий Виноградов", style: TextStyle(fontWeight: FontWeight.bold)),
+                Text("В богатом содержанием современном Церковном Уставе скромно затерялось одно совершенно неприметное, по своей внешней бесцветности и нехарактерности, выражение, в отношении которого даже самый добросовестный рядовой читатель считает вполне для себя дозволительным не останавливать своего внимания, как на подробности слишком мелкой и слишком малозначительной."),
+                Text("Это выражение состоит из одного слова, скромно вплетающегося в непрерывную цепь уставных указаний при помощи соединительного союза «и»: «и чтение». Но лаконически краткое и маловыразительное, оно неотступно преследует внимательного читателя «Устава» страница за страницей, встречает его глаз непременно в одних и тех же местах церковно-богослужебного последования: на утрене – после каждой кафизмы, на полиелее, после 3-ей и 6-ой песен канона, по отпуске пред первым часом, – и на всенощном бдении по окончании вечерни пред началом утрени."),
+                Text("«Чтение... чтение... чтение»…"),
+                Text("Что это за «чтение?» Большинство читателей Устава, читателей «ех officio», успокаивается на мысли, что здесь, разумеется, вообще какое-то, обычно непрактикуемое теперь, дополнительное чтение, в роде чтения псалтири или седальнов. Но при более внимательном ознакомлении с Уставом замечается, что лаконическое указание «чтение» по временам принимает более конкретный и определенный характер: «и чтение... чтется от слова иже во святых отца нашего... чтется от жития святого... от словес торжественных... слово Златоуста... слово Богослова... чтется от шестодневника Св. Василия Великого, чтется от толкований на Евангелие, на послание Павла апостола, оглашение преп. отца нашего Феодора Студита» и т. д. Отсюда для внимательного читателя «Устава» естественно следует приблизительно правильное общее представление о церковно-богослужебном факте, кроющемся под уставным термином «чтение»; это есть теперь уже обычно непрактикующееся чтение в определенные моменты богослужения церковно-учительных произведений, преимущественно житий святых и святоотеческих творений."),
+                Text("Обычно думают, что Уставные Чтения это – одно из таких же мало выдающихся явлений исторической жизни Руси, как чтение псалтири или канонов за богослужением, как исследование об Уставных Чтениях понимается, как исследование одного узкоспециального археологически-литургического интереса с исследованиями о порядке чтения псалтири или канонов в русском богослужении давно минувшего времени. Иначе говоря, думают, что Уставные Чтения могут представлять интерес только со стороны своего литургического положения, как мелкий литургический факт, не допуская и мысли, чтобы это мог быть факт более высокой научной ценности и более широкого значения."),
+                Text("А между тем Уставные Чтения – чрезвычайно важный факт в исторической жизни древней Руси."),
+                Text("Об этом говорит уже простое сопоставление установленных наукой общих положений о характере идейной жизни древней Руси с указанным сейчас общим понятием об Уставных Чтениях как чтениях из церковно-учительных произведений, производившихся в древней Руси за богослужением."),
+                Text("А. «В наше время, – писал проф. Иконников в 1869 г., – книга получила могущественное влияние и не редко заменяет школу, но в доброе старое время школа давала умственное направление обществу, и только отдельные умы, создавая новое, разрывали заветные связи со школою, из которой они вышли. Но в древней Руси школьное обучение имело узкий объем, ограничиваясь научением чтению по часослову и псалтири и письму, единственной же школой, где русское общество могло получать идейное поучение, была церковь – храм: а среди всех средств, которыми храм поучал общество, самым непосредственным и понятным средством, конечно, были Уставные Чтения. Отсюда вытекает вопрос о значении Уставных Чтений, как первостепенной силы, дававшей направление идейной жизни общества."),
+                Text("Б. «В строгом смысле слова, до XVII века у нас не было науки. Наша литературная деятельность до того времени верно характеризуется названием книжности. Она стояла в самом тесном отношении к религии и была ее результатом; книжность должна была удовлетворять только религиозным потребностям». Но если древнерусская литературная деятельность стояла в самом тесном отношении к религии, как ее результат, то, конечно, она не могла не стоять в таком же отношении и к тем письменным произведениям, которые, выражая сущность этой религии, читались вслух всего церковного общества и при том в самом сердце религиозной жизни, в учреждении самого высшего религиозного авторитета, – в храме. А отсюда вытекает новый вопрос: об Уставных Чтениях как важнейшем источнике и вместе продукте древнерусской литературной деятельности."),
+                Text("«Книжность в России распространялась главным образом чрез монастыри, и потому русская образованность древней эпохи может быть вполне названа монастырской». Но так как в монастырях вся жизнедеятельность имела сосредоточие в храме, в богослужении, то естественно, чтобы и образованность монастырская по своему характеру и идейному содержанию стояла в самой тесной зависимости от идейного содержания тех поучительных произведений, которые читались за богослужением в руководство всей братии, т. е. с Уставными Чтениями."),
+              ],
+            )
+          ],
+        ),
       ),
       drawer: Drawer(
-        // Add a ListView to the drawer. This ensures the user can scroll
-        // through the options in the drawer if there isn't enough vertical
-        // space to fit everything.
         child: ListView(
-          // Important: Remove any padding from the ListView.
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
+            DrawerHeader(
               decoration: BoxDecoration(
                 color: Colors.green,
               ),
-              child: Text('Типикон ($majorVersion.$minorVersion.0)'),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Типикон ($majorVersion.$minorVersion.0)'),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, "/search");
+                    },
+                    child: Icon(
+                      Icons.search,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
             ListTile(
               title: const Text('Главная страница', style: TextStyle(fontSize: 14.0),),
@@ -373,16 +403,9 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
             ),
             ListTile(
               title: const Text('Избранное', style: TextStyle(fontSize: 14.0),),
-              selected: ModalRoute.of(context)?.settings.name == "/favourite",
+              selected: ModalRoute.of(context)?.settings.name == "/favourites",
               onTap: () {
-                Navigator.pushNamed(context, "/favourite");
-              },
-            ),
-            ListTile(
-              title: const Text('Поиск', style: TextStyle(fontSize: 14.0),),
-              selected: ModalRoute.of(context)?.settings.name == "/search",
-              onTap: () {
-                Navigator.pushNamed(context, "/search");
+                Navigator.pushNamed(context, "/favourites");
               },
             ),
             ListTile(
@@ -428,10 +451,25 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
               },
             ),
             ListTile(
+              title: const Text('Обратная связь', style: TextStyle(fontSize: 14.0),),
+              selected: ModalRoute.of(context)?.settings.name == "/contact",
+              onTap: () {
+                Navigator.pushNamed(context, "/contact");
+              },
+            ),
+            ListTile(
               title: const Text('Настройки', style: TextStyle(fontSize: 14.0),),
               selected: ModalRoute.of(context)?.settings.name == "/settings",
               onTap: () {
                 Navigator.pushNamed(context, "/settings");
+              },
+            ),
+            ListTile(
+              title: const Text('Помочь проекту', style: TextStyle(fontSize: 14.0),),
+              onTap: () {
+                String url = dotenv.env['CLOUDTIPS_URL'] ?? "";
+                Uri myUrl = Uri.parse(url);
+                launchUrl(myUrl);
               },
             ),
             if (widget.hasSkippedUpdate) ListTile(
