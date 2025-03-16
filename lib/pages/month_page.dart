@@ -34,7 +34,7 @@ class _MonthPageState extends State<MonthPage> {
               DateTime now = DateTime.now();
               DateTime newDate =  DateTime.utc(now.year, future.data!.value ?? 0);
               String month = DateFormat.MMMM(locale).format(newDate);
-              return Text(month);
+              return Text(month, style: TextStyle(fontFamily: "OldStandard"));
             } else if (future.hasError) {
               return Text('${future.error}');
             }

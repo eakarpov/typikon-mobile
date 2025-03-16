@@ -36,7 +36,6 @@ class DneslovImageListD {
 
   factory DneslovImageListD.fromJson(dynamic json) {
     var list = json;
-    print(list);
     List<DneslovImageDItem> items = List<DneslovImageDItem>.from(
         list
             .map((item) => DneslovImageDItem.fromJson(item))

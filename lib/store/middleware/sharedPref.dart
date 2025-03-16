@@ -16,8 +16,11 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
 
   @override
   Future<void> call(Store<AppState> store, action, NextDispatcher next) async {
-    if (action is ChangeFontSizeAction) {
-      await _saveStateToPrefs(store.state); // TODO - after store update save to storage, not before!!
+    if (
+      action is ChangeFontSizeAction ||
+      action is ChangeBackgroundColorAction
+    ) {
+      // await _saveStateToPrefs(store.state); // TODO - after store update save to storage, not before!!
       store.dispatch(AppSaveAdditional());
     }
 
@@ -43,5 +46,6 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     if (stateString == null) return;
     AppState state = AppState.fromJson(json.decode(stateString));
     store.dispatch(ChangeFontSizeAction(state.settings.fontSize));
+    store.dispatch(ChangeBackgroundColorAction(state.settings.backgroundColor));
   }
 }

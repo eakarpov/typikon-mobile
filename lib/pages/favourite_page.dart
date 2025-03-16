@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import 'package:typikon/apiMapper/favourites.dart';
 import 'package:typikon/dto/book.dart';
 
@@ -11,7 +12,7 @@ class FavouritePage extends StatefulWidget {
 }
 
 class _FavouritePageState extends State<FavouritePage> {
-  late Future<List<BookText>> favourites;
+  late Future<BookWithTexts> favourites;
 
   @override
   void initState() {
@@ -23,37 +24,42 @@ class _FavouritePageState extends State<FavouritePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Избранное"),
+        title: Text("Избранное", style: TextStyle(fontFamily: "OldStandard")),
       ),
       body: Container(
         color: const Color(0xffffffff),
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<List<BookText>>(
+        child: FutureBuilder<BookWithTexts>(
           future: favourites,
           builder: (context, future) {
             if (future.hasData) {
-              return Text('');
-              // List<Month> list = future.data!.list;
-              // return ListView.builder(
-              //   scrollDirection: Axis.vertical,
-              //   itemCount: list.length,
-              //   itemBuilder: (context, index) {
-              //     final item = list[index];
-              //     String locale = Localizations.localeOf(context).languageCode;
-              //     DateTime now = DateTime.now();
-              //     DateTime newDate =  DateTime.utc(now.year, item.value ?? 0);
-              //     String month = DateFormat.MMMM(locale).format(newDate);
-              //     return Container(
-              //       child: ListTile(
-              //         title: Text(month),
-              //         onTap: () => {
-              //           Navigator.pushNamed(context, "/reading", arguments: item.id)
-              //         },
-              //       ),
-              //     );
-              //   },
-              // );
+              List<BookText> list = future.data!.texts;
+              return ListView.builder(
+                scrollDirection: Axis.vertical,
+                itemCount: list.length,
+                itemBuilder: (context, index) {
+                  final item = list[index];
+                  return Container(
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.favorite,
+                        color: Colors.pink,
+                        size: 32.0,
+                        semanticLabel: 'Text to announce in accessibility modes',
+                      ),
+                      title: Text(
+                          item.name,
+                          style: TextStyle(fontFamily: "OldStandard")),
+                      onTap: () =>
+                      {
+                        Navigator.pushNamed(
+                            context, "/reading", arguments: item.id)
+                      },
+                    ),
+                  );
+                },
+              );
             } else if (future.hasError) {
               return Text('${future.error}');
             }

@@ -34,7 +34,7 @@ class _DaysPageState extends State<DaysPage> {
             future: day,
             builder: (context, future) {
               if (future.hasData) {
-                return Text("Чтение на день: ${future.data!.name}");
+                return Text("Чтение на день: ${future.data!.name}", style: TextStyle(fontFamily: "OldStandard"));
               }
               return Text("");
             },

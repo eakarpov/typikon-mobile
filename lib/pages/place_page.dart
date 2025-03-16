@@ -39,7 +39,7 @@ class _PlacePageState extends State<PlacePage> {
           builder: (context, future) {
             if (future.hasData) {
               String name = future.data!.name??"";
-              return Text(name);
+              return Text(name, style: TextStyle(fontFamily: "OldStandard"));
             } else if (future.hasError) {
               return Text('${future.error}');
             }

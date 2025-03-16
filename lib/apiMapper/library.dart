@@ -23,3 +23,13 @@ Future<BookWithTexts> getBook(String id) async {
     throw Exception('Не получена книга');
   }
 }
+
+Future<BookWithTexts> getBatchTexts(List<String> ids) async {
+  final response = await batchTexts(ids);
+
+  if (response.statusCode == 200) {
+    return BookWithTexts.fromJsonToList(jsonDecode(response.body));
+  } else {
+    throw Exception('Не получена книга');
+  }
+}

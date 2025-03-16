@@ -125,7 +125,7 @@ class _CalculatorPageState extends State<CalculatorPage> with RestorationMixin {
     String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
     return Scaffold(
       appBar: AppBar(
-        title: Text(value),
+        title: Text(value, style: TextStyle(fontFamily: "OldStandard")),
         actions: <Widget>[
           IconButton(
             icon: Icon(
