@@ -39,13 +39,13 @@ class Common {
 
   Map<String, dynamic> toJson() {
     return {
-      'date': date.millisecondsSinceEpoch.toString(),
+      'date': date.millisecondsSinceEpoch,
     };
   }
 
   static fromJson(Map<String, dynamic> json) {
     return Common(
-      date: DateTime.fromMillisecondsSinceEpoch(int.parse(json["date"])),
+      date: DateTime.fromMillisecondsSinceEpoch(json["date"]),
     );
   }
 }

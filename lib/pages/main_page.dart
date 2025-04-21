@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import "../dto/text.dart";
 import "../apiMapper/reading.dart";
@@ -16,6 +17,8 @@ import '../dto/calendar.dart';
 import "../dto/day.dart";
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
+
+const String APP_STATE_KEY = "APP_STATE";
 
 class MainPage extends StatefulWidget {
   const MainPage(context, {
@@ -71,13 +74,15 @@ class _MainPageState extends State<MainPage> {
   }
 
   @override
-  void didChangeDependencies() {
+  void didChangeDependencies() async {
     super.didChangeDependencies();
     var val = StoreProvider.of<AppState>(context).state.common.date != null
         ? StoreProvider.of<AppState>(context).state.common.date!.subtract(const Duration(days: 13))
         : DateTime.now().subtract(const Duration(days: 13));
     currentDay = getCalendarReadingForDate(val.millisecondsSinceEpoch + 3 * 60 * 60 * 1000);
-    // StoreProvider.of<AppState>(context).dispatch(FetchItemsAction());
+    // final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // var stateString = prefs.getString(APP_STATE_KEY);
+    // print(stateString);
   }
 
   @override

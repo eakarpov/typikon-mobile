@@ -27,7 +27,7 @@ class AppState {
     return AppState(
       isLoading: isLoading ?? this.isLoading,
       settings: settings ?? this.settings,
-      common: common ?? this.common,
+      common: common ?? Common.init(),
     );
   }
 
