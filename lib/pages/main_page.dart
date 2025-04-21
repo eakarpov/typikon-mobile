@@ -4,14 +4,21 @@ import 'package:typikon/version.dart';
 import 'package:url_launcher/url_launcher.dart';
 import "package:google_fonts/google_fonts.dart";
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_redux/flutter_redux.dart';
+import 'package:redux/redux.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import "../dto/text.dart";
 import "../apiMapper/reading.dart";
 import '../apiMapper/calendar.dart';
 import '../dto/calendar.dart';
 import "../dto/day.dart";
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:typikon/store/actions/actions.dart';
+import 'package:typikon/store/models/models.dart';
+
+const String APP_STATE_KEY = "APP_STATE";
 
 class MainPage extends StatefulWidget {
   const MainPage(context, {
@@ -27,15 +34,15 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> with RestorationMixin {
+class _MainPageState extends State<MainPage> {
   late Future<DayResult> currentDay;
   late Future<Version> version;
   late Future<ReadingList> lastTexts;
 
-  @override
-  String? get restorationId => "test";
+  // @override
+  // String? get restorationId => "test";
 
-  final RestorableDateTime _selectedDate = RestorableDateTime(DateTime.now());
+  // final RestorableDateTime _selectedDate = RestorableDateTime(DateTime.now());
   // late final RestorableRouteFuture<DateTime?> _restorableDatePickerRouteFuture =
   // RestorableRouteFuture<DateTime?>(
   //   onComplete: _selectDate,
@@ -57,12 +64,6 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
     //         DateTime.now()
     //     )
     // );
-    currentDay = getCalendarReadingForDate(
-        DateTime.now().subtract(const Duration(days: 13)).millisecondsSinceEpoch
-        // DateFormat('yyyy-MM-dd').format(
-        //     DateTime.now().subtract(const Duration(days: 13))
-        // )
-    );
     lastTexts = getLastTexts();
     version = getVersion();
     version.then((value) => {
@@ -73,8 +74,20 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
   }
 
   @override
+  void didChangeDependencies() async {
+    super.didChangeDependencies();
+    var val = StoreProvider.of<AppState>(context).state.common.date != null
+        ? StoreProvider.of<AppState>(context).state.common.date!.subtract(const Duration(days: 13))
+        : DateTime.now().subtract(const Duration(days: 13));
+    currentDay = getCalendarReadingForDate(val.millisecondsSinceEpoch + 3 * 60 * 60 * 1000);
+    // final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // var stateString = prefs.getString(APP_STATE_KEY);
+    // print(stateString);
+  }
+
+  @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    registerForRestoration(_selectedDate, 'selected_date');
+    // registerForRestoration(_selectedDate, 'selected_date');
     // registerForRestoration(
     //     _restorableDatePickerRouteFuture, 'date_picker_route_future');
   }
@@ -105,22 +118,28 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
   // }
 
   void buildMaterialDatePicker(BuildContext context) async {
+    DateTime now = new DateTime.now();
     final DateTime? picked = await showDatePicker(
       context: context,
       locale: const Locale("ru", "RU"),
-      initialDate: DateTime.fromMillisecondsSinceEpoch(_selectedDate.value.millisecondsSinceEpoch! as int),
+      // initialDate: DateTime.fromMillisecondsSinceEpoch(_selectedDate.value.millisecondsSinceEpoch! as int),
+      initialDate: StoreProvider.of<AppState>(context).state.common.date,
       firstDate: DateTime(2000),
-      lastDate: DateTime(2025),
+      lastDate: DateTime(now.year + 5),
       initialEntryMode: DatePickerEntryMode.calendar,
       initialDatePickerMode: DatePickerMode.day,
       // helpText: 'Select booking date',
       // cancelText: 'Not now',
       // confirmText: 'Book',
     );
-    if (picked != null && picked != _selectedDate.value) {
-      setState(() {
-        _selectedDate.value = picked;
-      });
+    if (picked != null && picked != StoreProvider.of<AppState>(context).state.common.date) {
+    // if (picked != null && picked != _selectedDate.value) {
+      // setState(() {
+      //   _selectedDate.value = picked;
+      // });
+      StoreProvider.of<AppState>(context).dispatch(
+          ChangeCommonDateAction(picked)
+      );
       currentDay = getCalendarReadingForDate(picked.subtract(const Duration(days: 13)).millisecondsSinceEpoch);
     }
   }
@@ -129,11 +148,14 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
       return buildMaterialDatePicker(context);
   }
 
-  void _selectDate(DateTime? newSelectedDate) {
+  void _selectDate(BuildContext context, DateTime? newSelectedDate) {
     if (newSelectedDate != null) {
-      setState(() {
-        _selectedDate.value = newSelectedDate;
-      });
+      // setState(() {
+      //   _selectedDate.value = newSelectedDate;
+      // });
+      StoreProvider.of<AppState>(context).dispatch(
+          ChangeCommonDateAction(newSelectedDate)
+      );
       currentDay = getCalendarReadingForDate(
           newSelectedDate.subtract(const Duration(days: 13)).millisecondsSinceEpoch
           // DateFormat('yyyy-MM-dd').format(
@@ -195,11 +217,17 @@ class _MainPageState extends State<MainPage> with RestorationMixin {
   @override
   Widget build(BuildContext context) {
     DateFormat format = DateFormat("dd.MM.yyyy");
-    String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
+    // String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
+    String value = StoreProvider.of<AppState>(context).state.common.date != null
+        ? format.format(StoreProvider.of<AppState>(context).state.common.date)
+        : "Не задано";
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(value, style: TextStyle(fontFamily: "OldStandard")),
+        title: Text(
+            value,
+            style: TextStyle(fontFamily: "OldStandard")
+        ),
         actions: <Widget>[
           IconButton(
             icon: Icon(

@@ -1,19 +1,39 @@
+class DayTextBook {
+  final String id;
+  final String name;
+
+  const DayTextBook({
+    required this.id,
+    required this.name,
+  });
+
+  factory DayTextBook.fromJson(Map<String, dynamic> json) {
+    return DayTextBook(
+      id: json["_id"] ?? "",
+      name: json["name"] ?? "",
+    );
+  }
+}
+
 class DayText {
   final String id;
   final String name;
   final String content;
+  final DayTextBook? book;
 
   const DayText({
     required this.id,
     required this.name,
     required this.content,
+    required this.book,
   });
 
   factory DayText.fromJson(Map<String, dynamic> json) {
     return DayText(
-      id: json["_id"],
-      name: json["name"],
-      content: json["content"],
+      id: json["_id"] ?? "",
+      name: json["name"] ?? "",
+      content: json["content"] ?? "",
+      book: json["book"] == null ? null : DayTextBook.fromJson(json["book"]),
     );
   }
 }

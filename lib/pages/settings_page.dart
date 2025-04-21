@@ -46,8 +46,6 @@ class _SettingsPageState extends State<SettingsPage> {
       body: StoreConnector<AppState, SettingsViewModel>(
         converter: (store) => SettingsViewModel.build(store),
         builder: (context, viewModel) {
-          print("print");
-          print(viewModel.backgroundColor);
           return Container(
             color: viewModel.backgroundColor,
             child: Column(
@@ -68,7 +66,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text(
                   "Пример того, как будет выглядеть текст.",
                   textAlign: TextAlign.justify,
-                  style: TextStyle(fontFamily: "OldStandard", fontSize: viewModel.fontSize.toDouble()),
+                  style: TextStyle(
+                      fontFamily: "OldStandard",
+                      fontSize: viewModel.fontSize.toDouble(),
+                      color: StoreProvider.of<AppState>(context).state.settings.fontColor
+                  ),
                 ),
                 Padding(
                     padding: EdgeInsets.only(top: 20),
@@ -78,6 +80,15 @@ class _SettingsPageState extends State<SettingsPage> {
                            onOpenPicker(context, viewModel.backgroundColor, viewModel.onChangeBackgroundColor);
                           },
                     ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(top: 20),
+                  child: TextButton(
+                    child: Text("Выбрать цвет шрифта текстов", style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      onOpenPicker(context, viewModel.fontColor, viewModel.onChangeFontColor);
+                    },
+                  ),
                 ),
               ],
             ),
@@ -95,9 +106,14 @@ class SettingsViewModel {
   final Color backgroundColor;
   final Function(Color) onChangeBackgroundColor;
 
+  final Color fontColor;
+  final Function(Color) onChangeFontColor;
+
   SettingsViewModel({
     this.fontSize = 0,
     this.onChangeFontSize = SettingsViewModel.stub,
+    this.fontColor = const Color(0x00000000),
+    this.onChangeFontColor = SettingsViewModel.stubColor,
     this.backgroundColor = const Color(0xffffffff),
     this.onChangeBackgroundColor = SettingsViewModel.stubColor,
   });
@@ -111,6 +127,10 @@ class SettingsViewModel {
       fontSize: store.state.settings.fontSize,
       onChangeFontSize: (newFontSize) {
         store.dispatch(ChangeFontSizeAction(newFontSize));
+      },
+      fontColor: store.state.settings.fontColor,
+      onChangeFontColor: (newFontColor) {
+        store.dispatch(ChangeFontColorAction(newFontColor));
       },
       backgroundColor: store.state.settings.backgroundColor,
       onChangeBackgroundColor: (newBackgroundColor) {

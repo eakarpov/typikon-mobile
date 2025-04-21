@@ -37,7 +37,7 @@ class FusionTextWidgets extends StatelessWidget {
             style: TextStyle(
               fontFamily: "OldStandard",
               fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
-              color: Colors.black,
+              color: StoreProvider.of<AppState>(context).state.settings.fontColor,
             ),
             children: buildFootlinks(
                 beforeText,
@@ -78,7 +78,7 @@ class FusionTextWidgets extends StatelessWidget {
           style: TextStyle(
             fontFamily: "OldStandard",
             fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
-            color: Colors.black,
+            color: StoreProvider.of<AppState>(context).state.settings.fontColor,
           ),
           children: buildFootlinks(
               remainingText,
