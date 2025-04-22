@@ -35,6 +35,19 @@ class _FavouritePageState extends State<FavouritePage> {
           builder: (context, future) {
             if (future.hasData) {
               List<BookText> list = future.data!.texts;
+              if (list.isEmpty) {
+                return Container(
+                  color: const Color(0xffffffff),
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height,
+                  child: Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: const Text("Вы еще ничего не добавили в избранное")
+                    ),
+                  ),
+                );
+              }
               return ListView.builder(
                 scrollDirection: Axis.vertical,
                 itemCount: list.length,

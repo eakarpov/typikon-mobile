@@ -9,6 +9,7 @@ class TriodionCollection {
 
   factory TriodionCollection.fromJson(List<dynamic> json) {
     var list = json;
+    print(json);
     List<WeekWithDays> items = List<WeekWithDays>.from(
         list
             .map((item) => WeekWithDays.fromJson(item))

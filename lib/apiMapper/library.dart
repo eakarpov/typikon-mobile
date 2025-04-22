@@ -30,6 +30,9 @@ Future<BookWithTexts> getBatchTexts(List<String> ids) async {
   if (response.statusCode == 200) {
     return BookWithTexts.fromJsonToList(jsonDecode(response.body));
   } else {
+    if (ids.length == 0) {
+      return BookWithTexts.fromJsonToList([]);
+    }
     throw Exception('Не получена книга');
   }
 }

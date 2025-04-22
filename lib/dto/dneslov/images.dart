@@ -17,8 +17,8 @@ class DneslovImageDItem {
 
   factory DneslovImageDItem.fromJson(Map<String, dynamic> json) {
     return DneslovImageDItem(
-      title: json["title"],
-      description: json["description"],
+      title: json["title"] ?? "",
+      description: json["description"] ?? "",
       type: json["type"],
       thumb_url: json["thumb_url"],
       url: json["url"],

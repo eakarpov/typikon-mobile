@@ -24,6 +24,8 @@ if (flutterVersionName == null) {
 }
 
 android {
+    namespace "su.typikon.typikon"
+
     compileSdkVersion rootProject.ext.compileSdkVersion
     ndkVersion flutter.ndkVersion
 

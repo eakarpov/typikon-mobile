@@ -5,8 +5,10 @@ import "package:typikon/api/saints.dart";
 import "package:typikon/api/dneslov/memories.dart";
 
 Future<Saint> getSaint(String slugId) async {
+  print(slugId);
   final responseDneslov = await fetchMemoryById(slugId);
   Map<String, dynamic> json = jsonDecode(responseDneslov.body);
+  print(json);
   int id = json["id"];
   String slug = json["slug"];
 
