@@ -146,6 +146,11 @@ class _DaysPageState extends State<DaysPage> {
                   future.data!.kathisma3!,
                   "По седальнах третьей кафизмы",
                 ),
+                if (future.data!.before50 != null) renderItem(
+                  context,
+                  future.data!.before50!,
+                  "После Евангелия перед 50-м псалмом",
+                ),
                 if (future.data!.ipakoi != null) renderItem(
                   context,
                   future.data!.ipakoi!,
@@ -175,6 +180,21 @@ class _DaysPageState extends State<DaysPage> {
                   context,
                   future.data!.before1h!,
                   "Перед первым часом",
+                ),
+                if (future.data!.h3 != null) renderItem(
+                  context,
+                  future.data!.h3!,
+                  "На 3-м часе",
+                ),
+                if (future.data!.h6 != null) renderItem(
+                  context,
+                  future.data!.h6!,
+                  "На 6-м часе",
+                ),
+                if (future.data!.h9 != null) renderItem(
+                  context,
+                  future.data!.h9!,
+                  "На 9-м часе",
                 ),
               ].expand((element) => [element, Image.asset("assets/images/divider.png") ]).toList();
               if (children.isNotEmpty) {

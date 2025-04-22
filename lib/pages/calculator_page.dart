@@ -130,6 +130,40 @@ class _CalculatorPageState extends State<CalculatorPage> {
     }
   }
 
+  Widget renderItem(BuildContext context, CalendarDayPart? part, String title) {
+    List<CalendarDayPartItem> list = [];
+    if (part?.items?.isNotEmpty == true) {
+      list = part?.items ?? [];
+    }
+    var textStyle = TextStyle(
+      fontFamily: "OldStandard",
+      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
+      color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+    );
+    const titleStyle = const TextStyle(
+      fontWeight: FontWeight.bold,
+      color:  Colors.red,
+    );
+    return Column(
+      children: [
+        Text(title, style: titleStyle),
+        ...list.map((item) => Column(
+          children: [
+            Text(item.name, style: titleStyle),
+            Text(
+              item.content,
+              textAlign: TextAlign.justify,
+              style: TextStyle(
+                  fontFamily: "OldStandard",
+                  fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
+              ),
+            ),
+          ],
+        )),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     DateFormat format = DateFormat("dd.MM.yyyy");
@@ -167,167 +201,70 @@ class _CalculatorPageState extends State<CalculatorPage> {
                     padding: const EdgeInsets.all(8.0),
                     child: Column(
                       children: [
-                        if (future.data!.kathisma1 != null) Column(
-                          children: [
-                            Text("По седальнах первой кафизмы", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ...future.data!.kathisma1!.items!.map((item) => Column(
-                              children: [
-                                Text(item.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  item.content,
-                                  textAlign: TextAlign.justify,
-                                  style: TextStyle(
-                                      fontFamily: "OldStandard",
-                                      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
-                                  ),
-                                ),
-                              ],
-                            )),
-                          ],
+                        if (future.data?.kathisma1?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.kathisma1,
+                            "По седальнах первой кафизмы"
                         ),
-                        if (future.data!.kathisma2 != null) Column(
-                          children: [
-                            Text("По седальнах второй кафизмы", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ...future.data!.kathisma2!.items!.map((item) => Column(
-                              children: [
-                                Text(item.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  item.content,
-                                  textAlign: TextAlign.justify,
-                                  style: TextStyle(
-                                      fontFamily: "OldStandard",
-                                      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
-                                  ),
-                                ),
-                              ],
-                            )),
-                          ],
+                        if (future.data?.kathisma2?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.kathisma2,
+                            "По седальнах второй кафизмы"
                         ),
-                        if (future.data!.kathisma3 != null) Column(
-                          children: [
-                            Text("По седальнах третьей кафизмы", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ...future.data!.kathisma3!.items!.map((item) => Column(
-                              children: [
-                                Text(item.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  item.content,
-                                  textAlign: TextAlign.justify,
-                                  style: TextStyle(
-                                      fontFamily: "OldStandard",
-                                      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
-                                  ),
-                                ),
-                              ],
-                            )),
-                          ],
+                        if (future.data?.kathisma3?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.kathisma3,
+                            "По седальнах третьей кафизмы"
                         ),
-                        if (future.data!.ipakoi != null) Column(
-                          children: [
-                            Text("По ипакои", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ...future.data!.ipakoi!.items!.map((item) => Column(
-                              children: [
-                                Text(item.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  item.content,
-                                  textAlign: TextAlign.justify,
-                                  style: TextStyle(
-                                      fontFamily: "OldStandard",
-                                      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
-                                  ),
-                                ),
-                              ],
-                            )),
-                          ],
+                        if (future.data?.before50?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.before50,
+                            "Перед 50-м псалмом после Евангелия"
                         ),
-                        if (future.data!.polyeleos != null) Column(
-                          children: [
-                            Text("По седальнах полиелея", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ...future.data!.polyeleos!.items!.map((item) => Column(
-                              children: [
-                                Text(item.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  item.content,
-                                  textAlign: TextAlign.justify,
-                                  style: TextStyle(
-                                      fontFamily: "OldStandard",
-                                      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
-                                  ),
-                                ),
-                              ],
-                            )),
-                          ],
+                        if (future.data?.ipakoi?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.ipakoi,
+                            "По ипакои"
                         ),
-                        if (future.data!.song3 != null) Column(
-                          children: [
-                            Text("По седальнах третьей песни", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ...future.data!.song3!.items!.map((item) => Column(
-                              children: [
-                                Text(item.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  item.content,
-                                  textAlign: TextAlign.justify,
-                                  style: TextStyle(
-                                      fontFamily: "OldStandard",
-                                      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
-                                  ),
-                                ),
-                              ],
-                            )),
-                          ],
+                        if (future.data?.polyeleos?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.polyeleos,
+                            "По седальнах полиелея"
                         ),
-                        if (future.data!.song6 != null) Column(
-                          children: [
-                            Text("По кондаке и икосе шестой песни", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ...future.data!.song6!.items!.map((item) => Column(
-                              children: [
-                                Text(item.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  item.content,
-                                  textAlign: TextAlign.justify,
-                                  style: TextStyle(
-                                      fontFamily: "OldStandard",
-                                      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
-                                  ),
-                                ),
-                              ],
-                            )),
-                          ],
+                        if (future.data?.song3?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.song3,
+                            "По седальнах третьей песни"
                         ),
-                        if (future.data!.apolutikaTroparia != null) Column(
-                          children: [
-                            Text("По отпустительным тропарям", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ...future.data!.apolutikaTroparia!.items!.map((item) => Column(
-                              children: [
-                                Text(item.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  item.content,
-                                  textAlign: TextAlign.justify,
-                                  style: TextStyle(
-                                      fontFamily: "OldStandard",
-                                      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
-                                  ),
-                                ),
-                              ],
-                            )),
-                          ],
+                        if (future.data?.song6?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.song6,
+                            "По кондаке и икосе по шестой песни"
                         ),
-                        if (future.data!.before1h != null) Column(
-                          children: [
-                            Text("Перед первым часом", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ...future.data!.before1h!.items!.map((item) => Column(
-                              children: [
-                                Text(item.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  item.content,
-                                  textAlign: TextAlign.justify,
-                                  style: TextStyle(
-                                      fontFamily: "OldStandard",
-                                      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
-                                  ),
-                                ),
-                              ],
-                            )),
-                          ],
+                        if (future.data?.apolutikaTroparia?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.apolutikaTroparia,
+                            "По  отпустительным тропарям"
+                        ),
+                        if (future.data?.before1h?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.before1h,
+                            "Перед первым часом"
+                        ),
+                        if (future.data?.h3?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.h3,
+                            "На 3-м часе"
+                        ),
+                        if (future.data?.h6?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.h6,
+                            "На 6-м часе"
+                        ),
+                        if (future.data?.h9?.items?.isNotEmpty == true) renderItem(
+                            context,
+                            future.data?.h9,
+                            "На 9-м часе"
                         ),
                       ],
                     ),

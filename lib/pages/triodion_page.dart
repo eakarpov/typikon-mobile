@@ -7,7 +7,7 @@ import "package:typikon/dto/week.dart";
 
 String getTitle(int? value, String? type, String? label) {
   if (value is int && type is String) {
-    return "${type == "Fast" ? "Неделя $value Великого поста" : label}";
+    return label != null ? label : "${type == "Fast" ? "Неделя $value Великого поста" : ""}";
   }
   return "";
 }

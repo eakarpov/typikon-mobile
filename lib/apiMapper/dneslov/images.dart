@@ -7,7 +7,7 @@ import 'package:typikon/dto/dneslov/roundels.dart';
 Future<DneslovImageListD> fetchDneslovImagesD(String dneslovId) async {
   final imageResponse = await fetchDneslovImages(dneslovId);
 
-  if (imageResponse.statusCode == 200) {
+  if (imageResponse.statusCode < 300) { // Приходит 206 сейчас
     return DneslovImageListD.fromJson(jsonDecode(imageResponse.body));
   } else {
     throw Exception('Failed to load images');
