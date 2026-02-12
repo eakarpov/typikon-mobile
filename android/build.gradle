@@ -1,7 +1,7 @@
 ext {
-    compileSdkVersion   = 35 // or latest
-    targetSdkVersion    = 35 // or latest
-    appCompatVersion    = "1.4.2" // or latest
+    compileSdkVersion   = 36 // or latest
+    targetSdkVersion    = 36 // or latest
+    appCompatVersion    = "2.1.0" // or latest
 }
 
 allprojects {
