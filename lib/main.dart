@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import "package:google_fonts/google_fonts.dart";
 import 'package:flutter_redux/flutter_redux.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
