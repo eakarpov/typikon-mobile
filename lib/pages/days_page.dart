@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:typikon/apiMapper/days.dart';
 import 'package:typikon/dto/day.dart';
 import 'package:typikon/store/models/models.dart';
+import 'package:typikon/utils/text.dart';
 
 class DaysPage extends StatefulWidget {
   final String id;
@@ -25,9 +26,20 @@ class _DaysPageState extends State<DaysPage> {
     day = getDay(widget.id);
   }
 
+  String getContent (DayTextsPart item) {
+    var statia = item.statia != null ? (item.statia! - 1) : 0;
+    var parts = getStatias(item.text!.content);
+    return parts[statia];
+  }
+
   Widget renderItem(BuildContext context, DayTextsParts part, String title) {
     var textStyle = TextStyle(
       fontFamily: "OldStandard",
+      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
+      color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+    );
+    var textCsStyle = TextStyle(
+      fontFamily: "Monomakh",
       fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
       color: StoreProvider.of<AppState>(context).state.settings.fontColor,
     );
@@ -95,9 +107,9 @@ class _DaysPageState extends State<DaysPage> {
                   ),
                 ),
                 Text(
-                  item.text!.content,
+                  getContent(item),
                   textAlign: TextAlign.justify,
-                  style: textStyle,
+                  style: item.text!.csSource ? textCsStyle : textStyle,
                 ),
               ],
             )),

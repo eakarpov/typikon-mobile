@@ -23,3 +23,13 @@ Future<TriodionCollection> getTriodion() async {
     throw Exception('Не получены результаты');
   }
 }
+
+Future<TriodionCollection> getOutTriodion() async {
+  final response = await fetchOutTriodion();
+
+  if (response.statusCode == 200) {
+    return TriodionCollection.fromJson(jsonDecode(response.body));
+  } else {
+    throw Exception('Не получены результаты');
+  }
+}

@@ -20,12 +20,14 @@ class DayText {
   final String name;
   final String content;
   final DayTextBook? book;
+  final bool csSource;
 
   const DayText({
     required this.id,
     required this.name,
     required this.content,
     required this.book,
+    required this.csSource,
   });
 
   factory DayText.fromJson(Map<String, dynamic> json) {
@@ -34,21 +36,26 @@ class DayText {
       name: json["name"] ?? "",
       content: json["content"] ?? "",
       book: json["book"] == null ? null : DayTextBook.fromJson(json["book"]),
+      csSource: json["csSource"] ?? false,
     );
   }
 }
 
 class DayTextsPart {
   final DayText? text;
+  final int? statia;
 
   const DayTextsPart({
     required this.text,
+    required this.statia,
   });
 
   factory DayTextsPart.fromJson(Map<String, dynamic> json) {
     var dayText = json["text"] == null ? null : DayText.fromJson(json["text"]);
+    var statiaVal = json["statia"] == null ? null : json["statia"];
     return DayTextsPart(
       text: dayText,
+      statia: statiaVal,
     );
   }
 }

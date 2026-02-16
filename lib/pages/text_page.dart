@@ -1,5 +1,20 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import "package:google_fonts/google_fonts.dart";
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:file_saver_ffi/file_saver_ffi.dart';
+import 'package:path/path.dart';
+import "package:path_provider/path_provider.dart";
+import 'package:epub_pro/epub_pro.dart' hide Image;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:typikon/main.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:redux/redux.dart';
@@ -143,7 +158,163 @@ class _TextPageState extends State<TextPage> {
               ) : Icon(
                 Icons.favorite_outline,
               )
-          )
+          ),
+          FutureBuilder<Reading>(
+            future: reading,
+            builder: (context, future) {
+              if (future.hasData) {
+                String name = future.data!.name;
+                String content = future.data!.content;
+                return TextButton(
+                  // icon: Icon(
+                  //   Icons.file_download,
+                  //   color: Colors.white,
+                  // ),
+                  child: Text("fb2", style: TextStyle(color: Colors.white)),
+                  onPressed: () async{
+                    // var book = EpubBook(
+                    //     title: "Test",
+                    //     author: "No author",
+                    //     content: EpubContent(
+                    //       allFiles: {},
+                    //     ),
+                    //     schema: EpubSchema(
+                    //       package: EpubPackage(
+                    //         version: EpubVersion.epub2,
+                    //         metadata: EpubMetadata(),
+                    //         manifest: EpubManifest(),
+                    //         spine: EpubSpine(
+                    //           ltr: true,
+                    //           tableOfContents: "",
+                    //         ),
+                    //         guide: EpubGuide(),
+                    //       ),
+                    //     ),
+                    //     chapters: [
+                    //       EpubChapter(
+                    //         title: "Chapter",
+                    //         htmlContent: "<div>Test something</div>",
+                    //       )
+                    //     ]
+                    // );
+                    // var bytes = await rootBundle.load('assets/English-cyrillic.epub');
+                    // var p = ByteData.sublistView(bytes).buffer.asUint8List();
+                    // // var bytes = File('assets/English-cyrillic.epub').readAsBytesSync();
+                    // var b = await EpubReader.readBook(p);
+                    // print(b.schema);
+                    // print(b.schema!.contentDirectoryPath);
+                    // var bb = EpubBook(b);
+
+                    //
+                    // var w = EpubWriter.writeBook(b);
+                    // if (w != null) {
+                    //   print(w);
+                    //   // await file.writeAsBytes(w);
+                    //   // await FileSaver.instance.saveFile(
+                    //   //   name: "hello.epub",
+                    //   //   bytes: Uint8List.fromList(w),
+                    //   //   fileExtension: "epub",
+                    //   // );
+                    //   final uri = await FileSaver.instance.saveBytesAsync(
+                    //       fileName: 'hello',
+                    //       bytes: Uint8List.fromList(w),
+                    //       fileType: CustomFileType(ext: 'epub', mimeType: 'application/epub+zip')
+                    //   );
+                    //   print(uri);
+                    // }
+
+                    String fb2Content = """<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+<description>
+  <title-info>
+    <genre>poetry</genre>
+    <author><first-name>No</first-name><last-name>author</last-name></author>
+    <book-title>${name}</book-title>
+    <lang>en</lang>
+  </title-info>
+  <document-info>
+    <author><nickname>Creator</nickname></author>
+    <program-used>Dart Script</program-used>
+    <date>2026-02-16</date>
+    <id>12345</id>
+    <version>1.0</version>
+  </document-info>
+</description>
+<body>
+  <section>
+    <title>${name}</title>
+    <p>${content}</p>
+  </section>
+</body>
+</FictionBook>
+""";
+
+                    Uri uri = await FileSaver.instance.saveBytesAsync(
+                        fileName: "Из уставных чтений",
+                        bytes: utf8.encode(fb2Content),
+                        fileType: CustomFileType(ext: 'fb2', mimeType: 'application/x-fictionbook'),
+                        conflictResolution: ConflictResolution.autoRename,
+                    );
+                    print(uri.toString());
+                    var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
+                      'updateChannelId',
+                      'updateNotificationChannel',
+                      channelDescription: 'Notifications about update',
+                      importance: Importance.max,
+                      priority: Priority.high,
+                      ticker: "update version ticker",
+                    );
+                    var iOSPlatformChannelSpecifics = new DarwinNotificationDetails();
+
+                    // initialise channel platform for both Android and iOS device.
+                    var platformChannelSpecifics = new NotificationDetails(
+                        android: androidPlatformChannelSpecifics,
+                        iOS: iOSPlatformChannelSpecifics
+                    );
+
+                    await flutterLocalNotificationsPlugin.show(id++,
+                      'Уставные чтения',
+                      'Скачался файл. Для октрытия нажмите.',
+                      platformChannelSpecifics, payload: "download - ${uri.toString()}",
+                    );
+
+                    // final pdf = pw.Document();
+                    // final fileStr = await rootBundle.load('assets/fonts/OldStandardTT-Regular.ttf');
+                    // print(fileStr);
+                    // // final Uint8List fontData = File('OldStandard-Regular.otf').readAsBytesSync();
+                    // final ttf = pw.Font.ttf(fileStr);
+                    //
+                    // pdf.addPage(pw.MultiPage(
+                    //     maxPages: 4,
+                    //     pageFormat: PdfPageFormat.a4,
+                    //     build: (pw.Context context) {
+                    //       return Wrap(pw.Text(
+                    //         content,
+                    //         style: pw.TextStyle(font: ttf, fontSize: 40),
+                    //       )); // Center
+                    //     })); // Page
+                    // final bytes = await pdf.save();
+                    // final uri = await FileSaver.instance.saveBytesAsync(
+                    //     fileName: name,
+                    //     bytes: bytes,
+                    //     fileType: CustomFileType(ext: 'pdf', mimeType: 'application/pdf')
+                    // );
+                    // print(uri);
+
+                    // Directory? appDocDirectory = await getExternalStorageDirectory();
+                    // if (appDocDirectory != null) {
+                    // File file = File(join(appDocDirectory.path, "hello.epub"));
+                    // await file.create();
+                    // print(file);
+                    // }
+                  },
+                );
+              } else if (future.hasError) {
+                return Text('${future.error}');
+              }
+              return const CircularProgressIndicator();
+            },
+          ),
         ],
       ),
       body: Container(
@@ -171,13 +342,23 @@ class _TextPageState extends State<TextPage> {
                             )
                         ),
                       ),
-                      Column(
-                        children: content.split("\n\n").map((itemContent) =>
-                            FusionTextWidgets(
-                              text: itemContent,
-                              footnotes: future.data?.footnotes??[],
-                            ),
-                        ).toList(),
+                      future.data!.newUi ? (
+                        SizedBox(
+                          height: 350.0,
+                          child: Markdown(
+                            data: content,
+                          ),
+                        )
+                      ) : (
+                          Column(
+                            children: content.split("\n\n").map((itemContent) =>
+                                FusionTextWidgets(
+                                  text: itemContent,
+                                  footnotes: future.data?.footnotes??[],
+                                  fontFamily: future.data!.csSource ? "Monomakh" : "OldStandard",
+                                ),
+                            ).toList(),
+                          )
                       ),
                       if (future.data!.dneslovId != null) FutureBuilder<DneslovImageListD>(
                           future: dneslovImages,

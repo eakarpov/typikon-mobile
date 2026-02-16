@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import "package:typikon/components/saints.dart";
 import 'package:typikon/store/models/models.dart';
 
-List<InlineSpan> buildPlaces(String text, double size, BuildContext context) {
+List<InlineSpan> buildPlaces(String text, double size, BuildContext context, String fontFamily) {
   final regex = RegExp(r"\{pl\|(.+)}");
 
   final matches = regex.allMatches(text);
@@ -25,7 +25,7 @@ List<InlineSpan> buildPlaces(String text, double size, BuildContext context) {
         TextSpan(
           // text: beforeText,
           style: TextStyle(
-            fontFamily: "OldStandard",
+            fontFamily: fontFamily,
             fontSize: size,
             color: StoreProvider.of<AppState>(context).state.settings.fontColor,
           ),
@@ -33,6 +33,7 @@ List<InlineSpan> buildPlaces(String text, double size, BuildContext context) {
             beforeText,
             size,
             context,
+            fontFamily,
           ),
         ),
       );
@@ -47,7 +48,7 @@ List<InlineSpan> buildPlaces(String text, double size, BuildContext context) {
             Navigator.pushNamed(context, "/places", arguments: matchStrings[0]);
           },
           style: TextStyle(
-            fontFamily: "OldStandard",
+            fontFamily: fontFamily,
             fontSize: size,
             color: Colors.blue,
           ),
@@ -67,7 +68,7 @@ List<InlineSpan> buildPlaces(String text, double size, BuildContext context) {
       TextSpan(
         // text: remainingText,
         style: TextStyle(
-          fontFamily: "OldStandard",
+          fontFamily: fontFamily,
           fontSize: size,
           color: StoreProvider.of<AppState>(context).state.settings.fontColor,
         ),
@@ -75,6 +76,7 @@ List<InlineSpan> buildPlaces(String text, double size, BuildContext context) {
           remainingText,
           size,
           context,
+          fontFamily,
         ),
       ),
     );

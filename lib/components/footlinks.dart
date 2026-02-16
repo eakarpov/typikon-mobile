@@ -14,6 +14,7 @@ List<InlineSpan> buildFootlinks(
     double size,
     BuildContext context,
     List<String> footnotes,
+    String fontFamily,
 ) {
   final regex = RegExp(r"\{(\d+)}");
 
@@ -30,7 +31,7 @@ List<InlineSpan> buildFootlinks(
         TextSpan(
           // text: beforeText,
           style: TextStyle(
-            fontFamily: "OldStandard",
+            fontFamily: fontFamily,
             fontSize: size,
             color: StoreProvider.of<AppState>(context).state.settings.fontColor,
           ),
@@ -38,6 +39,7 @@ List<InlineSpan> buildFootlinks(
             beforeText,
             size,
             context,
+            fontFamily,
           ),
         ),
       );
@@ -68,7 +70,7 @@ List<InlineSpan> buildFootlinks(
             );
           },
           style: TextStyle(
-            fontFamily: "OldStandard",
+            fontFamily: fontFamily,
             fontSize: size,
             color: Colors.blue,
           ),
@@ -88,7 +90,7 @@ List<InlineSpan> buildFootlinks(
       TextSpan(
         // text: remainingText,
         style: TextStyle(
-          fontFamily: "OldStandard",
+          fontFamily: fontFamily,
           fontSize: size,
           color: StoreProvider.of<AppState>(context).state.settings.fontColor,
         ),
@@ -96,6 +98,7 @@ List<InlineSpan> buildFootlinks(
           remainingText,
           size,
           context,
+          fontFamily,
         ),
       ),
     );

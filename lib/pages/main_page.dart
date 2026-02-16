@@ -533,6 +533,13 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   },
                 ),
                 ListTile(
+                  title: const Text('Вне триодного цикла', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/outside",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/outside");
+                  },
+                ),
+                ListTile(
                   title: const Text('Чтения на календарный день', style: TextStyle(fontSize: 14.0),),
                   selected: ModalRoute.of(context)?.settings.name == "/months",
                   onTap: () {
@@ -551,6 +558,13 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   selected: ModalRoute.of(context)?.settings.name == "/dneslov/memories",
                   onTap: () {
                     Navigator.pushNamed(context, "/dneslov/memories");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Полезные ресурсы', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/resources",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/resources");
                   },
                 ),
                 ListTile(

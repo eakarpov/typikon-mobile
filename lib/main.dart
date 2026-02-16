@@ -2,14 +2,18 @@ import "dart:ui";
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import "package:google_fonts/google_fonts.dart";
 import 'package:flutter_redux/flutter_redux.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import "package:background_fetch/background_fetch.dart";
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:typikon/pages/outside_page.dart';
+import 'package:typikon/pages/signs_page.dart';
 // import 'package:workmanager/workmanager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -34,6 +38,7 @@ import 'package:typikon/pages/saint_page.dart';
 import 'package:typikon/pages/place_page.dart';
 import 'package:typikon/pages/favourite_page.dart';
 import 'package:typikon/pages/contact_page.dart';
+import 'package:typikon/pages/resources_page.dart';
 
 import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
@@ -341,6 +346,27 @@ class MyAppState extends State<MyApp> {
           throw new Exception("Cannot launch update");
         }
       }
+      if (payload != null && payload.contains("download")) {
+        var [v, path] = payload.split(" - ");
+        print(path);
+        // final String filePath = Uri(
+        //   scheme: 'file',
+        //   path: path,
+        // ).toFilePath();
+        //
+        // final Uri fileUri = Uri(
+        //   scheme: 'file',
+        //   path: filePath,
+        // );
+        // print(fileUri);
+        // print(filePath);
+
+        const platform = MethodChannel('su.typikon.typikon/utils');
+        platform.invokeMethod("openFile", [path, "application/x-fictionbook"]);
+        // OpenFilex.open(path);
+        // launchUrl(fileUri);
+        // OpenAppFile.open(path);
+      }
       // await Navigator.of(context).push(MaterialPageRoute<void>(
       //   builder: (BuildContext context) => LibraryPage(context),
       // ));
@@ -515,6 +541,24 @@ class MyAppState extends State<MyApp> {
                       return MaterialPageRoute(
                         builder: (context) {
                           return CurrentDayMemoriesPage(context);
+                        },
+                      );
+                    case "/resources":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return ResourcesPage(context);
+                        },
+                      );
+                    case "/outside":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return OutsidePage(context);
+                        },
+                      );
+                    case "/signs":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return SignsPage(context);
                         },
                       );
                     case "/":

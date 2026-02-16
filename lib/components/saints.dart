@@ -8,7 +8,7 @@ import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 import 'package:typikon/store/models/models.dart';
 
-List<InlineSpan> buildSaints(String text, double size, BuildContext context) {
+List<InlineSpan> buildSaints(String text, double size, BuildContext context, String fontFamily) {
   final regex = RegExp(r"\{st\|(.+)}");
 
   final matches = regex.allMatches(text);
@@ -24,7 +24,7 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context) {
         TextSpan(
           text: beforeText,
           style: TextStyle(
-            fontFamily: "OldStandard",
+            fontFamily: fontFamily,
             fontSize: size,
             color: StoreProvider.of<AppState>(context).state.settings.fontColor,
           ),
@@ -41,7 +41,7 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context) {
             Navigator.pushNamed(context, "/saints", arguments: matchStrings[0]);
           },
           style: TextStyle(
-            fontFamily: "OldStandard",
+            fontFamily: fontFamily,
             fontSize: size,
             color: Colors.blue,
           ),
@@ -61,7 +61,7 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context) {
       TextSpan(
         text: remainingText,
         style: TextStyle(
-          fontFamily: "OldStandard",
+          fontFamily: fontFamily,
           fontSize: size,
           color: StoreProvider.of<AppState>(context).state.settings.fontColor,
         ),

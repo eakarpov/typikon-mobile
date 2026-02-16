@@ -16,6 +16,8 @@ class Reading {
   final String? dneslovId;
   final String? bookId;
   final String? dayId;
+  final bool csSource;
+  final bool newUi;
 
   const Reading({
     required this.id,
@@ -31,6 +33,8 @@ class Reading {
     required this.dneslovId,
     required this.bookId,
     required this.dayId,
+    required this.csSource,
+    required this.newUi,
   });
 
   factory Reading.fromJson(Map<String, dynamic> json, Map<String, dynamic>? jsonDay) {
@@ -48,6 +52,8 @@ class Reading {
     var dneslovId = json["dneslovId"];
     var updatedAtString = json["updatedAt"];
     var bookId = json["bookId"];
+    var csSource = json["csSource"] ?? false;
+    var newUi = json["newUi"] ?? false;
     List<String> footnotes = json["footnotes"] == null ? List<String>.empty() : List<String>.from(json["footnotes"] as List);
     var dayId = jsonDay != null ? jsonDay["id"] : null;
     return Reading(
@@ -64,6 +70,8 @@ class Reading {
       dneslovId: dneslovId,
       bookId: bookId,
       dayId: dayId,
+      csSource: csSource,
+      newUi: newUi,
     );
   }
 }

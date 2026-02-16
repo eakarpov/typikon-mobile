@@ -11,3 +11,9 @@ Future<http.Response> fetchTriodion() {
     Uri.parse('https://typikon.su/api/v1/collections/triodion'),
   );
 }
+
+Future<http.Response> fetchOutTriodion() {
+  return http.get(
+    Uri.parse('https://typikon.su/api/v1/collections/out-triodion'),
+  );
+}

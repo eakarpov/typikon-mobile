@@ -12,12 +12,14 @@ import 'package:typikon/components/footlinks.dart';
 class FusionTextWidgets extends StatelessWidget {
   final String text;
   final List<String> footnotes;
+  final String fontFamily;
   static final regex = RegExp(r"\{k\|(.+)}");
 
   const FusionTextWidgets({
     Key? key,
     required this.text,
     required this.footnotes,
+    required this.fontFamily,
   }) : super(key: key);
 
   @override
@@ -35,7 +37,7 @@ class FusionTextWidgets extends StatelessWidget {
           TextSpan(
             // text: beforeText,
             style: TextStyle(
-              fontFamily: "OldStandard",
+              fontFamily: fontFamily,
               fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
               color: StoreProvider.of<AppState>(context).state.settings.fontColor,
             ),
@@ -44,6 +46,7 @@ class FusionTextWidgets extends StatelessWidget {
                 StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
                 context,
                 footnotes,
+                fontFamily,
             ),
           ),
         );
@@ -54,7 +57,7 @@ class FusionTextWidgets extends StatelessWidget {
           TextSpan(
             text: match.group(1),
             style: TextStyle(
-              fontFamily: "OldStandard",
+              fontFamily: fontFamily,
               fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
               color: Colors.red,
             ),
@@ -76,7 +79,7 @@ class FusionTextWidgets extends StatelessWidget {
         TextSpan(
           // text: remainingText,
           style: TextStyle(
-            fontFamily: "OldStandard",
+            fontFamily: fontFamily,
             fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
             color: StoreProvider.of<AppState>(context).state.settings.fontColor,
           ),
@@ -85,6 +88,7 @@ class FusionTextWidgets extends StatelessWidget {
               StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
               context,
               footnotes,
+              fontFamily,
           ),
         ),
       );
