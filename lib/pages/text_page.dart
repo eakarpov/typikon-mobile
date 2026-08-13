@@ -47,12 +47,7 @@ class _TextPageState extends State<TextPage> {
   @override
   void initState() {
     super.initState();
-    reading = getText(widget.id);
-    reading.then((value) => {
-      if (value!.dneslovId != null) {
-        dneslovImages = fetchDneslovImagesD(value!.dneslovId!)
-      }
-    });
+    _loadReading();
     SharedPreferences.getInstance().then((prefs){
       List<String>? liked = prefs.getStringList("favourites") ?? [];
       if (liked.contains(widget.id)) {
@@ -61,6 +56,56 @@ class _TextPageState extends State<TextPage> {
         });
       }
     });
+  }
+
+  void _loadReading() {
+    reading = getText(widget.id);
+    reading.then((value) => {
+      if (value!.dneslovId != null) {
+        dneslovImages = fetchDneslovImagesD(value!.dneslovId!)
+      }
+    });
+  }
+
+  void _retry() {
+    setState(_loadReading);
+  }
+
+  bool _isOffline(Object? error) {
+    final message = error.toString();
+    return message.contains('SocketException') || message.contains('Failed host lookup');
+  }
+
+  Widget _buildError(BuildContext context, Object? error) {
+    final offline = _isOffline(error);
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      width: double.infinity,
+      height: double.infinity,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(offline ? Icons.wifi_off : Icons.error_outline, size: 48),
+              SizedBox(height: 16),
+              Text(
+                offline
+                    ? "Нет соединения с интернетом. Этот текст ещё не открывали, поэтому офлайн он недоступен."
+                    : "Не удалось загрузить текст.",
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16),
+              TextButton(
+                onPressed: _retry,
+                child: Text("Повторить"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void onClick(String link) {
@@ -112,7 +157,12 @@ class _TextPageState extends State<TextPage> {
               String name = future.data!.name;
               return Text(name, style: TextStyle(fontFamily: "OldStandard"));
             } else if (future.hasError) {
-              return Text('${future.error}');
+              return Text(
+                "Ошибка загрузки",
+                style: TextStyle(fontFamily: "OldStandard"),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              );
             }
             return const CircularProgressIndicator();
           },
@@ -310,7 +360,7 @@ class _TextPageState extends State<TextPage> {
                   },
                 );
               } else if (future.hasError) {
-                return Text('${future.error}');
+                return SizedBox.shrink();
               }
               return const CircularProgressIndicator();
             },
@@ -395,7 +445,7 @@ class _TextPageState extends State<TextPage> {
                 ),
               );
             } else if (future.hasError) {
-              return Text('${future.error}');
+              return _buildError(context, future.error);
             }
             return Container(
               color: Theme.of(context).scaffoldBackgroundColor,
