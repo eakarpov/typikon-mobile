@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -9,7 +10,6 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:file_saver_ffi/file_saver_ffi.dart';
-import 'package:path/path.dart';
 import "package:path_provider/path_provider.dart";
 import 'package:epub_pro/epub_pro.dart' hide Image;
 import 'package:flutter/material.dart';
@@ -23,6 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import "package:typikon/components/fusion_text.dart";
 import 'package:typikon/store/models/models.dart';
+import 'package:typikon/store/reading_progress.dart';
 import 'package:typikon/dto/book.dart';
 import 'package:typikon/dto/text.dart';
 import 'package:typikon/dto/dneslov/images.dart';
@@ -38,15 +39,21 @@ class TextPage extends StatefulWidget {
   State<TextPage> createState() => _TextPageState();
 }
 
-class _TextPageState extends State<TextPage> {
+class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   late Future<Reading> reading;
   late Future<DneslovImageListD> dneslovImages;
 
   bool isFavourite = false;
 
+  final ScrollController _scrollController = ScrollController();
+  Timer? _persistDebounce;
+  bool _resumeBannerShown = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_onScroll);
     _loadReading();
     SharedPreferences.getInstance().then((prefs){
       List<String>? liked = prefs.getStringList("favourites") ?? [];
@@ -58,12 +65,85 @@ class _TextPageState extends State<TextPage> {
     });
   }
 
+  @override
+  void dispose() {
+    _persistDebounce?.cancel();
+    _persistProgressNow();
+    WidgetsBinding.instance.removeObserver(this);
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _persistProgressNow();
+    }
+  }
+
+  void _onScroll() {
+    _persistDebounce?.cancel();
+    _persistDebounce = Timer(const Duration(seconds: 2), _persistProgressNow);
+  }
+
+  void _persistProgressNow() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final maxExtent = position.maxScrollExtent;
+    if (maxExtent <= 0) return;
+    final fraction = (position.pixels / maxExtent).clamp(0.0, 1.0);
+    saveReadingProgress(widget.id, fraction);
+  }
+
+  Future<void> _checkResumeProgress() async {
+    final progress = await getReadingProgress(widget.id);
+    if (progress == null || _resumeBannerShown || !mounted) return;
+    _resumeBannerShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showResumeBanner(progress.fraction);
+    });
+  }
+
+  void _showResumeBanner(double fraction) {
+    ScaffoldMessenger.of(context).showMaterialBanner(
+      MaterialBanner(
+        content: Text("Вы уже читали этот текст. Продолжить с места, где остановились?"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+              clearReadingProgress(widget.id);
+            },
+            child: Text("Сначала"),
+          ),
+          TextButton(
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+              _resumeTo(fraction);
+            },
+            child: Text("Продолжить"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _resumeTo(double fraction) {
+    if (!_scrollController.hasClients) return;
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    _scrollController.jumpTo((fraction * maxExtent).clamp(0.0, maxExtent));
+  }
+
   void _loadReading() {
+    _resumeBannerShown = false;
     reading = getText(widget.id);
-    reading.then((value) => {
-      if (value!.dneslovId != null) {
-        dneslovImages = fetchDneslovImagesD(value!.dneslovId!)
+    reading.then((value) {
+      if (value.dneslovId != null) {
+        dneslovImages = fetchDneslovImagesD(value.dneslovId!);
       }
+      _checkResumeProgress();
     });
   }
 
@@ -378,6 +458,7 @@ class _TextPageState extends State<TextPage> {
               String content = future.data!.content;
               String name = future.data!.name;
               return SingleChildScrollView(
+                controller: _scrollController,
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
