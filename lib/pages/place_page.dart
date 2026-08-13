@@ -48,7 +48,7 @@ class _PlacePageState extends State<PlacePage> {
         ),
       ),
       body: Container(
-        color: const Color(0xffffffff),
+        color: Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<PlaceInfo>(
@@ -82,7 +82,7 @@ class _PlacePageState extends State<PlacePage> {
               return Text('${future.error}');
             }
             return Container(
-              color: const Color(0xffffffff),
+              color: Theme.of(context).scaffoldBackgroundColor,
               width: double.infinity,
               height: double.infinity,
               child: Positioned.fill(

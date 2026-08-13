@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/material.dart' show ThemeMode;
+
 import 'package:typikon/models/color.dart';
 
 // abstract class AppActions {
@@ -65,3 +67,16 @@ class ChangeBackgroundColorAction {
     return 'ChangeBackgroundColorAction{backgroundColor: ${HexColor.toHex(backgroundColor)}}';
   }
 }
+
+class ChangeThemeModeAction {
+  final ThemeMode themeMode;
+
+  ChangeThemeModeAction(this.themeMode);
+
+  @override
+  String toString() {
+    return 'ChangeThemeModeAction{themeMode: $themeMode}';
+  }
+}
+
+class ResetReadingColorsAction {}

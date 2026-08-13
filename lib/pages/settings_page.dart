@@ -47,50 +47,87 @@ class _SettingsPageState extends State<SettingsPage> {
         converter: (store) => SettingsViewModel.build(store),
         builder: (context, viewModel) {
           return Container(
-            color: viewModel.backgroundColor,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(top: 20),
-                  child: GestureDetector(
-                    onTap: () { viewModel.onChangeFontSize(viewModel.fontSize + 1); },
-                    child: Text("Размер текста чтений", style: TextStyle(fontWeight: FontWeight.bold)),
-                  )),
-                Slider(
-                  value: viewModel.fontSize.toDouble(),
-                  onChanged: (newValue) { viewModel.onChangeFontSize(newValue.toInt()); },
-                  min: 5,
-                  max: 40,
-                ),
-                Text(
-                  "Пример того, как будет выглядеть текст.",
-                  textAlign: TextAlign.justify,
-                  style: TextStyle(
-                      fontFamily: "OldStandard",
-                      fontSize: viewModel.fontSize.toDouble(),
-                      color: StoreProvider.of<AppState>(context).state.settings.fontColor
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(top: 20, left: 16, right: 16),
+                    child: Text("Тема оформления", style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                ),
-                Padding(
-                    padding: EdgeInsets.only(top: 20),
-                    child: TextButton(
-                          child: Text("Выбрать цвет фона текстов", style: TextStyle(fontWeight: FontWeight.bold)),
-                          onPressed: () {
-                           onOpenPicker(context, viewModel.backgroundColor, viewModel.onChangeBackgroundColor);
-                          },
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: SegmentedButton<ThemeMode>(
+                      segments: const [
+                        ButtonSegment(value: ThemeMode.system, label: Text("Системная")),
+                        ButtonSegment(value: ThemeMode.light, label: Text("Светлая")),
+                        ButtonSegment(value: ThemeMode.dark, label: Text("Тёмная")),
+                      ],
+                      selected: {viewModel.themeMode},
+                      onSelectionChanged: (selected) {
+                        viewModel.onChangeThemeMode(selected.first);
+                      },
                     ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(top: 20),
-                  child: TextButton(
-                    child: Text("Выбрать цвет шрифта текстов", style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: () {
-                      onOpenPicker(context, viewModel.fontColor, viewModel.onChangeFontColor);
-                    },
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: EdgeInsets.only(top: 20, left: 16),
+                    child: GestureDetector(
+                      onTap: () { viewModel.onChangeFontSize(viewModel.fontSize + 1); },
+                      child: Text("Размер текста чтений", style: TextStyle(fontWeight: FontWeight.bold)),
+                    )),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Slider(
+                      value: viewModel.fontSize.toDouble(),
+                      onChanged: (newValue) { viewModel.onChangeFontSize(newValue.toInt()); },
+                      min: 5,
+                      max: 40,
+                    ),
+                  ),
+                  Container(
+                    margin: EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.all(12),
+                    color: viewModel.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+                    child: Text(
+                      "Пример того, как будет выглядеть текст.",
+                      textAlign: TextAlign.justify,
+                      style: TextStyle(
+                          fontFamily: "OldStandard",
+                          fontSize: viewModel.fontSize.toDouble(),
+                          color: viewModel.fontColor ?? Theme.of(context).textTheme.bodyLarge?.color
+                      ),
+                    ),
+                  ),
+                  Padding(
+                      padding: EdgeInsets.only(top: 20, left: 16, right: 16),
+                      child: TextButton(
+                            child: Text("Выбрать цвет фона текстов", style: TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: () {
+                             onOpenPicker(context, viewModel.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor, viewModel.onChangeBackgroundColor);
+                            },
+                      ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: TextButton(
+                      child: Text("Выбрать цвет шрифта текстов", style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        onOpenPicker(context, viewModel.fontColor ?? Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black, viewModel.onChangeFontColor);
+                      },
+                    ),
+                  ),
+                  if (viewModel.backgroundColor != null || viewModel.fontColor != null) Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: TextButton(
+                      child: Text("Сбросить цвета чтений (следовать теме)"),
+                      onPressed: viewModel.onResetReadingColors,
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                ],
+              ),
             ),
           );
         }
@@ -103,24 +140,36 @@ class SettingsViewModel {
   final int fontSize;
   final Function(int) onChangeFontSize;
 
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final Function(Color) onChangeBackgroundColor;
 
-  final Color fontColor;
+  final Color? fontColor;
   final Function(Color) onChangeFontColor;
+
+  final ThemeMode themeMode;
+  final Function(ThemeMode) onChangeThemeMode;
+
+  final VoidCallback onResetReadingColors;
 
   SettingsViewModel({
     this.fontSize = 0,
     this.onChangeFontSize = SettingsViewModel.stub,
-    this.fontColor = const Color(0x00000000),
+    this.fontColor,
     this.onChangeFontColor = SettingsViewModel.stubColor,
-    this.backgroundColor = const Color(0xffffffff),
+    this.backgroundColor,
     this.onChangeBackgroundColor = SettingsViewModel.stubColor,
+    this.themeMode = ThemeMode.system,
+    this.onChangeThemeMode = SettingsViewModel.stubThemeMode,
+    this.onResetReadingColors = SettingsViewModel.stubVoid,
   });
 
   static stub (int fontSize) {}
 
   static stubColor (Color backgroundColor) {}
+
+  static stubThemeMode (ThemeMode themeMode) {}
+
+  static stubVoid () {}
 
   static SettingsViewModel build(Store<AppState> store) {
     return SettingsViewModel(
@@ -135,6 +184,13 @@ class SettingsViewModel {
       backgroundColor: store.state.settings.backgroundColor,
       onChangeBackgroundColor: (newBackgroundColor) {
         store.dispatch(ChangeBackgroundColorAction(newBackgroundColor));
+      },
+      themeMode: store.state.settings.themeMode,
+      onChangeThemeMode: (newThemeMode) {
+        store.dispatch(ChangeThemeModeAction(newThemeMode));
+      },
+      onResetReadingColors: () {
+        store.dispatch(ResetReadingColorsAction());
       },
     );
   }

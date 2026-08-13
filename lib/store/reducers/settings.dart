@@ -7,31 +7,31 @@ final settingsReducer = combineReducers<Settings>([
   TypedReducer<Settings, ChangeFontSizeAction>(_changeFontSize),
   TypedReducer<Settings, ChangeBackgroundColorAction>(_changeBackgroundColor),
   TypedReducer<Settings, ChangeFontColorAction>(_changeFontColor),
+  TypedReducer<Settings, ChangeThemeModeAction>(_changeThemeMode),
+  TypedReducer<Settings, ResetReadingColorsAction>(_resetReadingColors),
 ]);
 
 Settings _changeFontSize(Settings state, ChangeFontSizeAction action) {
-  return Settings(
-      fontSize: action.fontSize,
-
-      backgroundColor: state.backgroundColor,
-      fontColor: state.fontColor,
-  );
+  return state.copyWith(fontSize: action.fontSize);
 }
 
 Settings _changeFontColor(Settings state, ChangeFontColorAction action) {
-  return Settings(
-    fontColor: action.fontColor,
-
-    backgroundColor: state.backgroundColor,
-    fontSize: state.fontSize,
-  );
+  return state.copyWith(fontColor: action.fontColor);
 }
 
 Settings _changeBackgroundColor(Settings state, ChangeBackgroundColorAction action) {
-  return Settings(
-    backgroundColor: action.backgroundColor,
+  return state.copyWith(backgroundColor: action.backgroundColor);
+}
 
+Settings _changeThemeMode(Settings state, ChangeThemeModeAction action) {
+  return state.copyWith(themeMode: action.themeMode);
+}
+
+Settings _resetReadingColors(Settings state, ResetReadingColorsAction action) {
+  return Settings(
     fontSize: state.fontSize,
-    fontColor: state.fontColor,
+    themeMode: state.themeMode,
+    backgroundColor: null,
+    fontColor: null,
   );
 }

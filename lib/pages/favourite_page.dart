@@ -27,7 +27,7 @@ class _FavouritePageState extends State<FavouritePage> {
         title: Text("Избранное", style: TextStyle(fontFamily: "OldStandard")),
       ),
       body: Container(
-        color: const Color(0xffffffff),
+        color: Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<BookWithTexts>(
@@ -37,7 +37,7 @@ class _FavouritePageState extends State<FavouritePage> {
               List<BookText> list = future.data!.texts;
               if (list.isEmpty) {
                 return Container(
-                  color: const Color(0xffffffff),
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   width: MediaQuery.of(context).size.width,
                   height: MediaQuery.of(context).size.height,
                   child: Positioned.fill(
@@ -77,7 +77,7 @@ class _FavouritePageState extends State<FavouritePage> {
               return Text('${future.error}');
             }
             return Container(
-              color: const Color(0xffffffff),
+              color: Theme.of(context).scaffoldBackgroundColor,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
               child: Positioned.fill(

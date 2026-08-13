@@ -128,7 +128,7 @@ class _SaintPageState extends State<SaintPage> {
           ),
         ),
         body: Container(
-          color: const Color(0xffffffff),
+          color: Theme.of(context).scaffoldBackgroundColor,
           width: MediaQuery.of(context).size.width,
           height: MediaQuery.of(context).size.height,
           child: FutureBuilder<Saint>(
@@ -186,7 +186,7 @@ class _SaintPageState extends State<SaintPage> {
                 return Text('${future.error}');
               }
               return Container(
-                color: const Color(0xffffffff),
+                color: Theme.of(context).scaffoldBackgroundColor,
                 width: double.infinity,
                 height: double.infinity,
                 child: Align(

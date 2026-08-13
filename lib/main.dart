@@ -18,6 +18,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import "version.dart";
+import "api/constants.dart";
 
 import "package:typikon/apiMapper/version.dart";
 import 'package:typikon/pages/book_page.dart';
@@ -170,7 +171,7 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
   //   print(
   //       'notification action tapped with input: ${notificationResponse.input}');
   // }
-  final Uri url = Uri.parse('https://typikon.su/app/app.apk');
+  final Uri url = Uri.parse('$apiBaseUrl/app/app.apk');
   if (await canLaunchUrl(url)) {
     await launchUrl(
       url,
@@ -243,6 +244,41 @@ class MyAppState extends State<MyApp> {
     setState(() {
       _hasSkippedUpdate = val;
     });
+  }
+
+  ThemeData _buildTheme(Brightness brightness) {
+    final colorScheme = ColorScheme.fromSeed(seedColor: Colors.green, brightness: brightness);
+    final brandColor = brightness == Brightness.dark ? Colors.green.shade900 : Colors.green;
+    return ThemeData(
+      colorScheme: colorScheme,
+      brightness: brightness,
+      textTheme: TextTheme(
+        displayLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+        displayMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+        displaySmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+        headlineLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+        headlineMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+        headlineSmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+        labelLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+        labelMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+        labelSmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+        titleLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+        titleMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+        titleSmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+        bodyLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
+        bodyMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
+        bodySmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
+      ),
+      scaffoldBackgroundColor: colorScheme.surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: brandColor,
+        foregroundColor: Colors.white,
+        titleTextStyle: TextStyle(fontSize: 18.0, color: Colors.white),
+      ),
+      drawerTheme: DrawerThemeData(
+        backgroundColor: colorScheme.surface,
+      ),
+    );
   }
 
   @override
@@ -334,7 +370,7 @@ class MyAppState extends State<MyApp> {
   void _configureSelectNotificationSubject() {
     selectNotificationStream.stream.listen((String? payload) async {
       if (payload == wantToGetUpdate) {
-        final Uri url = Uri.parse('https://typikon.su/app/app.apk');
+        final Uri url = Uri.parse('$apiBaseUrl/app/app.apk');
         if (await canLaunchUrl(url)) {
           await launchUrl(
             url,
@@ -574,35 +610,9 @@ class MyAppState extends State<MyApp> {
                       return null;
                   }
                 },
-                theme: ThemeData(
-                  // primarySwatch: Colors.green,
-                  colorSchemeSeed: Colors.green,
-                  // textTheme: GoogleFonts.latoTextTheme(
-                  //   Theme.of(context).textTheme,
-                  // ),
-                  textTheme: TextTheme(
-                    displayLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
-                    displayMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
-                    displaySmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
-                    headlineLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
-                    headlineMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
-                    headlineSmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
-                    labelLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
-                    labelMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
-                    labelSmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
-                    titleLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
-                    titleMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
-                    titleSmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
-                    bodyLarge: TextStyle(fontFamily: "OldStandard", fontSize: 16),
-                    bodyMedium: TextStyle(fontFamily: "OldStandard", fontSize: 14),
-                    bodySmall: TextStyle(fontFamily: "OldStandard", fontSize: 12),
-                  ),
-                  scaffoldBackgroundColor: const Color(0xFFFFFFFF),
-                  appBarTheme: AppBarTheme(
-                      backgroundColor: Colors.green,
-                      titleTextStyle: TextStyle(fontSize: 18.0)
-                  )
-                ),
+                theme: _buildTheme(Brightness.light),
+                darkTheme: _buildTheme(Brightness.dark),
+                themeMode: store.state.settings.themeMode,
               );
             },
         ),

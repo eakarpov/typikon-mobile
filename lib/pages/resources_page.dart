@@ -34,7 +34,7 @@ class _ResourcesPageState extends State<ResourcesPage> {
           title: Text("Полезные ресурсы", style: TextStyle(fontFamily: "OldStandard")),
         ),
         body: Container(
-          color: const Color(0xffffffff),
+          color: Theme.of(context).scaffoldBackgroundColor,
           width: MediaQuery.of(context).size.width,
           height: MediaQuery.of(context).size.height,
           child: ListView.builder(

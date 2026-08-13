@@ -29,7 +29,7 @@ class _MonthsPageState extends State<MonthsPage> {
         title: Text("Выберите месяц", style: TextStyle(fontFamily: "OldStandard")),
       ),
       body: Container(
-        color: const Color(0xffffffff),
+        color: Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<MonthList>(
@@ -60,7 +60,7 @@ class _MonthsPageState extends State<MonthsPage> {
               return Text('${future.error}');
             }
             return Container(
-              color: const Color(0xffffffff),
+              color: Theme.of(context).scaffoldBackgroundColor,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
               child: Positioned.fill(

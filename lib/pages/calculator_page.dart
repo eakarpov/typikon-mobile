@@ -188,7 +188,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
         ],
       ),
       body: Container(
-        color: const Color(0xffffffff),
+        color: Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<CalendarDay>(
@@ -274,7 +274,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
               return Center(child: Text('Для этой даты формирование выдачи недоступно'));
             }
             return Container(
-              color: const Color(0xffffffff),
+              color: Theme.of(context).scaffoldBackgroundColor,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
               child: Positioned.fill(

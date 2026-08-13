@@ -36,7 +36,7 @@ class _PenticostarionPageState extends State<PenticostarionPage> {
         title: Text("Период Цветной Триоди", style: TextStyle(fontFamily: "OldStandard")),
       ),
       body: Container(
-        color: const Color(0xffffffff),
+        color: Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<PenticostarionCollection>(
@@ -68,7 +68,7 @@ class _PenticostarionPageState extends State<PenticostarionPage> {
               return Text('${future.error}');
             }
             return Container(
-              color: const Color(0xffffffff),
+              color: Theme.of(context).scaffoldBackgroundColor,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
               child: Positioned.fill(

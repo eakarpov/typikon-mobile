@@ -20,6 +20,8 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
       action is ChangeFontSizeAction ||
       action is ChangeFontColorAction ||
       action is ChangeBackgroundColorAction ||
+      action is ChangeThemeModeAction ||
+      action is ResetReadingColorsAction ||
       action is ChangeCommonDateAction
     ) {
       // await _saveStateToPrefs(store.state); // TODO - after store update save to storage, not before!!
@@ -50,8 +52,13 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     if (stateString == null) return;
     AppState state = AppState.fromJson(json.decode(stateString));
     store.dispatch(ChangeFontSizeAction(state.settings.fontSize));
-    store.dispatch(ChangeFontColorAction(state.settings.fontColor));
-    store.dispatch(ChangeBackgroundColorAction(state.settings.backgroundColor));
+    store.dispatch(ChangeThemeModeAction(state.settings.themeMode));
+    if (state.settings.fontColor != null) {
+      store.dispatch(ChangeFontColorAction(state.settings.fontColor!));
+    }
+    if (state.settings.backgroundColor != null) {
+      store.dispatch(ChangeBackgroundColorAction(state.settings.backgroundColor!));
+    }
     // store.dispatch(ChangeCommonDateAction(state.common.date)); // Дату пока не сохраняем
   }
 }

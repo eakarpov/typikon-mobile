@@ -19,6 +19,7 @@ import '../dto/calendar.dart';
 import "../dto/day.dart";
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
+import '../api/constants.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
 
@@ -123,7 +124,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 
   void onLoadUpdate(BuildContext context) async {
     Navigator.of(context).pop();
-    final Uri url = Uri.parse('https://typikon.su/app/app.apk');
+    final Uri url = Uri.parse('$apiBaseUrl/app/app.apk');
     if (await canLaunchUrl(url)) {
       await launchUrl(
           url,
@@ -222,7 +223,6 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     return DefaultTabController(
         length: 3,
         child: Scaffold(
-          backgroundColor: Colors.white,
           appBar: AppBar(
             title: Text(
                 value,
@@ -292,7 +292,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                 ),
               ]),
           body: Container(
-            color: const Color(0xffffffff),
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: FutureBuilder(
               future: data,
               builder: (context, future) {
@@ -455,9 +455,39 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   ),
                 ],
                 );
-               }
+               } else if (future.hasError) {
+                  return Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text(
+                            '${future.error}',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              data = updateData(
+                                  DateFormat('yyyy-MM-dd').format(
+                                      StoreProvider.of<AppState>(context).state.common.date ??
+                                          DateTime.now().subtract(const Duration(days: 13))
+                                  )
+                              );
+                            });
+                          },
+                          child: Text("Повторить"),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 return Container(
-                  color: const Color(0xffffffff),
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -478,7 +508,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
               children: [
                 DrawerHeader(
                   decoration: BoxDecoration(
-                    color: Colors.green,
+                    color: Theme.of(context).appBarTheme.backgroundColor,
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

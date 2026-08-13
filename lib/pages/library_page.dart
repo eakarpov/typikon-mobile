@@ -29,7 +29,7 @@ class _LibraryPageState extends State<LibraryPage> {
         title: Text("Библиотека", style: TextStyle(fontFamily: "OldStandard")),
       ),
       body: Container(
-        color: const Color(0xffffffff),
+        color: Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<BookList>(
@@ -57,7 +57,7 @@ class _LibraryPageState extends State<LibraryPage> {
               return Text('${future.error}');
             }
             return Container(
-              color: const Color(0xffffffff),
+              color: Theme.of(context).scaffoldBackgroundColor,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
               child: Positioned.fill(

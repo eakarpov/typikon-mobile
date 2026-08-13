@@ -135,7 +135,7 @@ class _DaysPageState extends State<DaysPage> {
         ),
       ),
       body: Container(
-        color: StoreProvider.of<AppState>(context).state.settings.backgroundColor,
+        color: StoreProvider.of<AppState>(context).state.settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<DayTexts>(
@@ -227,7 +227,7 @@ class _DaysPageState extends State<DaysPage> {
               return Text("Ошибка: ${future.error}");
             }
             return Container(
-              color: const Color(0xffffffff),
+              color: Theme.of(context).scaffoldBackgroundColor,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
               child: Positioned.fill(

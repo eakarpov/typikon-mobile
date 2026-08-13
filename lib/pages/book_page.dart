@@ -41,7 +41,7 @@ class _BookPageState extends State<BookPage> {
         ),
       ),
       body: Container(
-        color: const Color(0xffffffff),
+        color: Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<BookWithTexts>(
@@ -64,7 +64,7 @@ class _BookPageState extends State<BookPage> {
               return Text('${future.error}');
             }
             return Container(
-              color: const Color(0xffffffff),
+              color: Theme.of(context).scaffoldBackgroundColor,
               width: double.infinity,
               height: double.infinity,
               child: Positioned.fill(

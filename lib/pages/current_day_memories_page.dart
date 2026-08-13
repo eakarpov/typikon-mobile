@@ -172,7 +172,7 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
         ],
       ),
       body: Container(
-        color: const Color(0xffffffff),
+        color: Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: FutureBuilder<CalendarDayD>(
@@ -202,7 +202,7 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
                   return Text('${future.error}');
                 }
                 return Container(
-                  color: const Color(0xffffffff),
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   width: MediaQuery.of(context).size.width,
                   height: MediaQuery.of(context).size.height,
                   child: Positioned.fill(
