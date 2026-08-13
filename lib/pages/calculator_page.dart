@@ -9,6 +9,7 @@ import 'package:typikon/apiMapper/calendar.dart';
 import 'package:typikon/dto/calendar.dart';
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
+import 'package:typikon/components/table_of_contents.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage(context, {super.key});
@@ -17,8 +18,18 @@ class CalculatorPage extends StatefulWidget {
   State<CalculatorPage> createState() => _CalculatorPageState();
 }
 
+class _Section {
+  final String title;
+  final CalendarDayPart? part;
+
+  _Section(this.title, this.part);
+}
+
 class _CalculatorPageState extends State<CalculatorPage> {
   late Future<CalendarDay> currentDay;
+
+  final Map<String, GlobalKey> _sectionKeys = {};
+  final Map<String, GlobalKey> _itemKeys = {};
 
   @override
   String? get restorationId => "test";
@@ -100,12 +111,14 @@ class _CalculatorPageState extends State<CalculatorPage> {
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(picked)
       );
-      currentDay = getCalendarDay(
-          DateFormat('yyyy-MM-dd').format(
-              picked
-                  // .subtract(const Duration(days: 13))
-          )
-      );
+      setState(() {
+        currentDay = getCalendarDay(
+            DateFormat('yyyy-MM-dd').format(
+                picked
+                    // .subtract(const Duration(days: 13))
+            )
+        );
+      });
     }
   }
 
@@ -121,33 +134,61 @@ class _CalculatorPageState extends State<CalculatorPage> {
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(newSelectedDate)
       );
-      currentDay = getCalendarDay(
-          DateFormat('yyyy-MM-dd').format(
-              newSelectedDate
-                  // .subtract(const Duration(days: 13))
-          )
-      );
+      setState(() {
+        currentDay = getCalendarDay(
+            DateFormat('yyyy-MM-dd').format(
+                newSelectedDate
+                    // .subtract(const Duration(days: 13))
+            )
+        );
+      });
     }
   }
 
-  Widget renderItem(BuildContext context, CalendarDayPart? part, String title) {
-    List<CalendarDayPartItem> list = [];
-    if (part?.items?.isNotEmpty == true) {
-      list = part?.items ?? [];
-    }
-    var textStyle = TextStyle(
-      fontFamily: "OldStandard",
-      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
-      color: StoreProvider.of<AppState>(context).state.settings.fontColor,
-    );
-    const titleStyle = const TextStyle(
+  GlobalKey _sectionKey(String title) => _sectionKeys.putIfAbsent(title, () => GlobalKey());
+  GlobalKey _itemKey(String id) => _itemKeys.putIfAbsent(id, () => GlobalKey());
+
+  List<_Section> _sections(CalendarDay data) {
+    return [
+      _Section("По седальнах первой кафизмы", data.kathisma1),
+      _Section("По седальнах второй кафизмы", data.kathisma2),
+      _Section("По седальнах третьей кафизмы", data.kathisma3),
+      _Section("Перед 50-м псалмом после Евангелия", data.before50),
+      _Section("По ипакои", data.ipakoi),
+      _Section("По седальнах полиелея", data.polyeleos),
+      _Section("По седальнах третьей песни", data.song3),
+      _Section("По кондаке и икосе по шестой песни", data.song6),
+      _Section("По  отпустительным тропарям", data.apolutikaTroparia),
+      _Section("Перед первым часом", data.before1h),
+      _Section("На 3-м часе", data.h3),
+      _Section("На 6-м часе", data.h6),
+      _Section("На 9-м часе", data.h9),
+    ].where((s) => s.part?.items?.isNotEmpty == true).toList();
+  }
+
+  List<TocEntry> _toc(List<_Section> sections) {
+    return sections.map((s) => TocEntry(
+      title: s.title,
+      anchorKey: _sectionKey(s.title),
+      children: s.part!.items!.map((item) => TocEntry(
+        title: item.name,
+        anchorKey: _itemKey(item.id),
+      )).toList(),
+    )).toList();
+  }
+
+  Widget renderItem(BuildContext context, _Section section) {
+    List<CalendarDayPartItem> list = section.part?.items ?? [];
+    var titleStyle = const TextStyle(
       fontWeight: FontWeight.bold,
-      color:  Colors.red,
+      color: Colors.red,
     );
     return Column(
+      key: _sectionKey(section.title),
       children: [
-        Text(title, style: titleStyle),
+        Text(section.title, style: titleStyle),
         ...list.map((item) => Column(
+          key: _itemKey(item.id),
           children: [
             Text(item.name, style: titleStyle),
             Text(
@@ -175,6 +216,19 @@ class _CalculatorPageState extends State<CalculatorPage> {
       appBar: AppBar(
         title: Text(value, style: TextStyle(fontFamily: "OldStandard")),
         actions: <Widget>[
+          FutureBuilder<CalendarDay>(
+            future: currentDay,
+            builder: (context, future) {
+              if (!future.hasData) return SizedBox.shrink();
+              final sections = _sections(future.data!);
+              if (sections.isEmpty) return SizedBox.shrink();
+              return IconButton(
+                icon: Icon(Icons.toc, color: Colors.white),
+                tooltip: "Оглавление",
+                onPressed: () => showTableOfContents(context, _toc(sections)),
+              );
+            },
+          ),
           IconButton(
             icon: Icon(
               Icons.calendar_today,
@@ -194,79 +248,13 @@ class _CalculatorPageState extends State<CalculatorPage> {
         child: FutureBuilder<CalendarDay>(
           future: currentDay,
           builder: (context, future) {
-            print(future);
             if (future.hasData) {
+              final sections = _sections(future.data!);
               return SingleChildScrollView(
                 child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Column(
-                      children: [
-                        if (future.data?.kathisma1?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.kathisma1,
-                            "По седальнах первой кафизмы"
-                        ),
-                        if (future.data?.kathisma2?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.kathisma2,
-                            "По седальнах второй кафизмы"
-                        ),
-                        if (future.data?.kathisma3?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.kathisma3,
-                            "По седальнах третьей кафизмы"
-                        ),
-                        if (future.data?.before50?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.before50,
-                            "Перед 50-м псалмом после Евангелия"
-                        ),
-                        if (future.data?.ipakoi?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.ipakoi,
-                            "По ипакои"
-                        ),
-                        if (future.data?.polyeleos?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.polyeleos,
-                            "По седальнах полиелея"
-                        ),
-                        if (future.data?.song3?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.song3,
-                            "По седальнах третьей песни"
-                        ),
-                        if (future.data?.song6?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.song6,
-                            "По кондаке и икосе по шестой песни"
-                        ),
-                        if (future.data?.apolutikaTroparia?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.apolutikaTroparia,
-                            "По  отпустительным тропарям"
-                        ),
-                        if (future.data?.before1h?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.before1h,
-                            "Перед первым часом"
-                        ),
-                        if (future.data?.h3?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.h3,
-                            "На 3-м часе"
-                        ),
-                        if (future.data?.h6?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.h6,
-                            "На 6-м часе"
-                        ),
-                        if (future.data?.h9?.items?.isNotEmpty == true) renderItem(
-                            context,
-                            future.data?.h9,
-                            "На 9-м часе"
-                        ),
-                      ],
+                      children: sections.map((section) => renderItem(context, section)).toList(),
                     ),
                 ),
               );

@@ -7,6 +7,7 @@ import 'package:typikon/apiMapper/days.dart';
 import 'package:typikon/dto/day.dart';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/utils/text.dart';
+import 'package:typikon/components/table_of_contents.dart';
 
 class DaysPage extends StatefulWidget {
   final String id;
@@ -17,13 +18,55 @@ class DaysPage extends StatefulWidget {
   State<DaysPage> createState() => _DaysPageState();
 }
 
+class _Section {
+  final String title;
+  final DayTextsParts? part;
+
+  _Section(this.title, this.part);
+}
+
 class _DaysPageState extends State<DaysPage> {
   late Future<DayTexts> day;
+
+  final Map<String, GlobalKey> _sectionKeys = {};
+  final Map<String, GlobalKey> _itemKeys = {};
 
   @override
   void initState() {
     super.initState();
     day = getDay(widget.id);
+  }
+
+  GlobalKey _sectionKey(String title) => _sectionKeys.putIfAbsent(title, () => GlobalKey());
+  GlobalKey _itemKey(String id) => _itemKeys.putIfAbsent(id, () => GlobalKey());
+
+  List<_Section> _sections(DayTexts data) {
+    return [
+      _Section("По седальнах первой кафизмы", data.kathisma1),
+      _Section("По седальнах второй кафизмы", data.kathisma2),
+      _Section("По седальнах третьей кафизмы", data.kathisma3),
+      _Section("После Евангелия перед 50-м псалмом", data.before50),
+      _Section("По ипакои", data.ipakoi),
+      _Section("По седальнах полиелея", data.polyeleos),
+      _Section("По седальнах третьей песни", data.song3),
+      _Section("По кондаке и икосе шестой песни", data.song6),
+      _Section("По отпустительным тропарям", data.apolutikaTroparia),
+      _Section("Перед первым часом", data.before1h),
+      _Section("На 3-м часе", data.h3),
+      _Section("На 6-м часе", data.h6),
+      _Section("На 9-м часе", data.h9),
+    ].where((s) => s.part?.items?.isNotEmpty == true).toList();
+  }
+
+  List<TocEntry> _toc(List<_Section> sections) {
+    return sections.map((s) => TocEntry(
+      title: s.title,
+      anchorKey: _sectionKey(s.title),
+      children: s.part!.items!.map((item) => TocEntry(
+        title: item.text?.name ?? "Без названия",
+        anchorKey: _itemKey(item.text?.id ?? item.text?.name ?? s.title),
+      )).toList(),
+    )).toList();
   }
 
   String getContent (DayTextsPart item) {
@@ -32,7 +75,7 @@ class _DaysPageState extends State<DaysPage> {
     return parts[statia];
   }
 
-  Widget renderItem(BuildContext context, DayTextsParts part, String title) {
+  Widget renderItem(BuildContext context, _Section section) {
     var textStyle = TextStyle(
       fontFamily: "OldStandard",
       fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
@@ -47,11 +90,12 @@ class _DaysPageState extends State<DaysPage> {
       fontWeight: FontWeight.bold,
       color:  Colors.red,
     );
-    return (
-        Column(
+    return Column(
+          key: _sectionKey(section.title),
           children: [
-            Text(title, style: titleStyle),
-            ...part.items!.map((item) => Column(
+            Text(section.title, style: titleStyle),
+            ...section.part!.items!.map((item) => Column(
+              key: _itemKey(item.text?.id ?? item.text?.name ?? section.title),
               children: [
                 GestureDetector(
                   onTap: () {
@@ -114,7 +158,6 @@ class _DaysPageState extends State<DaysPage> {
               ],
             )),
           ],
-        )
     );
   }
 
@@ -133,6 +176,21 @@ class _DaysPageState extends State<DaysPage> {
               return Text("");
             },
         ),
+        actions: <Widget>[
+          FutureBuilder<DayTexts>(
+            future: day,
+            builder: (context, future) {
+              if (!future.hasData) return SizedBox.shrink();
+              final sections = _sections(future.data!);
+              if (sections.isEmpty) return SizedBox.shrink();
+              return IconButton(
+                icon: Icon(Icons.toc, color: Colors.white),
+                tooltip: "Оглавление",
+                onPressed: () => showTableOfContents(context, _toc(sections)),
+              );
+            },
+          ),
+        ],
       ),
       body: Container(
         color: StoreProvider.of<AppState>(context).state.settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
@@ -142,73 +200,10 @@ class _DaysPageState extends State<DaysPage> {
           future: day,
           builder: (context, future) {
             if (future.hasData) {
-              List<Widget> children = [
-                if (future.data!.kathisma1 != null) renderItem(
-                  context,
-                  future.data!.kathisma1!,
-                  "По седальнах первой кафизмы",
-                ),
-                if (future.data!.kathisma2 != null) renderItem(
-                  context,
-                  future.data!.kathisma2!,
-                  "По седальнах второй кафизмы",
-                ),
-                if (future.data!.kathisma3 != null) renderItem(
-                  context,
-                  future.data!.kathisma3!,
-                  "По седальнах третьей кафизмы",
-                ),
-                if (future.data!.before50 != null) renderItem(
-                  context,
-                  future.data!.before50!,
-                  "После Евангелия перед 50-м псалмом",
-                ),
-                if (future.data!.ipakoi != null) renderItem(
-                  context,
-                  future.data!.ipakoi!,
-                  "По ипакои",
-                ),
-                if (future.data!.polyeleos != null) renderItem(
-                  context,
-                  future.data!.polyeleos!,
-                  "По седальнах полиелея",
-                ),
-                if (future.data!.song3 != null) renderItem(
-                  context,
-                  future.data!.song3!,
-                  "По седальнах третьей песни",
-                ),
-                if (future.data!.song6 != null) renderItem(
-                  context,
-                  future.data!.song6!,
-                  "По кондаке и икосе шестой песни",
-                ),
-                if (future.data!.apolutikaTroparia != null) renderItem(
-                  context,
-                  future.data!.apolutikaTroparia!,
-                  "По отпустительным тропарям",
-                ),
-                if (future.data!.before1h != null) renderItem(
-                  context,
-                  future.data!.before1h!,
-                  "Перед первым часом",
-                ),
-                if (future.data!.h3 != null) renderItem(
-                  context,
-                  future.data!.h3!,
-                  "На 3-м часе",
-                ),
-                if (future.data!.h6 != null) renderItem(
-                  context,
-                  future.data!.h6!,
-                  "На 6-м часе",
-                ),
-                if (future.data!.h9 != null) renderItem(
-                  context,
-                  future.data!.h9!,
-                  "На 9-м часе",
-                ),
-              ].expand((element) => [element, Image.asset("assets/images/divider.png") ]).toList();
+              final sections = _sections(future.data!);
+              List<Widget> children = sections
+                  .map((section) => renderItem(context, section))
+                  .expand((element) => [element, Image.asset("assets/images/divider.png") ]).toList();
               if (children.isNotEmpty) {
                 children.removeLast();
               }
