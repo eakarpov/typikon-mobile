@@ -1,13 +1,15 @@
 import 'package:http/http.dart' as http;
 
+import 'constants.dart';
+
 Future<http.Response> fetchMonths() {
   return http.get(
-    Uri.parse('https://typikon.su/api/v1/months'),
-  );
+    Uri.parse('$apiBaseUrl/api/v1/months'),
+  ).timeout(apiTimeout);
 }
 
 Future<http.Response> fetchMonth(String id) {
   return http.get(
-    Uri.parse('https://typikon.su/api/v1/months/$id'),
-  );
+    Uri.parse('$apiBaseUrl/api/v1/months/$id'),
+  ).timeout(apiTimeout);
 }

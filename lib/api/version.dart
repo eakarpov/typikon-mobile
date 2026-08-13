@@ -1,7 +1,9 @@
 import 'package:http/http.dart' as http;
 
+import 'constants.dart';
+
 Future<http.Response> fetchVersion() {
   return http.get(
-    Uri.parse('https://typikon.su/api/v1/app/version'),
-  );
+    Uri.parse('$apiBaseUrl/api/v1/app/version'),
+  ).timeout(apiTimeout);
 }
