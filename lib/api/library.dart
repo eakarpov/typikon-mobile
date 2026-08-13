@@ -1,18 +1,23 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'cached_fetch.dart';
 import 'constants.dart';
 
 Future<http.Response> fetchBooks() {
-  return http.get(
-    Uri.parse('$apiBaseUrl/api/v1/library'),
-  ).timeout(apiTimeout);
+  return cachedFetch(
+    'library',
+    () => http.get(Uri.parse('$apiBaseUrl/api/v1/library')).timeout(apiTimeout),
+    ttl: const Duration(hours: 24),
+  );
 }
 
 Future<http.Response> fetchBook(String id) {
-  return http.get(
-    Uri.parse('$apiBaseUrl/api/v1/library/$id'),
-  ).timeout(apiTimeout);
+  return cachedFetch(
+    'library:$id',
+    () => http.get(Uri.parse('$apiBaseUrl/api/v1/library/$id')).timeout(apiTimeout),
+    ttl: const Duration(hours: 24),
+  );
 }
 
 Future<http.Response> batchTexts(List<String> ids) {

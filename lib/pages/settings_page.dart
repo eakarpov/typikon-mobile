@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/actions/actions.dart';
+import 'package:typikon/api/cached_fetch.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage(context, {super.key});
@@ -20,6 +21,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void onPress() {
     StoreProvider.of<AppState>(context).dispatch(ChangeFontSizeAction(StoreProvider.of<AppState>(context).state.settings.fontSize + 1));
+  }
+
+  void onClearCache(BuildContext context) async {
+    await clearHttpCache();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Кэш очищен")),
+    );
   }
 
   void onOpenPicker(BuildContext context, Color value, void Function(Color) cb) {
@@ -123,6 +132,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: TextButton(
                       child: Text("Сбросить цвета чтений (следовать теме)"),
                       onPressed: viewModel.onResetReadingColors,
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: TextButton(
+                      child: Text("Очистить кэш"),
+                      onPressed: () => onClearCache(context),
                     ),
                   ),
                   SizedBox(height: 20),

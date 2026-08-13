@@ -1,21 +1,28 @@
 import 'package:http/http.dart' as http;
 
+import 'cached_fetch.dart';
 import 'constants.dart';
 
 Future<http.Response> fetchText(String id) {
-  return http.get(
-    Uri.parse('$apiBaseUrl/api/v1/texts/$id'),
-  ).timeout(apiTimeout);
+  return cachedFetch(
+    'text:$id',
+    () => http.get(Uri.parse('$apiBaseUrl/api/v1/texts/$id')).timeout(apiTimeout),
+    ttl: const Duration(hours: 24),
+  );
 }
 
 Future<http.Response> fetchDayByText(String id) {
-  return http.get(
-    Uri.parse('$apiBaseUrl/api/v1/texts/$id/day'),
-  ).timeout(apiTimeout);
+  return cachedFetch(
+    'text-day:$id',
+    () => http.get(Uri.parse('$apiBaseUrl/api/v1/texts/$id/day')).timeout(apiTimeout),
+    ttl: const Duration(hours: 24),
+  );
 }
 
 Future<http.Response> fetchLastTexts() {
-  return http.get(
-    Uri.parse('$apiBaseUrl/api/v1/texts/last'),
-  ).timeout(apiTimeout);
+  return cachedFetch(
+    'texts:last',
+    () => http.get(Uri.parse('$apiBaseUrl/api/v1/texts/last')).timeout(apiTimeout),
+    ttl: const Duration(hours: 6),
+  );
 }
