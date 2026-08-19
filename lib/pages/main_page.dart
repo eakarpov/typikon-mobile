@@ -17,6 +17,7 @@ import "../apiMapper/reading.dart";
 import '../apiMapper/calendar.dart';
 import '../dto/calendar.dart';
 import "../dto/day.dart";
+import "../components/day_memories.dart";
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
@@ -201,8 +202,14 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                         item.name ?? "Без названия",
                         style: TextStyle(fontFamily: "OldStandard", color: Colors.red),
                       ),
-                      onTap: () => {
-                        Navigator.pushNamed(context, "/reading", arguments: item.id)
+                      onTap: item.id == null ? null : () => {
+                        Navigator.pushNamed(
+                          context,
+                          "/reading",
+                          arguments: item.verses != null && item.verses!.isNotEmpty
+                              ? "${item.id}#${item.verses!.first.chapter}"
+                              : item.id,
+                        )
                       },
                     ),
                   );
@@ -333,6 +340,20 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
+                    if (calendarDay != null) Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10.0),
+                      child: DayMemoriesView(memories: calendarDay.memories),
+                    ),
+                    if (calendarDay?.vespersProkimenon?.items?.isNotEmpty == true) renderItem(
+                      context,
+                      calendarDay?.vespersProkimenon,
+                      "На паремиях вечерни по прокимне",
+                    ),
+                    if (calendarDay?.vigil?.items?.isNotEmpty == true) renderItem(
+                      context,
+                      calendarDay?.vigil,
+                      "На всенощном бдении перед шестопсалмием",
+                    ),
                     if (calendarDay?.kathisma1?.items?.isNotEmpty == true) renderItem(
                       context,
                       calendarDay?.kathisma1,
@@ -363,6 +384,11 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       calendarDay?.polyeleos,
                       "По седальнах полиелея",
                     ),
+                    if (calendarDay?.gospelMatins?.items?.isNotEmpty == true) renderItem(
+                      context,
+                      calendarDay?.gospelMatins,
+                      "Евангелие на утрени",
+                    ),
                     if (calendarDay?.song3?.items?.isNotEmpty == true) renderItem(
                       context,
                       calendarDay?.song3,
@@ -383,6 +409,11 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       calendarDay?.before1h,
                       "Перед первым часом",
                     ),
+                    if (calendarDay?.h1?.items?.isNotEmpty == true) renderItem(
+                      context,
+                      calendarDay?.h1,
+                      "На первом часе",
+                    ),
                     if (calendarDay?.h3?.items?.isNotEmpty == true) renderItem(
                       context,
                       calendarDay?.h3,
@@ -397,6 +428,21 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       context,
                       calendarDay?.h9,
                       "На 9-м часе",
+                    ),
+                    if (calendarDay?.apostleLiturgy?.items?.isNotEmpty == true) renderItem(
+                      context,
+                      calendarDay?.apostleLiturgy,
+                      "Апостол на Литургии",
+                    ),
+                    if (calendarDay?.gospelLiturgy?.items?.isNotEmpty == true) renderItem(
+                      context,
+                      calendarDay?.gospelLiturgy,
+                      "Евангелие на Литургии",
+                    ),
+                    if (calendarDay?.panagia?.items?.isNotEmpty == true) renderItem(
+                      context,
+                      calendarDay?.panagia,
+                      "На панагии",
                     ),
                   ],
                   ),

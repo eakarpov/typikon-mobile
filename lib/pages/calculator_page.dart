@@ -10,6 +10,8 @@ import 'package:typikon/dto/calendar.dart';
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/table_of_contents.dart';
+import 'package:typikon/components/verse_list.dart';
+import 'package:typikon/components/day_memories.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage(context, {super.key});
@@ -150,19 +152,26 @@ class _CalculatorPageState extends State<CalculatorPage> {
 
   List<_Section> _sections(CalendarDay data) {
     return [
+      _Section("На паремиях вечерни по прокимне", data.vespersProkimenon),
+      _Section("На всенощном бдении перед шестопсалмием", data.vigil),
       _Section("По седальнах первой кафизмы", data.kathisma1),
       _Section("По седальнах второй кафизмы", data.kathisma2),
       _Section("По седальнах третьей кафизмы", data.kathisma3),
       _Section("Перед 50-м псалмом после Евангелия", data.before50),
       _Section("По ипакои", data.ipakoi),
       _Section("По седальнах полиелея", data.polyeleos),
+      _Section("Евангелие на утрени", data.gospelMatins),
       _Section("По седальнах третьей песни", data.song3),
       _Section("По кондаке и икосе по шестой песни", data.song6),
       _Section("По  отпустительным тропарям", data.apolutikaTroparia),
       _Section("Перед первым часом", data.before1h),
+      _Section("На первом часе", data.h1),
       _Section("На 3-м часе", data.h3),
       _Section("На 6-м часе", data.h6),
       _Section("На 9-м часе", data.h9),
+      _Section("Апостол на Литургии", data.apostleLiturgy),
+      _Section("Евангелие на Литургии", data.gospelLiturgy),
+      _Section("На панагии", data.panagia),
     ].where((s) => s.part?.items?.isNotEmpty == true).toList();
   }
 
@@ -172,7 +181,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
       anchorKey: _sectionKey(s.title),
       children: s.part!.items!.map((item) => TocEntry(
         title: item.name,
-        anchorKey: _itemKey(item.id),
+        anchorKey: _itemKey(item.id ?? item.name),
       )).toList(),
     )).toList();
   }
@@ -183,22 +192,44 @@ class _CalculatorPageState extends State<CalculatorPage> {
       fontWeight: FontWeight.bold,
       color: Colors.red,
     );
+    final fontSize = StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble();
     return Column(
       key: _sectionKey(section.title),
       children: [
         Text(section.title, style: titleStyle),
         ...list.map((item) => Column(
-          key: _itemKey(item.id),
+          key: _itemKey(item.id ?? item.name),
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(item.name, style: titleStyle),
-            Text(
-              item.content,
-              textAlign: TextAlign.justify,
-              style: TextStyle(
-                  fontFamily: "OldStandard",
-                  fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble()
+            if (item.verses != null && item.verses!.isNotEmpty)
+              VerseListView(verses: item.verses!, fontSize: fontSize, fontFamily: "Monomakh")
+            else if (item.isPericope)
+              Text(
+                "Текст для этого языка Библии ещё не размечен.",
+                style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize, fontStyle: FontStyle.italic),
+              )
+            else
+              Text(
+                item.content,
+                textAlign: TextAlign.justify,
+                style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize),
               ),
-            ),
+            if (item.isPericope && item.id != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    "/reading",
+                    arguments: item.verses != null && item.verses!.isNotEmpty
+                        ? "${item.id}#${item.verses!.first.chapter}"
+                        : item.id,
+                  ),
+                  child: const Text("Читать целиком →"),
+                ),
+              ),
           ],
         )),
       ],
@@ -254,7 +285,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
                 child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Column(
-                      children: sections.map((section) => renderItem(context, section)).toList(),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DayMemoriesView(memories: future.data!.memories),
+                        ...sections.map((section) => renderItem(context, section)),
+                      ],
                     ),
                 ),
               );

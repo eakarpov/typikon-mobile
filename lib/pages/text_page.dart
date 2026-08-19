@@ -22,12 +22,17 @@ import 'package:flutter_redux/flutter_redux.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import "package:typikon/components/fusion_text.dart";
+import "package:typikon/components/table_of_contents.dart";
+import "package:typikon/components/verse_list.dart";
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/reading_progress.dart';
 import 'package:typikon/dto/book.dart';
+import 'package:typikon/dto/calendar.dart' show PericopeVerse;
 import 'package:typikon/dto/text.dart';
+import 'package:typikon/dto/verse.dart';
 import 'package:typikon/dto/dneslov/images.dart';
 import '../apiMapper/reading.dart';
+import '../apiMapper/verses.dart';
 import "../apiMapper/dneslov/images.dart";
 
 class TextPage extends StatefulWidget {
@@ -42,6 +47,14 @@ class TextPage extends StatefulWidget {
 class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   late Future<Reading> reading;
   late Future<DneslovImageListD> dneslovImages;
+  Future<VerseList>? verses;
+
+  // "Читать целиком" со страницы зачала кодирует начальную главу как
+  // суффикс "$textId#$chapter" в id маршрута — так не пришлось менять
+  // сигнатуру всех 8 существующих pushNamed(context, "/reading", ...).
+  late final String _realId;
+  int? _initialChapter;
+  final Map<int, GlobalKey> _chapterKeys = {};
 
   bool isFavourite = false;
 
@@ -49,15 +62,20 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   Timer? _persistDebounce;
   bool _resumeBannerShown = false;
 
+  GlobalKey _chapterKey(int chapter) => _chapterKeys.putIfAbsent(chapter, () => GlobalKey());
+
   @override
   void initState() {
     super.initState();
+    final parts = widget.id.split('#');
+    _realId = parts[0];
+    _initialChapter = parts.length > 1 ? int.tryParse(parts[1]) : null;
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
     _loadReading();
     SharedPreferences.getInstance().then((prefs){
       List<String>? liked = prefs.getStringList("favourites") ?? [];
-      if (liked.contains(widget.id)) {
+      if (liked.contains(_realId)) {
         setState(() {
           isFavourite = true;
         });
@@ -93,11 +111,11 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     final maxExtent = position.maxScrollExtent;
     if (maxExtent <= 0) return;
     final fraction = (position.pixels / maxExtent).clamp(0.0, 1.0);
-    saveReadingProgress(widget.id, fraction);
+    saveReadingProgress(_realId, fraction);
   }
 
   Future<void> _checkResumeProgress() async {
-    final progress = await getReadingProgress(widget.id);
+    final progress = await getReadingProgress(_realId);
     if (progress == null || _resumeBannerShown || !mounted) return;
     _resumeBannerShown = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -114,7 +132,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           TextButton(
             onPressed: () {
               ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-              clearReadingProgress(widget.id);
+              clearReadingProgress(_realId);
             },
             child: Text("Сначала"),
           ),
@@ -138,12 +156,32 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
 
   void _loadReading() {
     _resumeBannerShown = false;
-    reading = getText(widget.id);
+    reading = getText(_realId);
     reading.then((value) {
       if (value.dneslovId != null) {
         dneslovImages = fetchDneslovImagesD(value.dneslovId!);
       }
-      _checkResumeProgress();
+      if (value.isVerses) {
+        final versesFuture = getVerses(_realId);
+        verses = versesFuture;
+        versesFuture.then((list) {
+          if (!mounted || _initialChapter == null) return;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final targetContext = _chapterKey(_initialChapter!).currentContext;
+            if (targetContext != null) {
+              Scrollable.ensureVisible(
+                targetContext,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                alignment: 0.05,
+              );
+            }
+          });
+        });
+        setState(() {});
+      } else {
+        _checkResumeProgress();
+      }
     });
   }
 
@@ -204,26 +242,75 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     List<String>? liked = prefs.getStringList("favourites");
     if (liked == null) {
       List<String> newLiked = [];
-      newLiked.add(widget.id);
+      newLiked.add(_realId);
       prefs.setStringList("favourites", newLiked);
       setState(() {
         isFavourite = true;
       });
     } else {
-      if (liked.contains(widget.id)) {
-        List<String> newLiked = liked.where((e) => e != widget.id).toList();
+      if (liked.contains(_realId)) {
+        List<String> newLiked = liked.where((e) => e != _realId).toList();
         prefs.setStringList("favourites", newLiked);
         setState(() {
           isFavourite = false;
         });
       } else {
-        liked.add(widget.id);
+        liked.add(_realId);
         prefs.setStringList("favourites", liked);
         setState(() {
           isFavourite = true;
         });
       }
     }
+  }
+
+  List<TocEntry> _chapterToc(List<int> chapters) {
+    return chapters.map((c) => TocEntry(
+      title: "Глава $c",
+      anchorKey: _chapterKey(c),
+    )).toList();
+  }
+
+  Widget _buildVerses(BuildContext context) {
+    return FutureBuilder<VerseList>(
+      future: verses,
+      builder: (context, future) {
+        if (future.hasError) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Text("Не удалось загрузить текст Библии."),
+          );
+        }
+        if (!future.hasData) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24.0),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final byChapter = future.data!.byChapter;
+        final chapters = byChapter.keys.toList()..sort();
+        final fontSize = StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: chapters.map((chapter) {
+            final chapterVerses = byChapter[chapter]!
+                .map((v) => PericopeVerse(chapter: v.chapter, verse: v.verse, content: v.content))
+                .toList();
+            return Padding(
+              key: _chapterKey(chapter),
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Глава $chapter", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                  VerseListView(verses: chapterVerses, fontSize: fontSize, fontFamily: "Monomakh"),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
   }
 
   @override
@@ -280,6 +367,18 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           }),
         ),
         actions: <Widget>[
+          FutureBuilder<VerseList>(
+            future: verses,
+            builder: (context, future) {
+              if (!future.hasData || future.data!.list.isEmpty) return const SizedBox.shrink();
+              final chapters = future.data!.byChapter.keys.toList()..sort();
+              return IconButton(
+                icon: Icon(Icons.toc, color: Colors.white),
+                tooltip: "Главы",
+                onPressed: () => showTableOfContents(context, _chapterToc(chapters)),
+              );
+            },
+          ),
           IconButton(
               onPressed: onLike,
               icon: isFavourite ? Icon(
@@ -473,23 +572,25 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                             )
                         ),
                       ),
-                      future.data!.newUi ? (
-                        SizedBox(
-                          height: 350.0,
-                          child: Markdown(
-                            data: content,
-                          ),
-                        )
-                      ) : (
-                          Column(
-                            children: content.split("\n\n").map((itemContent) =>
-                                FusionTextWidgets(
-                                  text: itemContent,
-                                  footnotes: future.data?.footnotes??[],
-                                  fontFamily: future.data!.csSource ? "Monomakh" : "OldStandard",
-                                ),
-                            ).toList(),
+                      future.data!.isVerses ? _buildVerses(context) : (
+                        future.data!.newUi ? (
+                          SizedBox(
+                            height: 350.0,
+                            child: Markdown(
+                              data: content,
+                            ),
                           )
+                        ) : (
+                            Column(
+                              children: content.split("\n\n").map((itemContent) =>
+                                  FusionTextWidgets(
+                                    text: itemContent,
+                                    footnotes: future.data?.footnotes??[],
+                                    fontFamily: future.data!.csSource ? "Monomakh" : "OldStandard",
+                                  ),
+                              ).toList(),
+                            )
+                        )
                       ),
                       if (future.data!.dneslovId != null) FutureBuilder<DneslovImageListD>(
                           future: dneslovImages,
