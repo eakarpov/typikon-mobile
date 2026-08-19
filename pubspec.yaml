@@ -58,11 +58,6 @@ dependencies:
   redux: ^5.0.0
   shared_preferences: ^2.5.4
   url_launcher: ^6.3.1
-  workmanager: # 0.5.2 is not loading
-    git:
-      url: https://github.com/fluttercommunity/flutter_workmanager.git
-      path: workmanager
-      ref: main
   google_sign_in: ^7.2.0
   flutter_secure_storage: ^10.3.1
 

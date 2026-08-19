@@ -13,7 +13,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:typikon/pages/outside_page.dart';
 import 'package:typikon/pages/signs_page.dart';
-// import 'package:workmanager/workmanager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -21,6 +20,7 @@ import "version.dart";
 import "api/constants.dart";
 
 import "package:typikon/apiMapper/version.dart";
+import "package:typikon/apiMapper/reading.dart";
 import 'package:typikon/pages/book_page.dart';
 import 'package:typikon/pages/library_page.dart';
 import 'package:typikon/pages/main_page.dart';
@@ -49,13 +49,16 @@ int id = 0;
 
 const String navigationActionId = 'id_3';
 
-const String versionPeriodCheck = "simplePeriodicTask";
-
-const String versionCheck = "simpleTask";
-
 const String wantToGetUpdate = "wantToGetUpdate";
 
+const String newTextPayloadPrefix = "newText:";
+const String _lastSeenTextIdKey = "last_seen_text_id";
+
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+// Нужен, чтобы открыть текст по тапу на уведомление о новом тексте —
+// колбэк стрима вне дерева виджетов, без своего BuildContext.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// Streams are created so that app can respond to notification-related events
 /// since the plugin is initialised in the `main` function
@@ -111,29 +114,6 @@ Future<void> main() async {
   );
 
   await dotenv.load(fileName: ".env");
-  // Workmanager().initialize(
-  //     callbackDispatcher, // The top level function, aka callbackDispatcher
-  //     isInDebugMode: true // If enabled it will post a notification whenever the task is running. Handy for debugging tasks
-  // );
-  // // Workmanager().registerOneOffTask(
-  // //   "version-checker-start",
-  // //   versionCheck,
-  // // );
-  // Workmanager().registerPeriodicTask(
-  //   "version-checker",
-  //
-  //   //This is the value that will be
-  //   // returned in the callbackDispatcher
-  //   versionPeriodCheck,
-  //
-  //   // When no frequency is provided
-  //   // the default 15 minutes is set.
-  //   // Minimum frequency is 15 min.
-  //   // Android will automatically change
-  //   // your frequency to 15 min
-  //   // if you have configured a lower frequency.
-  //   frequency: Duration(minutes: 15),
-  // );
   final store = await createReduxStore();
   runApp(MyApp(store));
   // Register to receive BackgroundFetch events after app is terminated.
@@ -146,17 +126,8 @@ Future<void> main() async {
 @pragma('vm:entry-point')
 void backgroundFetchHeadlessTask(HeadlessTask task) async {
   String taskId = task.taskId;
-  bool isTimeout = task.timeout;
   await _checkVersionAndNotify("");
-  // if (isTimeout) {
-  //   // This task has exceeded its allowed running-time.
-  //   // You must stop what you're doing and immediately .finish(taskId)
-  //   print("[BackgroundFetch] Headless task timed-out: $taskId");
-  //   BackgroundFetch.finish(taskId);
-  //   return;
-  // }
-  // print('[BackgroundFetch] Headless event received.');
-  // Do your work here...
+  await _checkNewTextsAndNotify();
   BackgroundFetch.finish(taskId);
 }
 
@@ -179,20 +150,6 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
       webOnlyWindowName: "_blank",
     );
   }
-}
-
-@pragma('vm:entry-point') // Mandatory if the App is obfuscated or using Flutter 3.1+
-void callbackDispatcher() {
-  // Workmanager().executeTask((task, inputData) async {
-  //   switch (task) {
-  //     case versionCheck:
-  //     case versionPeriodCheck:
-  //       await _checkVersionAndNotify();
-  //       return Future.value(true);
-  //     default:
-  //       return Future.value(true);
-  //   }
-  // });
 }
 
 Future _checkVersionAndNotify(String type) async {
@@ -224,6 +181,59 @@ Future _checkVersionAndNotify(String type) async {
     }
   } catch (error) {
     print("Не получена версия");
+  }
+}
+
+// Едет на том же background_fetch-колбэке, что и _checkVersionAndNotify —
+// не заводим отдельную вторую периодическую задачу ради батареи.
+Future<void> _checkNewTextsAndNotify() async {
+  try {
+    final texts = await getLastTexts();
+    if (texts.list.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final lastSeenId = prefs.getString(_lastSeenTextIdKey);
+    final newest = texts.list.first;
+
+    if (lastSeenId == null) {
+      // Первый запуск фонового чекера на этом устройстве — не заваливаем
+      // уведомлениями то, что уже было опубликовано раньше, просто
+      // запоминаем текущую точку отсчёта.
+      await prefs.setString(_lastSeenTextIdKey, newest.id);
+      return;
+    }
+    if (lastSeenId == newest.id) return;
+
+    final knownIndex = texts.list.indexWhere((t) => t.id == lastSeenId);
+    final newItems = knownIndex == -1 ? texts.list : texts.list.sublist(0, knownIndex);
+    if (newItems.isEmpty) return;
+
+    await prefs.setString(_lastSeenTextIdKey, newest.id);
+
+    var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
+      'newTextsChannelId',
+      'newTextsChannel',
+      channelDescription: 'Notifications about new texts',
+      importance: Importance.max,
+      priority: Priority.high,
+      ticker: "new texts ticker",
+    );
+    var iOSPlatformChannelSpecifics = new DarwinNotificationDetails();
+    var platformChannelSpecifics = new NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iOSPlatformChannelSpecifics
+    );
+
+    final isSingle = newItems.length == 1;
+    await flutterLocalNotificationsPlugin.show(
+      id++,
+      isSingle ? newItems.first.name : 'Новые тексты',
+      isSingle ? 'Добавлен новый текст. Нажмите, чтобы открыть.' : 'Добавлено новых текстов: ${newItems.length}',
+      platformChannelSpecifics,
+      payload: isSingle ? '$newTextPayloadPrefix${newItems.first.id}' : null,
+    );
+  } catch (error) {
+    print("Не удалось проверить новые тексты");
   }
 }
 
@@ -310,7 +320,7 @@ class MyAppState extends State<MyApp> {
     ), (String taskId) async {  // <-- Event handler
       // This is the fetch-event callback.
       await _checkVersionAndNotify("");
-      // print("[BackgroundFetch] Event received $taskId");
+      await _checkNewTextsAndNotify();
       // IMPORTANT:  You must signal completion of your task or the OS can punish your app
       // for taking too long in the background.
       BackgroundFetch.finish(taskId);
@@ -402,9 +412,10 @@ class MyAppState extends State<MyApp> {
         // launchUrl(fileUri);
         // OpenAppFile.open(path);
       }
-      // await Navigator.of(context).push(MaterialPageRoute<void>(
-      //   builder: (BuildContext context) => LibraryPage(context),
-      // ));
+      if (payload != null && payload.startsWith(newTextPayloadPrefix)) {
+        final textId = payload.substring(newTextPayloadPrefix.length);
+        navigatorKey.currentState?.pushNamed("/reading", arguments: textId);
+      }
     });
   }
 
@@ -423,6 +434,7 @@ class MyAppState extends State<MyApp> {
             onInit: (store) => store.dispatch(FetchItemsAction()),
             builder: (context, store) {
               return MaterialApp(
+                navigatorKey: navigatorKey,
                 title: 'Typikon',
                 localizationsDelegates: [
                   GlobalMaterialLocalizations.delegate,
