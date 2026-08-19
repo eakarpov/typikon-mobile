@@ -12,8 +12,6 @@ import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/components/verse_list.dart';
 import 'package:typikon/components/day_memories.dart';
-import 'package:typikon/components/word_report.dart';
-import 'package:typikon/components/report_error_sheet.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage(context, {super.key});
@@ -195,7 +193,6 @@ class _CalculatorPageState extends State<CalculatorPage> {
       color: Colors.red,
     );
     final fontSize = StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble();
-    final isSignedIn = StoreProvider.of<AppState>(context).state.auth.isSignedIn;
     return Column(
       key: _sectionKey(section.title),
       children: [
@@ -210,8 +207,6 @@ class _CalculatorPageState extends State<CalculatorPage> {
                 verses: item.verses!,
                 fontSize: fontSize,
                 fontFamily: "Monomakh",
-                textId: item.id,
-                reportEnabled: isSignedIn,
               )
             else if (item.isPericope)
               Text(
@@ -219,29 +214,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
                 style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize, fontStyle: FontStyle.italic),
               )
             else
-              Builder(builder: (context) {
-                final style = TextStyle(fontFamily: "OldStandard", fontSize: fontSize);
-                final report = (isSignedIn && item.id != null)
-                    ? WordReportContext(
-                        enabled: true,
-                        onWordLongPress: (ctx, position, word, wordIndex) {
-                          showWordReportMenu(
-                            ctx,
-                            position,
-                            textId: item.id!,
-                            contextText: item.content,
-                            word: word,
-                            wordIndex: wordIndex,
-                            paragraphIndex: 0,
-                          );
-                        },
-                      )
-                    : null;
-                return RichText(
-                  textAlign: TextAlign.justify,
-                  text: TextSpan(children: tokenizeWords(item.content, style, report, context)),
-                );
-              }),
+              Text(
+                item.content,
+                textAlign: TextAlign.justify,
+                style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize),
+              ),
             if (item.isPericope && item.id != null)
               Align(
                 alignment: Alignment.centerLeft,

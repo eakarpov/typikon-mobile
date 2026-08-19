@@ -1,26 +1,29 @@
 import 'package:flutter/material.dart';
 
 import 'package:typikon/dto/calendar.dart';
-import 'package:typikon/components/word_report.dart';
-import 'package:typikon/components/report_error_sheet.dart';
+import 'package:typikon/dto/user_note.dart';
+import 'package:typikon/components/highlighted_text.dart';
 
 /// Рендер списка стихов Библии/зачала с надстрочным номером стиха перед
 /// каждым. Простой текст без markup сносок/ссылок — в отличие от
-/// FusionTextWidgets, тексту Библии это не нужно.
+/// FusionTextWidgets, тексту Библии это не нужно. Выделение (для "Сообщить
+/// об ошибке"/"Добавить заметку") оборачивается снаружи — см. SelectionMenu
+/// в text_page.dart, этот виджет о нём не знает. notes — уже сохранённые
+/// заметки для подсветки (пусто — просто обычный текст, как раньше).
 class VerseListView extends StatelessWidget {
   final List<PericopeVerse> verses;
   final double fontSize;
   final String fontFamily;
-  final String? textId;
-  final bool reportEnabled;
+  final List<UserNote> notes;
+  final void Function(UserNote note)? onTapNote;
 
   const VerseListView({
     super.key,
     required this.verses,
     required this.fontSize,
     this.fontFamily = "OldStandard",
-    this.textId,
-    this.reportEnabled = false,
+    this.notes = const [],
+    this.onTapNote,
   });
 
   @override
@@ -38,28 +41,12 @@ class VerseListView extends StatelessWidget {
       text: TextSpan(
         style: baseStyle,
         children: verses.expand((v) {
-          // Отдельный WordReportContext на каждый стих — индекс слова
-          // считается заново с 0 внутри стиха.
-          final report = (reportEnabled && textId != null)
-              ? WordReportContext(
-                  enabled: true,
-                  onWordLongPress: (ctx, position, word, wordIndex) {
-                    showWordReportMenu(
-                      ctx,
-                      position,
-                      textId: textId!,
-                      contextText: v.content,
-                      word: word,
-                      wordIndex: wordIndex,
-                      chapter: v.chapter,
-                      verse: v.verse,
-                    );
-                  },
-                )
-              : null;
+          final notesForVerse = notes.where((n) =>
+              n.selection.type == 'verse' && n.selection.chapter == v.chapter && n.selection.verse == v.verse
+          ).toList();
           return [
             TextSpan(text: "${v.verse} ", style: numberStyle),
-            ...tokenizeWords("${v.content} ", baseStyle, report, context),
+            ...buildHighlightedSpans("${v.content} ", baseStyle, notesForVerse, onTapNote ?? (_) {}),
           ];
         }).toList(),
       ),

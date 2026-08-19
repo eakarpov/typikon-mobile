@@ -24,15 +24,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import "package:typikon/components/fusion_text.dart";
 import "package:typikon/components/table_of_contents.dart";
 import "package:typikon/components/verse_list.dart";
+import "package:typikon/components/selection_menu.dart";
+import "package:typikon/components/report_error_sheet.dart";
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/reading_progress.dart';
 import 'package:typikon/dto/book.dart';
 import 'package:typikon/dto/calendar.dart' show PericopeVerse;
 import 'package:typikon/dto/text.dart';
 import 'package:typikon/dto/verse.dart';
+import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/dto/dneslov/images.dart';
 import '../apiMapper/reading.dart';
 import '../apiMapper/verses.dart';
+import '../apiMapper/user_notes.dart';
 import "../apiMapper/dneslov/images.dart";
 
 class TextPage extends StatefulWidget {
@@ -56,6 +60,8 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   int? _initialChapter;
   final Map<int, GlobalKey> _chapterKeys = {};
 
+  List<UserNote> _userNotes = [];
+
   bool isFavourite = false;
 
   final ScrollController _scrollController = ScrollController();
@@ -73,6 +79,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
     _loadReading();
+    _loadUserNotes();
     SharedPreferences.getInstance().then((prefs){
       List<String>? liked = prefs.getStringList("favourites") ?? [];
       if (liked.contains(_realId)) {
@@ -189,6 +196,30 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     setState(_loadReading);
   }
 
+  void _loadUserNotes() {
+    if (!StoreProvider.of<AppState>(context).state.auth.isSignedIn) return;
+    getUserNotes(textId: _realId).then((notes) {
+      if (!mounted) return;
+      setState(() { _userNotes = notes; });
+    });
+  }
+
+  void _onTapUserNote(UserNote note) {
+    showAddNoteSheet(
+      context,
+      textId: _realId,
+      contextText: note.selection.type == 'verse'
+          ? (note.selection.verseText ?? '')
+          : (note.selection.paragraph ?? ''),
+      phrase: note.selection.phrase,
+      paragraphIndex: note.selection.paragraphIndex,
+      chapter: note.selection.chapter,
+      verse: note.selection.verse,
+      existingNote: note,
+      onChanged: _loadUserNotes,
+    );
+  }
+
   bool _isOffline(Object? error) {
     final message = error.toString();
     return message.contains('SocketException') || message.contains('Failed host lookup');
@@ -290,7 +321,13 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
         final byChapter = future.data!.byChapter;
         final chapters = byChapter.keys.toList()..sort();
         final fontSize = StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble();
-        return Column(
+        return SelectionMenu(
+          enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
+          textId: _realId,
+          containers: future.data!.list.map((v) => TextContainer.verse(
+            chapter: v.chapter, verse: v.verse, text: "${v.content} ",
+          )).toList(),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: chapters.map((chapter) {
             final chapterVerses = byChapter[chapter]!
@@ -307,13 +344,14 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                     verses: chapterVerses,
                     fontSize: fontSize,
                     fontFamily: "Monomakh",
-                    textId: _realId,
-                    reportEnabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
+                    notes: _userNotes,
+                    onTapNote: _onTapUserNote,
                   ),
                 ],
               ),
             );
           }).toList(),
+          ),
         );
       },
     );
@@ -587,17 +625,25 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                             ),
                           )
                         ) : (
-                            Column(
-                              children: content.split("\n\n").asMap().entries.map((entry) =>
-                                  FusionTextWidgets(
-                                    text: entry.value,
-                                    footnotes: future.data?.footnotes??[],
-                                    fontFamily: future.data!.csSource ? "Monomakh" : "OldStandard",
-                                    paragraphIndex: entry.key,
-                                    textId: _realId,
-                                    reportEnabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
-                                  ),
+                            SelectionMenu(
+                              enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
+                              textId: _realId,
+                              containers: content.split("\n\n").asMap().entries.map((entry) =>
+                                  TextContainer.paragraph(paragraphIndex: entry.key, text: entry.value)
                               ).toList(),
+                              child: Column(
+                                children: content.split("\n\n").asMap().entries.map((entry) =>
+                                    FusionTextWidgets(
+                                      text: entry.value,
+                                      footnotes: future.data?.footnotes??[],
+                                      fontFamily: future.data!.csSource ? "Monomakh" : "OldStandard",
+                                      notes: _userNotes.where((n) =>
+                                          n.selection.type == 'paragraph' && n.selection.paragraphIndex == entry.key
+                                      ).toList(),
+                                      onTapNote: _onTapUserNote,
+                                    ),
+                                ).toList(),
+                              ),
                             )
                         )
                       ),

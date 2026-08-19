@@ -7,9 +7,17 @@ import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 import 'package:typikon/store/models/models.dart';
-import 'package:typikon/components/word_report.dart';
+import 'package:typikon/dto/user_note.dart';
+import 'package:typikon/components/highlighted_text.dart';
 
-List<InlineSpan> buildSaints(String text, double size, BuildContext context, String fontFamily, [WordReportContext? report]) {
+List<InlineSpan> buildSaints(
+  String text,
+  double size,
+  BuildContext context,
+  String fontFamily, [
+  List<UserNote>? notes,
+  void Function(UserNote)? onTapNote,
+]) {
   final regex = RegExp(r"\{st\|(.+)}");
 
   final matches = regex.allMatches(text);
@@ -28,7 +36,9 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context, Str
       );
       widgets.add(
         TextSpan(
-          children: tokenizeWords(beforeText, style, report, context),
+          children: (notes != null && notes.isNotEmpty)
+              ? buildHighlightedSpans(beforeText, style, notes, onTapNote ?? (_) {})
+              : [TextSpan(text: beforeText, style: style)],
         ),
       );
     }
@@ -46,9 +56,6 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context, Str
             fontSize: size,
             color: Colors.blue,
           ),
-          // children: [
-          //   TextSpan(text: (match.group(1) as String).split("|")[1]),
-          // ],
         ),
       );
     }
@@ -65,7 +72,9 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context, Str
     );
     widgets.add(
       TextSpan(
-        children: tokenizeWords(remainingText, style, report, context),
+        children: (notes != null && notes.isNotEmpty)
+            ? buildHighlightedSpans(remainingText, style, notes, onTapNote ?? (_) {})
+            : [TextSpan(text: remainingText, style: style)],
       ),
     );
   }

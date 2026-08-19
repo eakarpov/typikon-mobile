@@ -8,16 +8,14 @@ import 'package:flutter/material.dart';
 
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/footlinks.dart';
-import 'package:typikon/components/word_report.dart';
-import 'package:typikon/components/report_error_sheet.dart';
+import 'package:typikon/dto/user_note.dart';
 
 class FusionTextWidgets extends StatelessWidget {
   final String text;
   final List<String> footnotes;
   final String fontFamily;
-  final int paragraphIndex;
-  final String? textId;
-  final bool reportEnabled;
+  final List<UserNote> notes;
+  final void Function(UserNote)? onTapNote;
   static final regex = RegExp(r"\{k\|(.+)}");
 
   const FusionTextWidgets({
@@ -25,31 +23,13 @@ class FusionTextWidgets extends StatelessWidget {
     required this.text,
     required this.footnotes,
     required this.fontFamily,
-    this.paragraphIndex = 0,
-    this.textId,
-    this.reportEnabled = false,
+    this.notes = const [],
+    this.onTapNote,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final matches = regex.allMatches(text);
-
-    final WordReportContext? report = (reportEnabled && textId != null)
-        ? WordReportContext(
-            enabled: true,
-            onWordLongPress: (ctx, position, word, wordIndex) {
-              showWordReportMenu(
-                ctx,
-                position,
-                textId: textId!,
-                contextText: text,
-                word: word,
-                wordIndex: wordIndex,
-                paragraphIndex: paragraphIndex,
-              );
-            },
-          )
-        : null;
 
     final widgets = <InlineSpan>[];
     int currentIndex = 0;
@@ -72,7 +52,8 @@ class FusionTextWidgets extends StatelessWidget {
                 context,
                 footnotes,
                 fontFamily,
-                report,
+                notes,
+                onTapNote,
             ),
           ),
         );
@@ -115,7 +96,8 @@ class FusionTextWidgets extends StatelessWidget {
               context,
               footnotes,
               fontFamily,
-              report,
+              notes,
+              onTapNote,
           ),
         ),
       );
@@ -129,4 +111,3 @@ class FusionTextWidgets extends StatelessWidget {
     );
   }
 }
-

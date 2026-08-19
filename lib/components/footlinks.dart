@@ -8,7 +8,7 @@ import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 import 'package:typikon/store/models/models.dart';
 import "package:typikon/components/places.dart";
-import "package:typikon/components/word_report.dart";
+import 'package:typikon/dto/user_note.dart';
 
 List<InlineSpan> buildFootlinks(
     String text,
@@ -16,7 +16,8 @@ List<InlineSpan> buildFootlinks(
     BuildContext context,
     List<String> footnotes,
     String fontFamily, [
-    WordReportContext? report,
+    List<UserNote>? notes,
+    void Function(UserNote)? onTapNote,
 ]) {
   final regex = RegExp(r"\{(\d+)}");
 
@@ -42,7 +43,8 @@ List<InlineSpan> buildFootlinks(
             size,
             context,
             fontFamily,
-            report,
+            notes,
+            onTapNote,
           ),
         ),
       );
@@ -102,7 +104,8 @@ List<InlineSpan> buildFootlinks(
           size,
           context,
           fontFamily,
-          report,
+          notes,
+          onTapNote,
         ),
       ),
     );

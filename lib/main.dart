@@ -37,6 +37,7 @@ import 'package:typikon/pages/penticostarion_page.dart';
 import 'package:typikon/pages/saint_page.dart';
 import 'package:typikon/pages/place_page.dart';
 import 'package:typikon/pages/favourite_page.dart';
+import 'package:typikon/pages/notes_page.dart';
 import 'package:typikon/pages/contact_page.dart';
 import 'package:typikon/pages/resources_page.dart';
 
@@ -574,6 +575,12 @@ class MyAppState extends State<MyApp> {
                           return FavouritePage(
                             context,
                           );
+                        },
+                      );
+                    case "/notes":
+                      return MaterialPageRoute(
+                        builder: (context) {
+                          return NotesPage(context);
                         },
                       );
                     case "/contact":
