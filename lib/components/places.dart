@@ -8,8 +8,9 @@ import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 import "package:typikon/components/saints.dart";
 import 'package:typikon/store/models/models.dart';
+import 'package:typikon/components/word_report.dart';
 
-List<InlineSpan> buildPlaces(String text, double size, BuildContext context, String fontFamily) {
+List<InlineSpan> buildPlaces(String text, double size, BuildContext context, String fontFamily, [WordReportContext? report]) {
   final regex = RegExp(r"\{pl\|(.+)}");
 
   final matches = regex.allMatches(text);
@@ -34,6 +35,7 @@ List<InlineSpan> buildPlaces(String text, double size, BuildContext context, Str
             size,
             context,
             fontFamily,
+            report,
           ),
         ),
       );
@@ -77,6 +79,7 @@ List<InlineSpan> buildPlaces(String text, double size, BuildContext context, Str
           size,
           context,
           fontFamily,
+          report,
         ),
       ),
     );

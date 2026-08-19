@@ -303,7 +303,13 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text("Глава $chapter", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                  VerseListView(verses: chapterVerses, fontSize: fontSize, fontFamily: "Monomakh"),
+                  VerseListView(
+                    verses: chapterVerses,
+                    fontSize: fontSize,
+                    fontFamily: "Monomakh",
+                    textId: _realId,
+                    reportEnabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
+                  ),
                 ],
               ),
             );
@@ -582,11 +588,14 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                           )
                         ) : (
                             Column(
-                              children: content.split("\n\n").map((itemContent) =>
+                              children: content.split("\n\n").asMap().entries.map((entry) =>
                                   FusionTextWidgets(
-                                    text: itemContent,
+                                    text: entry.value,
                                     footnotes: future.data?.footnotes??[],
                                     fontFamily: future.data!.csSource ? "Monomakh" : "OldStandard",
+                                    paragraphIndex: entry.key,
+                                    textId: _realId,
+                                    reportEnabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
                                   ),
                               ).toList(),
                             )

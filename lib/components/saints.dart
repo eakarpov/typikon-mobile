@@ -7,8 +7,9 @@ import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 import 'package:typikon/store/models/models.dart';
+import 'package:typikon/components/word_report.dart';
 
-List<InlineSpan> buildSaints(String text, double size, BuildContext context, String fontFamily) {
+List<InlineSpan> buildSaints(String text, double size, BuildContext context, String fontFamily, [WordReportContext? report]) {
   final regex = RegExp(r"\{st\|(.+)}");
 
   final matches = regex.allMatches(text);
@@ -20,14 +21,14 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context, Str
     final beforeText = text.substring(currentIndex, match.start);
 
     if (beforeText.isNotEmpty) {
+      final style = TextStyle(
+        fontFamily: fontFamily,
+        fontSize: size,
+        color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+      );
       widgets.add(
         TextSpan(
-          text: beforeText,
-          style: TextStyle(
-            fontFamily: fontFamily,
-            fontSize: size,
-            color: StoreProvider.of<AppState>(context).state.settings.fontColor,
-          ),
+          children: tokenizeWords(beforeText, style, report, context),
         ),
       );
     }
@@ -57,14 +58,14 @@ List<InlineSpan> buildSaints(String text, double size, BuildContext context, Str
 
   final remainingText = text.substring(currentIndex);
   if (remainingText.isNotEmpty) {
+    final style = TextStyle(
+      fontFamily: fontFamily,
+      fontSize: size,
+      color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+    );
     widgets.add(
       TextSpan(
-        text: remainingText,
-        style: TextStyle(
-          fontFamily: fontFamily,
-          fontSize: size,
-          color: StoreProvider.of<AppState>(context).state.settings.fontColor,
-        ),
+        children: tokenizeWords(remainingText, style, report, context),
       ),
     );
   }
