@@ -80,3 +80,18 @@ class ChangeThemeModeAction {
 }
 
 class ResetReadingColorsAction {}
+
+class SignInSuccessAction {
+  final String userId;
+  final String? email;
+  final String? name;
+
+  SignInSuccessAction({required this.userId, this.email, this.name});
+
+  @override
+  String toString() {
+    return 'SignInSuccessAction{userId: $userId, email: $email}';
+  }
+}
+
+class SignOutAction {}

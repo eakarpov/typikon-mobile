@@ -22,7 +22,9 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
       action is ChangeBackgroundColorAction ||
       action is ChangeThemeModeAction ||
       action is ResetReadingColorsAction ||
-      action is ChangeCommonDateAction
+      action is ChangeCommonDateAction ||
+      action is SignInSuccessAction ||
+      action is SignOutAction
     ) {
       // await _saveStateToPrefs(store.state); // TODO - after store update save to storage, not before!!
       Future.delayed(const Duration(seconds: 0), () {
@@ -60,5 +62,12 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
       store.dispatch(ChangeBackgroundColorAction(state.settings.backgroundColor!));
     }
     // store.dispatch(ChangeCommonDateAction(state.common.date)); // Дату пока не сохраняем
+    if (state.auth.isSignedIn && state.auth.userId != null) {
+      store.dispatch(SignInSuccessAction(
+        userId: state.auth.userId!,
+        email: state.auth.email,
+        name: state.auth.name,
+      ));
+    }
   }
 }

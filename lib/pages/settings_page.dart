@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/api/cached_fetch.dart';
+import 'package:typikon/apiMapper/auth.dart' as auth_api;
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage(context, {super.key});
@@ -29,6 +30,34 @@ class _SettingsPageState extends State<SettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Кэш очищен")),
     );
+  }
+
+  bool _authInProgress = false;
+
+  void onSignIn(BuildContext context) async {
+    if (_authInProgress) return;
+    setState(() { _authInProgress = true; });
+    try {
+      await auth_api.signInWithGoogle(StoreProvider.of<AppState>(context));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Не удалось войти: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() { _authInProgress = false; });
+    }
+  }
+
+  void onSignOut(BuildContext context) async {
+    if (_authInProgress) return;
+    setState(() { _authInProgress = true; });
+    try {
+      await auth_api.signOut(StoreProvider.of<AppState>(context));
+    } finally {
+      if (mounted) setState(() { _authInProgress = false; });
+    }
   }
 
   void onOpenPicker(BuildContext context, Color value, void Function(Color) cb) {
@@ -141,6 +170,28 @@ class _SettingsPageState extends State<SettingsPage> {
                       onPressed: () => onClearCache(context),
                     ),
                   ),
+                  Padding(
+                    padding: EdgeInsets.only(top: 20, left: 16, right: 16),
+                    child: Text("Аккаунт", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: viewModel.isSignedIn
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Вы вошли как ${viewModel.email ?? viewModel.name ?? 'пользователь Google'}"),
+                              TextButton(
+                                child: Text(_authInProgress ? "Выходим…" : "Выйти"),
+                                onPressed: _authInProgress ? null : () => onSignOut(context),
+                              ),
+                            ],
+                          )
+                        : TextButton(
+                            child: Text(_authInProgress ? "Входим…" : "Войти через Google"),
+                            onPressed: _authInProgress ? null : () => onSignIn(context),
+                          ),
+                  ),
                   SizedBox(height: 20),
                 ],
               ),
@@ -167,6 +218,10 @@ class SettingsViewModel {
 
   final VoidCallback onResetReadingColors;
 
+  final bool isSignedIn;
+  final String? email;
+  final String? name;
+
   SettingsViewModel({
     this.fontSize = 0,
     this.onChangeFontSize = SettingsViewModel.stub,
@@ -177,6 +232,9 @@ class SettingsViewModel {
     this.themeMode = ThemeMode.system,
     this.onChangeThemeMode = SettingsViewModel.stubThemeMode,
     this.onResetReadingColors = SettingsViewModel.stubVoid,
+    this.isSignedIn = false,
+    this.email,
+    this.name,
   });
 
   static stub (int fontSize) {}
@@ -208,6 +266,9 @@ class SettingsViewModel {
       onResetReadingColors: () {
         store.dispatch(ResetReadingColorsAction());
       },
+      isSignedIn: store.state.auth.isSignedIn,
+      email: store.state.auth.email,
+      name: store.state.auth.name,
     );
   }
 }
