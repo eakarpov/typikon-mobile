@@ -5,6 +5,8 @@ import 'package:typikon/utils/app_version.dart';
 import 'package:url_launcher/url_launcher.dart';
 import "package:google_fonts/google_fonts.dart";
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_redux/flutter_redux.dart';
@@ -22,6 +24,7 @@ import "../components/day_memories.dart";
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
+import '../utils/day_preloader.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
 
@@ -60,7 +63,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     var val = StoreProvider.of<AppState>(context).state.common.date != null
         ? StoreProvider.of<AppState>(context).state.common.date
         : DateTime.now().subtract(const Duration(days: 13));
-    data = updateData(
+    data = _loadDay(
         DateFormat('yyyy-MM-dd').format(
             val
         )
@@ -69,6 +72,17 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     // final SharedPreferences prefs = await SharedPreferences.getInstance();
     // var stateString = prefs.getString(APP_STATE_KEY);
     // print(stateString);
+  }
+
+  /// Загружает день и следом тихо докачивает его тексты, чтобы они открылись
+  /// и без сети. Ошибки предзагрузки страницу не касаются.
+  Future<MainPageData> _loadDay(String date) {
+    final future = updateData(date);
+    future.then((value) {
+      final day = value.day;
+      if (day != null) unawaited(preloadTexts(day.textIds));
+    }).catchError((_) {});
+    return future;
   }
 
   void buildMaterialDatePicker(BuildContext context) async {
@@ -94,7 +108,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(picked)
       );
-      data = updateData(
+      data = _loadDay(
           DateFormat('yyyy-MM-dd').format(
             picked
                 // .subtract(const Duration(days: 13))
@@ -115,7 +129,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(newSelectedDate)
       );
-      data = updateData(
+      data = _loadDay(
           DateFormat('yyyy-MM-dd').format(
               newSelectedDate
                 // .subtract(const Duration(days: 13))
@@ -266,7 +280,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       StoreProvider.of<AppState>(context).dispatch(
                           ChangeCommonDateAction(newDate)
                       );
-                      data = updateData(
+                      data = _loadDay(
                           DateFormat('yyyy-MM-dd').format(
                               newDate
                             // .subtract(const Duration(days: 13))
@@ -279,7 +293,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       StoreProvider.of<AppState>(context).dispatch(
                           ChangeCommonDateAction(newDate)
                       );
-                      data = updateData(
+                      data = _loadDay(
                           DateFormat('yyyy-MM-dd').format(
                               newDate
                             // .subtract(const Duration(days: 13))
@@ -519,7 +533,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                         TextButton(
                           onPressed: () {
                             setState(() {
-                              data = updateData(
+                              data = _loadDay(
                                   DateFormat('yyyy-MM-dd').format(
                                       StoreProvider.of<AppState>(context).state.common.date ??
                                           DateTime.now().subtract(const Duration(days: 13))
