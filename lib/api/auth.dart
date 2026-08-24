@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'client.dart';
 import 'constants.dart';
 
 // Запрос с побочным эффектом (создаёт сессию) — не через cachedFetch,
@@ -12,7 +13,7 @@ Future<http.Response> loginWithGoogle({
   required String userIdHint,
   required String deviceId,
 }) {
-  return http.post(
+  return apiClient.post(
     Uri.parse('$apiBaseUrl/api/login'),
     headers: <String, String>{
       'Content-Type': 'application/json; charset=UTF-8',
@@ -31,7 +32,7 @@ Future<http.Response> loginWithGoogle({
 }
 
 Future<http.Response> logout(Map<String, String> authHeaders) {
-  return http.post(
+  return apiClient.post(
     Uri.parse('$apiBaseUrl/api/logout'),
     headers: authHeaders,
   ).timeout(apiTimeout);

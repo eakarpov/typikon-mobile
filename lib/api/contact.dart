@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'client.dart';
 import 'constants.dart';
 
 Future<http.Response> sendFeedback(String email, String theme, String value, String captcha, String fingerprint) {
@@ -11,7 +12,7 @@ Future<http.Response> sendFeedback(String email, String theme, String value, Str
     'captcha': captcha,
     'isMobile': true,
   };
-  return http.post(
+  return apiClient.post(
     Uri.parse('$apiBaseUrl/api/contact'),
     headers: <String, String>{
       'Content-Type': 'application/json; charset=UTF-8',
@@ -22,7 +23,7 @@ Future<http.Response> sendFeedback(String email, String theme, String value, Str
 }
 
 Future<http.Response> getCaptcha(String fingerprint) {
-  return http.post(
+  return apiClient.post(
     Uri.parse('$apiBaseUrl/api/captcha'),
     headers: <String, String>{
       'x-forwarded-for': fingerprint,
