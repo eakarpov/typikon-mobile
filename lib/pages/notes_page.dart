@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import 'package:typikon/dto/user_note.dart';
+import 'package:typikon/utils/session_message.dart';
+import '../apiMapper/session.dart';
 import '../apiMapper/user_notes.dart';
 
 class NotesPage extends StatefulWidget {
@@ -27,7 +29,15 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   void _onDelete(UserNote note) async {
-    final ok = await removeUserNote(note.id);
+    bool ok;
+    try {
+      ok = await removeUserNote(note.id);
+    } on SessionExpiredException {
+      if (!mounted) return;
+      showSessionExpiredToast();
+      _load();
+      return;
+    }
     if (!mounted) return;
     Fluttertoast.showToast(
       msg: ok ? "Заметка удалена" : "Не удалось удалить",
@@ -58,6 +68,26 @@ class _NotesPageState extends State<NotesPage> {
         child: FutureBuilder<List<UserNote>>(
           future: notes,
           builder: (context, future) {
+            if (future.error is SessionExpiredException) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Сессия истекла. Войдите снова, чтобы увидеть свои заметки.",
+                        textAlign: TextAlign.center,
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pushNamed(context, "/settings"),
+                        child: const Text("Войти"),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
             if (future.hasError) {
               return Center(child: Text("Не удалось загрузить заметки"));
             }

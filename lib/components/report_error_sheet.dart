@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
+import 'package:typikon/utils/session_message.dart';
+
 import '../apiMapper/report.dart';
+import '../apiMapper/session.dart';
 import '../apiMapper/user_notes.dart';
 import '../dto/user_note.dart';
 
@@ -91,18 +94,26 @@ class _ReportErrorFormState extends State<_ReportErrorForm> {
 
   Future<void> _submit() async {
     setState(() { _sending = true; });
-    final ok = await submitErrorReport(
-      textId: widget.textId,
-      selection: _buildSelectionPayload(
-        phrase: widget.phrase,
-        paragraphIndex: widget.paragraphIndex,
-        paragraph: widget.chapter == null ? widget.contextText : null,
-        chapter: widget.chapter,
-        verse: widget.verse,
-        verseText: widget.chapter != null ? widget.contextText : null,
-      ),
-      correction: _controller.text,
-    );
+    bool ok;
+    try {
+      ok = await submitErrorReport(
+        textId: widget.textId,
+        selection: _buildSelectionPayload(
+          phrase: widget.phrase,
+          paragraphIndex: widget.paragraphIndex,
+          paragraph: widget.chapter == null ? widget.contextText : null,
+          chapter: widget.chapter,
+          verse: widget.verse,
+          verseText: widget.chapter != null ? widget.contextText : null,
+        ),
+        correction: _controller.text,
+      );
+    } on SessionExpiredException {
+      if (!mounted) return;
+      Navigator.pop(context);
+      showSessionExpiredToast();
+      return;
+    }
     if (!mounted) return;
     Navigator.pop(context);
     Fluttertoast.showToast(
@@ -226,20 +237,28 @@ class _AddNoteFormState extends State<_AddNoteForm> {
     if (_controller.text.trim().isEmpty) return;
     setState(() { _sending = true; });
     final existing = widget.existingNote;
-    final ok = existing != null
-        ? await editUserNote(existing.id, _controller.text)
-        : (await submitUserNote(
-            textId: widget.textId,
-            selection: _buildSelectionPayload(
-              phrase: widget.phrase,
-              paragraphIndex: widget.paragraphIndex,
-              paragraph: widget.chapter == null ? widget.contextText : null,
-              chapter: widget.chapter,
-              verse: widget.verse,
-              verseText: widget.chapter != null ? widget.contextText : null,
-            ),
-            note: _controller.text,
-          )) != null;
+    bool ok;
+    try {
+      ok = existing != null
+          ? await editUserNote(existing.id, _controller.text)
+          : (await submitUserNote(
+              textId: widget.textId,
+              selection: _buildSelectionPayload(
+                phrase: widget.phrase,
+                paragraphIndex: widget.paragraphIndex,
+                paragraph: widget.chapter == null ? widget.contextText : null,
+                chapter: widget.chapter,
+                verse: widget.verse,
+                verseText: widget.chapter != null ? widget.contextText : null,
+              ),
+              note: _controller.text,
+            )) != null;
+    } on SessionExpiredException {
+      if (!mounted) return;
+      Navigator.pop(context);
+      showSessionExpiredToast();
+      return;
+    }
     if (!mounted) return;
     Navigator.pop(context);
     if (ok) widget.onChanged?.call();
@@ -257,7 +276,15 @@ class _AddNoteFormState extends State<_AddNoteForm> {
     final existing = widget.existingNote;
     if (existing == null) return;
     setState(() { _sending = true; });
-    final ok = await removeUserNote(existing.id);
+    bool ok;
+    try {
+      ok = await removeUserNote(existing.id);
+    } on SessionExpiredException {
+      if (!mounted) return;
+      Navigator.pop(context);
+      showSessionExpiredToast();
+      return;
+    }
     if (!mounted) return;
     Navigator.pop(context);
     if (ok) widget.onChanged?.call();

@@ -18,6 +18,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import "version.dart";
 import "api/constants.dart";
+import "utils/app_version.dart";
 
 import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
@@ -156,7 +157,7 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
 Future _checkVersionAndNotify(String type) async {
   try {
     var version = await getVersion();
-    if (version.major > majorVersion || version.minor > minorVersion) {
+    if (isUpdateAvailable(version)) {
       // Show a notification after every 15 minute with the first
       // appearance happening a minute after invoking the method
       var androidPlatformChannelSpecifics = new AndroidNotificationDetails(

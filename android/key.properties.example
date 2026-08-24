@@ -1,0 +1,47 @@
+# Образец. Скопировать в android/key.properties и заполнить своими значениями.
+# Сам key.properties и файл хранилища в git не попадают (android/.gitignore).
+#
+# Хранилище — это копия ключа, которым подписаны сборки начиная с 1.4.0
+# (сертификат SHA-256 064cc2b5…ccdb). Ключ обязан остаться тем же: Android
+# принимает обновление поверх установленного приложения только при совпадении
+# подписи, а иначе пользователю остаётся снос и установка заново — с потерей
+# избранного, прогресса чтения и заметок.
+#
+# Как получить хранилище (один раз):
+#
+#   mkdir -p ~/keys
+#   cp ~/.android/debug.keystore ~/keys/typikon-release.jks
+#   keytool -storepasswd -keystore ~/keys/typikon-release.jks
+#
+# keytool спросит текущий пароль (он равен android), затем новый — дважды.
+#
+# Хранилище в формате PKCS12, отсюда два следствия:
+#   - пароль только из ASCII-символов, кириллица не принимается
+#     (ошибка "Password is not ASCII");
+#   - отдельного пароля у ключа быть не может, поэтому keyPassword ниже
+#     должен совпадать с storePassword. Команда keytool -keypasswd для
+#     PKCS12 не работает вовсе.
+#
+# Смена пароля перешифровывает хранилище, но не трогает ни закрытый ключ, ни
+# сертификат — подпись остаётся прежней. Проверить можно так:
+#
+#   keytool -list -keystore ~/keys/typikon-release.jks
+#
+# отпечаток SHA-256 должен остаться 06:4C:C2:B5:…:CC:DB.
+#
+# Проверить, что собранный APK подписан тем же ключом. apksigner лежит в
+# build-tools и в PATH по умолчанию не попадает, поэтому путь полный:
+#
+#   ~/Library/Android/sdk/build-tools/36.0.0/apksigner verify --print-certs \
+#     build/app/outputs/flutter-apk/app-release.apk
+#
+# keytool -printcert -jarfile здесь не поможет: он читает только подпись v1,
+# а APK подписывается схемой v2.
+#
+# Файл хранилища положить в бэкап. Потеряется — обновления для всех
+# установленных приложений станут невозможны, восстановить ключ нельзя.
+
+storeFile=/Users/имя/keys/typikon-release.jks
+storePassword=
+keyAlias=androiddebugkey
+keyPassword=

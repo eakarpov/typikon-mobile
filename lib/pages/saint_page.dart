@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/saints.dart';
 import "package:typikon/dto/saint.dart";
 import "package:typikon/dto/text.dart";
+import "package:typikon/components/api_error_view.dart";
 
 class SaintPage extends StatefulWidget {
   final String id;
@@ -24,6 +25,12 @@ class _SaintPageState extends State<SaintPage> {
   void initState() {
     super.initState();
     saint = getSaint(widget.id);
+  }
+
+  void _retry() {
+    setState(() {
+      saint = getSaint(widget.id);
+    });
   }
 
   void onOpenLinks(BuildContext context, List<DneslovLink> links) {
@@ -67,7 +74,12 @@ class _SaintPageState extends State<SaintPage> {
                     : null;
                 return Text(memo != null ? memo.title : "", style: TextStyle(fontFamily: 'OldStandard'));
               } else if (future.hasError) {
-                return Text('${future.error}');
+                return Text(
+                  "Ошибка загрузки",
+                  style: TextStyle(fontFamily: 'OldStandard'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                );
               }
               return const CircularProgressIndicator();
             },
@@ -183,7 +195,12 @@ class _SaintPageState extends State<SaintPage> {
                       ],
                 );
               } else if (future.hasError) {
-                return Text('${future.error}');
+                return ApiErrorView(
+                  error: future.error,
+                  message: "Не удалось загрузить житие.",
+                  hint: "Жития приходят со стороннего сайта dneslov.org — иногда он недоступен.",
+                  onRetry: _retry,
+                );
               }
               return Container(
                 color: Theme.of(context).scaffoldBackgroundColor,

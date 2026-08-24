@@ -3,12 +3,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter_redux/flutter_redux.dart';
-import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
-import 'package:typikon/store/models/models.dart';
 import "package:typikon/components/places.dart";
 import 'package:typikon/dto/user_note.dart';
+import 'package:typikon/utils/reading_style.dart';
 
 List<InlineSpan> buildFootlinks(
     String text,
@@ -36,7 +34,7 @@ List<InlineSpan> buildFootlinks(
           style: TextStyle(
             fontFamily: fontFamily,
             fontSize: size,
-            color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+            color: readingTextColor(context),
           ),
           children: buildPlaces(
             beforeText,
@@ -97,7 +95,7 @@ List<InlineSpan> buildFootlinks(
         style: TextStyle(
           fontFamily: fontFamily,
           fontSize: size,
-          color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+          color: readingTextColor(context),
         ),
         children: buildPlaces(
           remainingText,

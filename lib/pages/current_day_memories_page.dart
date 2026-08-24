@@ -8,6 +8,7 @@ import 'package:typikon/apiMapper/dneslov/calendar.dart';
 import 'package:typikon/dto/dneslov/calendar.dart';
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
+import 'package:typikon/components/api_error_view.dart';
 
 class CurrentDayMemoriesPage extends StatefulWidget {
   const CurrentDayMemoriesPage(context, {super.key});
@@ -18,6 +19,15 @@ class CurrentDayMemoriesPage extends StatefulWidget {
 
 class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
   late Future<CalendarDayD> currentDay;
+  String? _lastRequestedDay;
+
+  void _retry() {
+    final day = _lastRequestedDay;
+    if (day == null) return;
+    setState(() {
+      currentDay = getCalendarDayD(day);
+    });
+  }
 
   @override
   String? get restorationId => "test";
@@ -51,6 +61,7 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
         ? StoreProvider.of<AppState>(context).state.common.date!.subtract(const Duration(days: 13))
         : DateTime.now().subtract(const Duration(days: 13));
     var valFormat = DateFormat('dd.MM.yyyy').format(val);
+    _lastRequestedDay = valFormat;
     currentDay = getCalendarDayD(valFormat);
     // StoreProvider.of<AppState>(context).dispatch(FetchItemsAction());
   }
@@ -199,7 +210,12 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
                     },
                   );
                 } else if (future.hasError) {
-                  return Text('${future.error}');
+                  return ApiErrorView(
+                    error: future.error,
+                    message: "Не удалось загрузить памяти дня.",
+                    hint: "Памяти приходят со стороннего сайта dneslov.org — иногда он недоступен.",
+                    onRetry: _retry,
+                  );
                 }
                 return Container(
                   color: Theme.of(context).scaffoldBackgroundColor,

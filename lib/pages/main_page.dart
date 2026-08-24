@@ -1,6 +1,7 @@
 import 'package:typikon/apiMapper/version.dart';
 import 'package:typikon/dto/version.dart';
 import 'package:typikon/version.dart';
+import 'package:typikon/utils/app_version.dart';
 import 'package:url_launcher/url_launcher.dart';
 import "package:google_fonts/google_fonts.dart";
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -47,7 +48,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     super.initState();
     version = getVersion();
     version.then((value) => {
-      if ((value.major > majorVersion || value.minor > minorVersion) && !widget.hasSkippedUpdate) {
+      if (isUpdateAvailable(value) && !widget.hasSkippedUpdate) {
         showAlert(context, value)
       }
     });

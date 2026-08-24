@@ -23,6 +23,25 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+// Ключ подписи релиза. Раньше здесь стоял signingConfigs.debug из шаблона, то
+// есть ключом был ~/.android/debug.keystore — файл, который SDK пересоздаёт
+// молча. Один раз это уже случилось: сборки 1.0.0–1.3.0 подписаны сертификатом
+// d1d7311c…, начиная с 1.4.0 — 064cc2b5…, и все, кто остался на 1.3.0, поставить
+// обновление поверх больше не могут.
+//
+// Теперь ключ берётся из android/key.properties (в git не хранится, см.
+// android/.gitignore; образец — key.properties.example). Ключ тот же самый, что
+// подписывал 1.4.0+, только вынесенный из ~/.android/ и с собственным паролем,
+// поэтому обновления поверх продолжают ставиться.
+def keystorePropertiesFile = rootProject.file('key.properties')
+def keystoreProperties = new Properties()
+def hasKeystore = keystorePropertiesFile.exists()
+if (hasKeystore) {
+    keystorePropertiesFile.withReader('UTF-8') { reader ->
+        keystoreProperties.load(reader)
+    }
+}
+
 android {
     namespace "su.typikon.typikon"
 
@@ -53,11 +72,25 @@ android {
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        if (hasKeystore) {
+            release {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig signingConfigs.debug
+            // Без key.properties релиз остаётся неподписанным и падает на
+            // проверке ниже. Молчаливый откат на debug-ключ здесь недопустим:
+            // именно так и разъехались подписи между 1.3.0 и 1.4.0.
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled true
         }
         profile {
@@ -77,4 +110,19 @@ dependencies {
     implementation 'androidx.window:window:1.1.0'
     implementation 'androidx.window:window-java:1.1.0'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+}
+
+// Сборка релиза без ключа должна останавливаться с внятным объяснением, а не
+// тихо выдавать APK, который потом не встанет поверх установленного.
+gradle.taskGraph.whenReady { graph ->
+    def buildsRelease = graph.allTasks.any { it.project == project && it.name.contains('Release') }
+    if (buildsRelease && !hasKeystore) {
+        throw new GradleException(
+            "Не найден android/key.properties — релиз подписать нечем.\n" +
+            "Скопируйте android/key.properties.example в android/key.properties и укажите\n" +
+            "путь к хранилищу и пароли. Ключ должен быть тем же, которым подписаны сборки\n" +
+            "начиная с 1.4.0 (сертификат SHA-256 064cc2b5…ccdb), иначе у пользователей\n" +
+            "сломается обновление поверх установленного приложения."
+        )
+    }
 }

@@ -3,12 +3,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter_redux/flutter_redux.dart';
-import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
-import 'package:typikon/store/models/models.dart';
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/components/highlighted_text.dart';
+import 'package:typikon/utils/reading_style.dart';
 
 List<InlineSpan> buildSaints(
   String text,
@@ -32,7 +30,7 @@ List<InlineSpan> buildSaints(
       final style = TextStyle(
         fontFamily: fontFamily,
         fontSize: size,
-        color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+        color: readingTextColor(context),
       );
       widgets.add(
         TextSpan(
@@ -68,7 +66,7 @@ List<InlineSpan> buildSaints(
     final style = TextStyle(
       fontFamily: fontFamily,
       fontSize: size,
-      color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+      color: readingTextColor(context),
     );
     widgets.add(
       TextSpan(

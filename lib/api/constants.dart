@@ -3,6 +3,12 @@ const String dneslovBaseUrl = 'http://dneslov.org';
 
 const Duration apiTimeout = Duration(seconds: 15);
 
+// dneslov.org — сторонний сайт, и его доступность нам не подконтрольна: он
+// периодически принимает соединение, но не отвечает. Ждать общие 15 секунд в
+// таком случае значит держать экран пустым всё это время ради дополнения к
+// основному содержимому, поэтому терпение здесь заметно короче.
+const Duration dneslovTimeout = Duration(seconds: 6);
+
 // Тот же Google OAuth web client id, что бекенд читает из GOOGLE_APP и
 // проверяет как audience при верификации id_token (не секрет, публичный
 // идентификатор). Передаётся в GoogleSignIn как serverClientId, чтобы
