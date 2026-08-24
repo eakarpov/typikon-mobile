@@ -6,7 +6,7 @@ import '../constants.dart';
 Future<http.Response> fetchDneslovImages(String dneslovId) {
   return cachedFetch(
     'dneslov-images:$dneslovId',
-    () => http.get(Uri.parse('$dneslovBaseUrl/api/v1/images.json?m=$dneslovId')).timeout(apiTimeout),
+    () => http.get(Uri.parse('$dneslovBaseUrl/api/v1/images.json?m=$dneslovId')).timeout(dneslovTimeout),
     ttl: const Duration(hours: 24),
   );
 }
@@ -14,7 +14,7 @@ Future<http.Response> fetchDneslovImages(String dneslovId) {
 Future<http.Response> fetchDneslovRoundels(String dneslovId) {
   return cachedFetch(
     'dneslov-roundels:$dneslovId',
-    () => http.get(Uri.parse('$dneslovBaseUrl/api/v1/roundels.json?m=$dneslovId')).timeout(apiTimeout),
+    () => http.get(Uri.parse('$dneslovBaseUrl/api/v1/roundels.json?m=$dneslovId')).timeout(dneslovTimeout),
     ttl: const Duration(hours: 24),
   );
 }

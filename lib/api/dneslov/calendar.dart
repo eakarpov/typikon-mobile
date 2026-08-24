@@ -6,7 +6,7 @@ import '../constants.dart';
 Future<http.Response> fetchCalendarDay(String dateTime, String calendarString) {
   return cachedFetch(
     'dneslov-calendar:$dateTime:$calendarString',
-    () => http.get(Uri.parse('$dneslovBaseUrl/index.json?d=ю$dateTime&c=$calendarString')).timeout(apiTimeout),
+    () => http.get(Uri.parse('$dneslovBaseUrl/index.json?d=ю$dateTime&c=$calendarString')).timeout(dneslovTimeout),
     ttl: const Duration(hours: 24),
   );
 }
@@ -14,7 +14,7 @@ Future<http.Response> fetchCalendarDay(String dateTime, String calendarString) {
 Future<http.Response> fetchCalendaries() {
   return cachedFetch(
     'dneslov-calendaries',
-    () => http.get(Uri.parse('$dneslovBaseUrl/calendaries.json?page=1&per=100&l=true')).timeout(apiTimeout),
+    () => http.get(Uri.parse('$dneslovBaseUrl/calendaries.json?page=1&per=100&l=true')).timeout(dneslovTimeout),
     ttl: const Duration(days: 7),
   );
 }

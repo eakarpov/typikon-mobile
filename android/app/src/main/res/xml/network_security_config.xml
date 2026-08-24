@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Начиная с Android 9 незашифрованный http запрещён по умолчанию, и запросы к
+  dneslov.org (жития, изображения святых, роундели) на релизных сборках просто
+  не уходили. У dneslov.org нет https, поэтому исключение делается точечно:
+  весь остальной трафик по-прежнему обязан быть https.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">dneslov.org</domain>
+    </domain-config>
+</network-security-config>
