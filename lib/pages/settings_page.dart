@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/api/cached_fetch.dart';
+import 'package:typikon/components/calendar_subscription.dart';
 import 'package:typikon/apiMapper/auth.dart' as auth_api;
 
 class SettingsPage extends StatefulWidget {
@@ -172,6 +173,32 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   Padding(
                     padding: EdgeInsets.only(top: 20, left: 16, right: 16),
+                    child: Text("Чтение без сети", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                    title: Text("Заранее скачивать чтения дня"),
+                    subtitle: Text(
+                      "Тексты дня загрузятся, пока есть связь, и откроются в храме без сети. "
+                      "Расходует мобильный трафик.",
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    value: viewModel.isPreloadEnabled,
+                    onChanged: viewModel.onChangePreloadTexts,
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(top: 20, left: 16, right: 16),
+                    child: Text("Календарь", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: TextButton(
+                      child: Text("Подписаться на чтения в календаре"),
+                      onPressed: () => showCalendarSubscriptionSheet(context),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(top: 20, left: 16, right: 16),
                     child: Text("Аккаунт", style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   Padding(
@@ -218,6 +245,9 @@ class SettingsViewModel {
 
   final VoidCallback onResetReadingColors;
 
+  final bool isPreloadEnabled;
+  final Function(bool) onChangePreloadTexts;
+
   final bool isSignedIn;
   final String? email;
   final String? name;
@@ -232,6 +262,8 @@ class SettingsViewModel {
     this.themeMode = ThemeMode.system,
     this.onChangeThemeMode = SettingsViewModel.stubThemeMode,
     this.onResetReadingColors = SettingsViewModel.stubVoid,
+    this.isPreloadEnabled = false,
+    this.onChangePreloadTexts = SettingsViewModel.stubBool,
     this.isSignedIn = false,
     this.email,
     this.name,
@@ -244,6 +276,8 @@ class SettingsViewModel {
   static stubThemeMode (ThemeMode themeMode) {}
 
   static stubVoid () {}
+
+  static stubBool (bool value) {}
 
   static SettingsViewModel build(Store<AppState> store) {
     return SettingsViewModel(
@@ -265,6 +299,10 @@ class SettingsViewModel {
       },
       onResetReadingColors: () {
         store.dispatch(ResetReadingColorsAction());
+      },
+      isPreloadEnabled: store.state.settings.isPreloadEnabled,
+      onChangePreloadTexts: (value) {
+        store.dispatch(ChangePreloadTextsAction(value));
       },
       isSignedIn: store.state.auth.isSignedIn,
       email: store.state.auth.email,

@@ -27,6 +27,12 @@
 	<!-- App Transport Security запрещает http по умолчанию, из-за чего запросы
 	     к dneslov.org (жития, изображения святых) не уходили вовсе. У сайта нет
 	     https, поэтому исключение точечное — на один домен. -->
+	<!-- Без этого списка canOpenURL для webcal:// всегда возвращает false,
+	     и подписка молча вырождалась бы в скачивание файла по https. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>webcal</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>

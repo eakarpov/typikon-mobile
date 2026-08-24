@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:typikon/api/constants.dart';
 import 'package:typikon/dto/version.dart';
 import 'package:typikon/utils/app_version.dart';
 import 'package:typikon/version.dart';
@@ -37,6 +38,17 @@ void main() {
         isFalse,
       );
     });
+  });
+
+  test("appVersion не разъехался с pubspec.yaml", () {
+    // Третья копия версии на клиенте: её приложение шлёт заголовком
+    // X-Typikon-App и прикладывает к отчётам о падениях. Разъедется —
+    // и статистика по версиям, и отчёты начнут врать.
+    final pubspec = File("pubspec.yaml").readAsStringSync();
+    final match = RegExp(r"^version:\s*(\S+)", multiLine: true).firstMatch(pubspec);
+
+    expect(match, isNotNull);
+    expect(appVersion, match!.group(1));
   });
 
   test("version.dart не разъехался с pubspec.yaml", () {

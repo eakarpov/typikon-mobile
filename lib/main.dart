@@ -19,6 +19,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import "version.dart";
 import "api/constants.dart";
 import "utils/app_version.dart";
+import "utils/crash_reporter.dart";
 
 import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
@@ -86,6 +87,8 @@ class ReceivedNotification {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Ставим до всего остального, чтобы падения самой инициализации тоже доехали.
+  installCrashReporting();
   // initialise the plugin of flutter local notifications
 
   // app_icon needs to be a added as a drawable

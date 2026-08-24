@@ -200,6 +200,44 @@ class CalendarDay {
     required this.memories,
   });
 
+  /// Все места службы одним списком — для обхода, а не для показа. Порядок тот
+  /// же, в каком места идут на странице дня.
+  List<CalendarDayPart?> get parts => [
+    vespersProkimenon,
+    vigil,
+    kathisma1,
+    kathisma2,
+    kathisma3,
+    before50,
+    ipakoi,
+    polyeleos,
+    gospelMatins,
+    song3,
+    song6,
+    apolutikaTroparia,
+    before1h,
+    h1,
+    h3,
+    h6,
+    h9,
+    apostleLiturgy,
+    gospelLiturgy,
+    panagia,
+  ];
+
+  /// Идентификаторы текстов дня, без повторов и в порядке службы. Один и тот же
+  /// текст нередко стоит сразу в нескольких местах.
+  List<String> get textIds {
+    final seen = <String>{};
+    for (final part in parts) {
+      for (final item in part?.items ?? const <CalendarDayPartItem>[]) {
+        final id = item.id;
+        if (id != null && id.isNotEmpty) seen.add(id);
+      }
+    }
+    return seen.toList();
+  }
+
   factory CalendarDay.fromJson(Map<String, dynamic> json) {
     final day = json["day"];
     CalendarDayPart? part(String key) =>

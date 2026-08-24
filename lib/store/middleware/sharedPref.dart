@@ -21,6 +21,7 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
       action is ChangeFontColorAction ||
       action is ChangeBackgroundColorAction ||
       action is ChangeThemeModeAction ||
+      action is ChangePreloadTextsAction ||
       action is ResetReadingColorsAction ||
       action is ChangeCommonDateAction ||
       action is SignInSuccessAction ||
@@ -55,6 +56,9 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     AppState state = AppState.fromJson(json.decode(stateString));
     store.dispatch(ChangeFontSizeAction(state.settings.fontSize));
     store.dispatch(ChangeThemeModeAction(state.settings.themeMode));
+    if (state.settings.preloadTexts != null) {
+      store.dispatch(ChangePreloadTextsAction(state.settings.preloadTexts!));
+    }
     if (state.settings.fontColor != null) {
       store.dispatch(ChangeFontColorAction(state.settings.fontColor!));
     }

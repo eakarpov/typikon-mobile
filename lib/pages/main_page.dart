@@ -5,6 +5,8 @@ import 'package:typikon/utils/app_version.dart';
 import 'package:url_launcher/url_launcher.dart';
 import "package:google_fonts/google_fonts.dart";
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_redux/flutter_redux.dart';
@@ -22,6 +24,7 @@ import "../components/day_memories.dart";
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
+import '../utils/day_preloader.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
 
@@ -43,6 +46,13 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   late Future<MainPageData> data;
   late Future<Version> version;
 
+  // Предложение включить предзагрузку показываем один раз за жизнь страницы, а
+  // снимаем в dispose: MaterialBanner живёт в ScaffoldMessenger выше
+  // MaterialApp и иначе уехал бы на следующий экран вместе с пользователем.
+  ScaffoldMessengerState? _messenger;
+  bool _preloadBannerShown = false;
+  bool _preloadBannerVisible = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,12 +65,19 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   }
 
   @override
+  void dispose() {
+    if (_preloadBannerVisible) _messenger?.hideCurrentMaterialBanner();
+    super.dispose();
+  }
+
+  @override
   void didChangeDependencies() async {
     super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.of(context);
     var val = StoreProvider.of<AppState>(context).state.common.date != null
         ? StoreProvider.of<AppState>(context).state.common.date
         : DateTime.now().subtract(const Duration(days: 13));
-    data = updateData(
+    data = _loadDay(
         DateFormat('yyyy-MM-dd').format(
             val
         )
@@ -69,6 +86,66 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     // final SharedPreferences prefs = await SharedPreferences.getInstance();
     // var stateString = prefs.getString(APP_STATE_KEY);
     // print(stateString);
+  }
+
+  /// Загружает день и, если пользователь на это согласился, следом тихо
+  /// докачивает его тексты, чтобы они открылись и без сети. Ошибки
+  /// предзагрузки страницы не касаются.
+  Future<MainPageData> _loadDay(String date) {
+    final future = updateData(date);
+    future.then((value) {
+      final day = value.day;
+      if (day == null || !mounted) return;
+
+      final settings = StoreProvider.of<AppState>(context).state.settings;
+      if (settings.isPreloadEnabled) {
+        unawaited(preloadTexts(day.textIds));
+        return;
+      }
+      // Спрашиваем не на пустом экране, а когда день уже показан: так понятно,
+      // о каких именно чтениях речь.
+      if (settings.shouldAskAboutPreload && !_preloadBannerShown) {
+        _preloadBannerShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showPreloadBanner(day.textIds);
+        });
+      }
+    }).catchError((_) {});
+    return future;
+  }
+
+  void _hidePreloadBanner() {
+    if (!_preloadBannerVisible) return;
+    _preloadBannerVisible = false;
+    _messenger?.hideCurrentMaterialBanner();
+  }
+
+  void _answerPreload(bool enabled, List<String> textIds) {
+    _hidePreloadBanner();
+    StoreProvider.of<AppState>(context).dispatch(ChangePreloadTextsAction(enabled));
+    if (enabled) unawaited(preloadTexts(textIds));
+  }
+
+  void _showPreloadBanner(List<String> textIds) {
+    _preloadBannerVisible = true;
+    ScaffoldMessenger.of(context).showMaterialBanner(
+      MaterialBanner(
+        content: const Text(
+          "Скачивать чтения дня заранее, чтобы читать их в храме без сети? "
+          "Это расходует мобильный трафик; переключить можно в настройках.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => _answerPreload(false, textIds),
+            child: const Text("Не нужно"),
+          ),
+          TextButton(
+            onPressed: () => _answerPreload(true, textIds),
+            child: const Text("Скачивать"),
+          ),
+        ],
+      ),
+    );
   }
 
   void buildMaterialDatePicker(BuildContext context) async {
@@ -94,7 +171,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(picked)
       );
-      data = updateData(
+      data = _loadDay(
           DateFormat('yyyy-MM-dd').format(
             picked
                 // .subtract(const Duration(days: 13))
@@ -115,7 +192,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(newSelectedDate)
       );
-      data = updateData(
+      data = _loadDay(
           DateFormat('yyyy-MM-dd').format(
               newSelectedDate
                 // .subtract(const Duration(days: 13))
@@ -266,7 +343,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       StoreProvider.of<AppState>(context).dispatch(
                           ChangeCommonDateAction(newDate)
                       );
-                      data = updateData(
+                      data = _loadDay(
                           DateFormat('yyyy-MM-dd').format(
                               newDate
                             // .subtract(const Duration(days: 13))
@@ -279,7 +356,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       StoreProvider.of<AppState>(context).dispatch(
                           ChangeCommonDateAction(newDate)
                       );
-                      data = updateData(
+                      data = _loadDay(
                           DateFormat('yyyy-MM-dd').format(
                               newDate
                             // .subtract(const Duration(days: 13))
@@ -519,7 +596,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                         TextButton(
                           onPressed: () {
                             setState(() {
-                              data = updateData(
+                              data = _loadDay(
                                   DateFormat('yyyy-MM-dd').format(
                                       StoreProvider.of<AppState>(context).state.common.date ??
                                           DateTime.now().subtract(const Duration(days: 13))
