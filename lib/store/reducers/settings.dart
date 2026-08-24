@@ -8,6 +8,7 @@ final settingsReducer = combineReducers<Settings>([
   TypedReducer<Settings, ChangeBackgroundColorAction>(_changeBackgroundColor),
   TypedReducer<Settings, ChangeFontColorAction>(_changeFontColor),
   TypedReducer<Settings, ChangeThemeModeAction>(_changeThemeMode),
+  TypedReducer<Settings, ChangePreloadTextsAction>(_changePreloadTexts),
   TypedReducer<Settings, ResetReadingColorsAction>(_resetReadingColors),
 ]);
 
@@ -27,11 +28,16 @@ Settings _changeThemeMode(Settings state, ChangeThemeModeAction action) {
   return state.copyWith(themeMode: action.themeMode);
 }
 
+Settings _changePreloadTexts(Settings state, ChangePreloadTextsAction action) {
+  return state.copyWith(preloadTexts: action.preloadTexts);
+}
+
 Settings _resetReadingColors(Settings state, ResetReadingColorsAction action) {
   return Settings(
     fontSize: state.fontSize,
     themeMode: state.themeMode,
     backgroundColor: null,
     fontColor: null,
+    preloadTexts: state.preloadTexts,
   );
 }

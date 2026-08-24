@@ -79,6 +79,17 @@ class ChangeThemeModeAction {
   }
 }
 
+class ChangePreloadTextsAction {
+  final bool preloadTexts;
+
+  ChangePreloadTextsAction(this.preloadTexts);
+
+  @override
+  String toString() {
+    return 'ChangePreloadTextsAction{preloadTexts: $preloadTexts}';
+  }
+}
+
 class ResetReadingColorsAction {}
 
 class SignInSuccessAction {

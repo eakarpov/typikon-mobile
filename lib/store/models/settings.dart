@@ -11,12 +11,27 @@ class Settings {
   final Color? backgroundColor;
   final Color? fontColor;
 
+  /// Скачивать ли тексты дня заранее, чтобы они открывались без сети.
+  ///
+  /// Три состояния, а не два: `null` — пользователя ещё не спрашивали, и до
+  /// ответа мы ничего не качаем. Предзагрузка тратит мобильный трафик, поэтому
+  /// включаться сама она не должна, но и молча прятаться в настройках тоже:
+  /// `null` — это ещё и признак, что главной странице нужно предложить.
+  final bool? preloadTexts;
+
   const Settings({
     this.fontSize = 16,
     this.themeMode = ThemeMode.system,
     this.backgroundColor,
     this.fontColor,
+    this.preloadTexts,
   });
+
+  /// Качаем только по явному согласию.
+  bool get isPreloadEnabled => preloadTexts == true;
+
+  /// Спрашивать ли про предзагрузку — то есть не отвечал ли пользователь раньше.
+  bool get shouldAskAboutPreload => preloadTexts == null;
 
   factory Settings.init() => const Settings();
 
@@ -25,18 +40,20 @@ class Settings {
     ThemeMode? themeMode,
     Color? backgroundColor,
     Color? fontColor,
+    bool? preloadTexts,
   }) {
     return Settings(
       fontSize: fontSize ?? this.fontSize,
       themeMode: themeMode ?? this.themeMode,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       fontColor: fontColor ?? this.fontColor,
+      preloadTexts: preloadTexts ?? this.preloadTexts,
     );
   }
 
   @override
   int get hashCode =>
-      fontSize.hashCode ^ themeMode.hashCode ^ backgroundColor.hashCode ^ fontColor.hashCode;
+      fontSize.hashCode ^ themeMode.hashCode ^ backgroundColor.hashCode ^ fontColor.hashCode ^ preloadTexts.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -45,11 +62,12 @@ class Settings {
               fontSize == other.fontSize &&
               themeMode == other.themeMode &&
               backgroundColor == other.backgroundColor &&
-              fontColor == other.fontColor;
+              fontColor == other.fontColor &&
+              preloadTexts == other.preloadTexts;
 
   @override
   String toString() {
-    return 'Settings{fonSize: $fontSize, themeMode: $themeMode, backgroundColor: ${backgroundColor == null ? 'null' : HexColor.toHex(backgroundColor!)}, fontColor: ${fontColor == null ? 'null' : HexColor.toHex(fontColor!)}}';
+    return 'Settings{fonSize: $fontSize, themeMode: $themeMode, backgroundColor: ${backgroundColor == null ? 'null' : HexColor.toHex(backgroundColor!)}, fontColor: ${fontColor == null ? 'null' : HexColor.toHex(fontColor!)}, preloadTexts: $preloadTexts}';
   }
 
   Map<String, dynamic> toJson() {
@@ -58,6 +76,7 @@ class Settings {
       'themeMode': themeMode.name,
       'backgroundColor': backgroundColor == null ? null : HexColor.toHex(backgroundColor!),
       'fontColor': fontColor == null ? null : HexColor.toHex(fontColor!),
+      'preloadTexts': preloadTexts,
     };
   }
 
@@ -81,6 +100,9 @@ class Settings {
       ),
       backgroundColor: backgroundColor,
       fontColor: fontColor,
+      // Отсутствие ключа — это ровно "не спрашивали": у тех, кто обновился
+      // с прежней версии, предзагрузка не включится сама, им предложат.
+      preloadTexts: json["preloadTexts"] is bool ? json["preloadTexts"] as bool : null,
     );
   }
 }
