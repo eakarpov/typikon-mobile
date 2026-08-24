@@ -18,7 +18,14 @@ List<InlineSpan> buildHighlightedSpans(
     return [TextSpan(text: text, style: style)];
   }
 
-  final highlightStyle = style.copyWith(backgroundColor: const Color(0xFFFFF3B0));
+  // Подложка подбирается под цвет самого текста, а не под тему: цвет чтений
+  // может быть и выбран пользователем вручную. Светлый текст (тёмная тема) на
+  // бледно-жёлтом не читается, поэтому для него берём тёмную янтарную подложку.
+  final textColor = style.color;
+  final isLightText = textColor == null || textColor.computeLuminance() > 0.5;
+  final highlightStyle = style.copyWith(
+    backgroundColor: isLightText ? const Color(0xFF5A4A00) : const Color(0xFFFFF3B0),
+  );
   final spans = <InlineSpan>[];
   int cursor = 0;
 

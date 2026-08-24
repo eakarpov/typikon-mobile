@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:typikon/dto/calendar.dart';
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/components/highlighted_text.dart';
+import 'package:typikon/utils/reading_style.dart';
 
 /// Рендер списка стихов Библии/зачала с надстрочным номером стиха перед
 /// каждым. Простой текст без markup сносок/ссылок — в отличие от
@@ -28,7 +29,11 @@ class VerseListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseStyle = TextStyle(fontFamily: fontFamily, fontSize: fontSize);
+    final baseStyle = TextStyle(
+      fontFamily: fontFamily,
+      fontSize: fontSize,
+      color: readingTextColor(context),
+    );
     final numberStyle = TextStyle(
       fontFamily: fontFamily,
       fontSize: fontSize * 0.7,

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/footlinks.dart';
 import 'package:typikon/dto/user_note.dart';
+import 'package:typikon/utils/reading_style.dart';
 
 class FusionTextWidgets extends StatelessWidget {
   final String text;
@@ -44,7 +45,7 @@ class FusionTextWidgets extends StatelessWidget {
             style: TextStyle(
               fontFamily: fontFamily,
               fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
-              color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+              color: readingTextColor(context),
             ),
             children: buildFootlinks(
                 beforeText,
@@ -88,7 +89,7 @@ class FusionTextWidgets extends StatelessWidget {
           style: TextStyle(
             fontFamily: fontFamily,
             fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
-            color: StoreProvider.of<AppState>(context).state.settings.fontColor,
+            color: readingTextColor(context),
           ),
           children: buildFootlinks(
               remainingText,
