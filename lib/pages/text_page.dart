@@ -21,6 +21,8 @@ import 'package:redux/redux.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import "package:typikon/components/api_error_view.dart";
+import "package:typikon/utils/fb2.dart";
 import "package:typikon/components/fusion_text.dart";
 import "package:typikon/components/table_of_contents.dart";
 import "package:typikon/components/verse_list.dart";
@@ -68,6 +70,14 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   Timer? _persistDebounce;
   bool _resumeBannerShown = false;
 
+  // MaterialBanner живёт в ScaffoldMessenger, а тот — выше MaterialApp, то есть
+  // переживает уход со страницы: не нажав ни "Сначала", ни "Продолжить",
+  // пользователь уносил баннер с собой на следующий экран. Снимаем его в
+  // dispose, а ссылку на messenger берём заранее — в dispose искать его по
+  // дереву уже поздно.
+  ScaffoldMessengerState? _messenger;
+  bool _bannerVisible = false;
+
   GlobalKey _chapterKey(int chapter) => _chapterKeys.putIfAbsent(chapter, () => GlobalKey());
 
   @override
@@ -91,7 +101,14 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.of(context);
+  }
+
+  @override
   void dispose() {
+    if (_bannerVisible) _messenger?.hideCurrentMaterialBanner();
     _persistDebounce?.cancel();
     _persistProgressNow();
     WidgetsBinding.instance.removeObserver(this);
@@ -131,21 +148,28 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     });
   }
 
+  void _hideResumeBanner() {
+    if (!_bannerVisible) return;
+    _bannerVisible = false;
+    _messenger?.hideCurrentMaterialBanner();
+  }
+
   void _showResumeBanner(double fraction) {
+    _bannerVisible = true;
     ScaffoldMessenger.of(context).showMaterialBanner(
       MaterialBanner(
         content: Text("Вы уже читали этот текст. Продолжить с места, где остановились?"),
         actions: [
           TextButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+              _hideResumeBanner();
               clearReadingProgress(_realId);
             },
             child: Text("Сначала"),
           ),
           TextButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+              _hideResumeBanner();
               _resumeTo(fraction);
             },
             child: Text("Продолжить"),
@@ -201,6 +225,13 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     getUserNotes(textId: _realId).then((notes) {
       if (!mounted) return;
       setState(() { _userNotes = notes; });
+    }).catchError((error) {
+      // Заметки — дополнение к тексту, а не он сам: если сессия истекла или
+      // сервер недоступен, страница просто показывает текст без подсветок.
+      // withSession уже погасил локальный вход, поэтому пункты меню выделения
+      // пропадут при следующей перерисовке.
+      if (!mounted) return;
+      setState(() { _userNotes = []; });
     });
   }
 
@@ -220,40 +251,59 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     );
   }
 
-  bool _isOffline(Object? error) {
-    final message = error.toString();
-    return message.contains('SocketException') || message.contains('Failed host lookup');
-  }
-
   Widget _buildError(BuildContext context, Object? error) {
-    final offline = _isOffline(error);
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       width: double.infinity,
       height: double.infinity,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(offline ? Icons.wifi_off : Icons.error_outline, size: 48),
-              SizedBox(height: 16),
-              Text(
-                offline
-                    ? "Нет соединения с интернетом. Этот текст ещё не открывали, поэтому офлайн он недоступен."
-                    : "Не удалось загрузить текст.",
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16),
-              TextButton(
-                onPressed: _retry,
-                child: Text("Повторить"),
-              ),
-            ],
-          ),
-        ),
+      child: ApiErrorView(
+        error: error,
+        message: "Не удалось загрузить текст.",
+        offlineMessage:
+            "Нет соединения с интернетом. Этот текст ещё не открывали, поэтому офлайн он недоступен.",
+        onRetry: _retry,
       ),
+    );
+  }
+
+  /// Выгрузка текста в fb2. Сборка xml вынесена в utils/fb2.dart — там же
+  /// экранирование и разбивка на абзацы, и там же её проверяет тест.
+  Future<void> _exportFb2(Reading reading) async {
+    final fb2Content = buildFb2(
+      id: reading.id,
+      name: reading.name,
+      author: reading.author,
+      content: reading.content,
+      now: DateTime.now(),
+    );
+
+    final Uri uri = await FileSaver.instance.saveBytesAsync(
+      fileName: fb2FileName(reading.name),
+      bytes: utf8.encode(fb2Content),
+      fileType: CustomFileType(ext: 'fb2', mimeType: 'application/x-fictionbook'),
+      conflictResolution: ConflictResolution.autoRename,
+    );
+
+    final androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'downloadChannelId',
+      'downloadNotificationChannel',
+      channelDescription: 'Notifications about saved files',
+      importance: Importance.max,
+      priority: Priority.high,
+      ticker: "download ticker",
+    );
+    final iOSPlatformChannelSpecifics = DarwinNotificationDetails();
+    final platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iOSPlatformChannelSpecifics,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      id++,
+      'Уставные чтения',
+      'Файл сохранён. Нажмите, чтобы открыть.',
+      platformChannelSpecifics,
+      payload: "download - ${uri.toString()}",
     );
   }
 
@@ -436,151 +486,10 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
             future: reading,
             builder: (context, future) {
               if (future.hasData) {
-                String name = future.data!.name;
-                String content = future.data!.content;
-                return TextButton(
-                  // icon: Icon(
-                  //   Icons.file_download,
-                  //   color: Colors.white,
-                  // ),
-                  child: Text("fb2", style: TextStyle(color: Colors.white)),
-                  onPressed: () async{
-                    // var book = EpubBook(
-                    //     title: "Test",
-                    //     author: "No author",
-                    //     content: EpubContent(
-                    //       allFiles: {},
-                    //     ),
-                    //     schema: EpubSchema(
-                    //       package: EpubPackage(
-                    //         version: EpubVersion.epub2,
-                    //         metadata: EpubMetadata(),
-                    //         manifest: EpubManifest(),
-                    //         spine: EpubSpine(
-                    //           ltr: true,
-                    //           tableOfContents: "",
-                    //         ),
-                    //         guide: EpubGuide(),
-                    //       ),
-                    //     ),
-                    //     chapters: [
-                    //       EpubChapter(
-                    //         title: "Chapter",
-                    //         htmlContent: "<div>Test something</div>",
-                    //       )
-                    //     ]
-                    // );
-                    // var bytes = await rootBundle.load('assets/English-cyrillic.epub');
-                    // var p = ByteData.sublistView(bytes).buffer.asUint8List();
-                    // // var bytes = File('assets/English-cyrillic.epub').readAsBytesSync();
-                    // var b = await EpubReader.readBook(p);
-                    // print(b.schema);
-                    // print(b.schema!.contentDirectoryPath);
-                    // var bb = EpubBook(b);
-
-                    //
-                    // var w = EpubWriter.writeBook(b);
-                    // if (w != null) {
-                    //   print(w);
-                    //   // await file.writeAsBytes(w);
-                    //   // await FileSaver.instance.saveFile(
-                    //   //   name: "hello.epub",
-                    //   //   bytes: Uint8List.fromList(w),
-                    //   //   fileExtension: "epub",
-                    //   // );
-                    //   final uri = await FileSaver.instance.saveBytesAsync(
-                    //       fileName: 'hello',
-                    //       bytes: Uint8List.fromList(w),
-                    //       fileType: CustomFileType(ext: 'epub', mimeType: 'application/epub+zip')
-                    //   );
-                    //   print(uri);
-                    // }
-
-                    String fb2Content = """<?xml version="1.0" encoding="UTF-8"?>
-<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
-<description>
-  <title-info>
-    <genre>poetry</genre>
-    <author><first-name>No</first-name><last-name>author</last-name></author>
-    <book-title>${name}</book-title>
-    <lang>en</lang>
-  </title-info>
-  <document-info>
-    <author><nickname>Creator</nickname></author>
-    <program-used>Dart Script</program-used>
-    <date>2026-02-16</date>
-    <id>12345</id>
-    <version>1.0</version>
-  </document-info>
-</description>
-<body>
-  <section>
-    <title>${name}</title>
-    <p>${content}</p>
-  </section>
-</body>
-</FictionBook>
-""";
-
-                    Uri uri = await FileSaver.instance.saveBytesAsync(
-                        fileName: "Из уставных чтений",
-                        bytes: utf8.encode(fb2Content),
-                        fileType: CustomFileType(ext: 'fb2', mimeType: 'application/x-fictionbook'),
-                        conflictResolution: ConflictResolution.autoRename,
-                    );
-                    print(uri.toString());
-                    var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
-                      'updateChannelId',
-                      'updateNotificationChannel',
-                      channelDescription: 'Notifications about update',
-                      importance: Importance.max,
-                      priority: Priority.high,
-                      ticker: "update version ticker",
-                    );
-                    var iOSPlatformChannelSpecifics = new DarwinNotificationDetails();
-
-                    // initialise channel platform for both Android and iOS device.
-                    var platformChannelSpecifics = new NotificationDetails(
-                        android: androidPlatformChannelSpecifics,
-                        iOS: iOSPlatformChannelSpecifics
-                    );
-
-                    await flutterLocalNotificationsPlugin.show(id++,
-                      'Уставные чтения',
-                      'Скачался файл. Для октрытия нажмите.',
-                      platformChannelSpecifics, payload: "download - ${uri.toString()}",
-                    );
-
-                    // final pdf = pw.Document();
-                    // final fileStr = await rootBundle.load('assets/fonts/OldStandardTT-Regular.ttf');
-                    // print(fileStr);
-                    // // final Uint8List fontData = File('OldStandard-Regular.otf').readAsBytesSync();
-                    // final ttf = pw.Font.ttf(fileStr);
-                    //
-                    // pdf.addPage(pw.MultiPage(
-                    //     maxPages: 4,
-                    //     pageFormat: PdfPageFormat.a4,
-                    //     build: (pw.Context context) {
-                    //       return Wrap(pw.Text(
-                    //         content,
-                    //         style: pw.TextStyle(font: ttf, fontSize: 40),
-                    //       )); // Center
-                    //     })); // Page
-                    // final bytes = await pdf.save();
-                    // final uri = await FileSaver.instance.saveBytesAsync(
-                    //     fileName: name,
-                    //     bytes: bytes,
-                    //     fileType: CustomFileType(ext: 'pdf', mimeType: 'application/pdf')
-                    // );
-                    // print(uri);
-
-                    // Directory? appDocDirectory = await getExternalStorageDirectory();
-                    // if (appDocDirectory != null) {
-                    // File file = File(join(appDocDirectory.path, "hello.epub"));
-                    // await file.create();
-                    // print(file);
-                    // }
-                  },
+                return IconButton(
+                  icon: Icon(Icons.file_download, color: Colors.white),
+                  tooltip: "Сохранить в fb2",
+                  onPressed: () => _exportFb2(future.data!),
                 );
               } else if (future.hasError) {
                 return SizedBox.shrink();
