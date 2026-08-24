@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'client.dart';
 import 'constants.dart';
 import '../store/auth_token.dart';
 
@@ -12,7 +13,7 @@ Future<http.Response> fetchUserNotes({String? textId}) async {
   final uri = textId != null
       ? Uri.parse('$apiBaseUrl/api/user-notes?textId=$textId')
       : Uri.parse('$apiBaseUrl/api/user-notes');
-  return http.get(uri, headers: headers).timeout(apiTimeout);
+  return apiClient.get(uri, headers: headers).timeout(apiTimeout);
 }
 
 Future<http.Response> createUserNote({
@@ -24,7 +25,7 @@ Future<http.Response> createUserNote({
     'Content-Type': 'application/json; charset=UTF-8',
     ...await authHeader(),
   };
-  return http.post(
+  return apiClient.post(
     Uri.parse('$apiBaseUrl/api/user-notes'),
     headers: headers,
     body: jsonEncode({'textId': textId, 'selection': selection, 'note': note}),
@@ -36,7 +37,7 @@ Future<http.Response> updateUserNote(String id, String note) async {
     'Content-Type': 'application/json; charset=UTF-8',
     ...await authHeader(),
   };
-  return http.put(
+  return apiClient.put(
     Uri.parse('$apiBaseUrl/api/user-notes/$id'),
     headers: headers,
     body: jsonEncode({'note': note}),
@@ -45,5 +46,5 @@ Future<http.Response> updateUserNote(String id, String note) async {
 
 Future<http.Response> deleteUserNote(String id) async {
   final headers = await authHeader();
-  return http.delete(Uri.parse('$apiBaseUrl/api/user-notes/$id'), headers: headers).timeout(apiTimeout);
+  return apiClient.delete(Uri.parse('$apiBaseUrl/api/user-notes/$id'), headers: headers).timeout(apiTimeout);
 }

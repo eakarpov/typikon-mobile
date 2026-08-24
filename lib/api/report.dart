@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'client.dart';
 import 'constants.dart';
 import '../store/auth_token.dart';
 
@@ -16,7 +17,7 @@ Future<http.Response> reportError({
     'Content-Type': 'application/json; charset=UTF-8',
     ...await authHeader(),
   };
-  return http.post(
+  return apiClient.post(
     Uri.parse('$apiBaseUrl/api/report'),
     headers: headers,
     body: jsonEncode(<String, dynamic>{
