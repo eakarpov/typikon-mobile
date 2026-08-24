@@ -11,6 +11,12 @@ const Duration apiTimeout = Duration(seconds: 15);
 const String appHeaderName = 'X-Typikon-App';
 const String appVersion = '1.5.0+6';
 
+// Подписной календарь чтений на сайте. Хост и путь отдельно — из них же
+// собирается webcal://-ссылка, которую календари понимают как подписку.
+const String calendarFeedHost = 'www.typikon.su';
+const String calendarFeedPath = '/calendar.ics';
+const String calendarFeedUrl = 'https://$calendarFeedHost$calendarFeedPath';
+
 // dneslov.org — сторонний сайт, и его доступность нам не подконтрольна: он
 // периодически принимает соединение, но не отвечает. Ждать общие 15 секунд в
 // таком случае значит держать экран пустым всё это время ради дополнения к

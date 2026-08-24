@@ -14,6 +14,11 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
         </intent>
+        <!-- Чтобы canLaunchUrl увидел календарь, способный подписаться на ленту. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="webcal" />
+        </intent>
     </queries>
    <application
         tools:replace="android:label"
