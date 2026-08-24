@@ -10,6 +10,7 @@ import '../api/constants.dart';
 import '../store/actions/actions.dart';
 import '../store/auth_token.dart';
 import '../store/models/models.dart';
+import '../store/store.dart';
 
 Future<void>? _googleSignInInit;
 
@@ -43,6 +44,71 @@ String? _extractSessionCookie(String? setCookieHeader) {
   final eqIndex = firstCookie.indexOf('=');
   if (eqIndex == -1 || !firstCookie.startsWith('session=')) return null;
   return firstCookie.substring(eqIndex + 1);
+}
+
+Future<bool>? _refreshInFlight;
+
+/// Заводит новую сессию по уже выбранному Google-аккаунту, без диалога входа.
+///
+/// Сессия на бекенде живёт час (`setExpirationTime('1h')` в
+/// typikon-web/src/lib/authorize/sessions.ts), а локальный `isSignedIn` лежит
+/// в SharedPreferences бессрочно. Поэтому 401 у "вошедшего" пользователя —
+/// штатная ситуация, а не ошибка: пробуем молча получить свежий id_token и
+/// обменять его на новую cookie.
+///
+/// Параллельные 401 (заметки и отчёт об ошибке разом) не должны порождать
+/// несколько входов подряд — попытка одна на всех, остальные ждут её.
+Future<bool> refreshSessionSilently() {
+  return _refreshInFlight ??= _doRefreshSession().whenComplete(() {
+    _refreshInFlight = null;
+  });
+}
+
+Future<bool> _doRefreshSession() async {
+  try {
+    await _ensureGoogleSignInInitialized();
+    // На вебе (FedCM) метод может вернуть null вместо Future — тогда молчаливое
+    // продление недоступно и остаётся только обычный вход.
+    final attempt = GoogleSignIn.instance.attemptLightweightAuthentication();
+    if (attempt == null) return false;
+    final account = await attempt;
+    if (account == null) return false;
+
+    final idToken = account.authentication.idToken;
+    if (idToken == null) return false;
+
+    final response = await loginWithGoogle(
+      idToken: idToken,
+      expiresIn: 3600,
+      userIdHint: account.id,
+      deviceId: await _deviceId(),
+    );
+    if (response.statusCode != 200) return false;
+
+    final cookie = _extractSessionCookie(response.headers['set-cookie']);
+    if (cookie == null) return false;
+    await saveSessionCookie(cookie);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/// Сессии больше нет и восстановить её молча не вышло — гасим локальный вход,
+/// чтобы интерфейс не показывал "вы вошли" и пункт "Мои заметки" тому, для
+/// кого ни один защищённый запрос уже не проходит.
+/// Каждый шаг гасится отдельно: локальный выход обязан состояться, даже если
+/// защищённое хранилище или плагин Google по какой-то причине недоступны —
+/// иначе интерфейс останется в состоянии "вошёл" навсегда.
+Future<void> forgetSession() async {
+  try {
+    await clearSessionCookie();
+  } catch (_) {}
+  try {
+    await _ensureGoogleSignInInitialized();
+    await GoogleSignIn.instance.signOut();
+  } catch (_) {}
+  appStore?.dispatch(SignOutAction());
 }
 
 Future<void> signInWithGoogle(Store<AppState> store) async {
