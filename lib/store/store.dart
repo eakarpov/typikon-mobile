@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/rootReducer.dart';
+import "package:typikon/store/middleware/favourites.dart";
 import "package:typikon/store/middleware/sharedPref.dart";
 
 /// Тот же самый стор, что уходит в StoreProvider, но доступный без
@@ -21,6 +22,7 @@ Future<Store<AppState>> createReduxStore() async {
     initialState: AppState.init(),
     middleware: [
       SharedPrefMiddleware(sharedPreferences),
+      FavouritesMiddleware(sharedPreferences),
     ],
     // AppActions(),
   );

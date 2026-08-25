@@ -13,6 +13,8 @@ android/build/
 .swiftpm/
 migrate_working_dir/
 
+NOTES.md
+
 *.env
 
 # IntelliJ related

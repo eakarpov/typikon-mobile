@@ -8,18 +8,21 @@ class AppState {
   final Settings settings;
   final Common common;
   final AuthState auth;
+  final FavouritesState favourites;
 
   AppState({
     this.isLoading = false,
     this.settings = const Settings(),
     required this.common,
     this.auth = const AuthState(),
+    this.favourites = const FavouritesState(),
   });
 
   factory AppState.init() => AppState(
     settings: Settings.init(),
     common: Common.init(),
     auth: AuthState.init(),
+    favourites: FavouritesState.init(),
   );
 
   AppState copyWith({
@@ -41,7 +44,8 @@ class AppState {
       settings.hashCode ^
       isLoading.hashCode ^
       common.hashCode ^
-      auth.hashCode;
+      auth.hashCode ^
+      favourites.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -50,7 +54,8 @@ class AppState {
               isLoading == other.isLoading &&
               settings == other.settings &&
               common == other.common &&
-              auth == other.auth;
+              auth == other.auth &&
+              favourites == other.favourites;
 
   @override
   String toString() {
@@ -62,6 +67,7 @@ class AppState {
       'settings': settings.toJson(),
       'common': common.toJson(),
       'auth': auth.toJson(),
+      'favourites': favourites.toJson(),
     };
   }
 
@@ -71,6 +77,7 @@ class AppState {
       settings: Settings.fromJson(json["settings"]),
       common: Common.fromJson(json["common"]),
       auth: AuthState.fromJson(json["auth"]),
+      favourites: FavouritesState.fromJson(json["favourites"]),
     );
   }
 }

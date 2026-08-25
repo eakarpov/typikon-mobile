@@ -28,6 +28,8 @@ import "package:typikon/components/table_of_contents.dart";
 import "package:typikon/components/verse_list.dart";
 import "package:typikon/components/selection_menu.dart";
 import "package:typikon/components/report_error_sheet.dart";
+import 'package:typikon/store/actions/actions.dart';
+import 'package:typikon/store/favourites_sync.dart';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/reading_progress.dart';
 import 'package:typikon/dto/book.dart';
@@ -64,7 +66,6 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
 
   List<UserNote> _userNotes = [];
 
-  bool isFavourite = false;
 
   final ScrollController _scrollController = ScrollController();
   Timer? _persistDebounce;
@@ -90,14 +91,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     _scrollController.addListener(_onScroll);
     _loadReading();
     _loadUserNotes();
-    SharedPreferences.getInstance().then((prefs){
-      List<String>? liked = prefs.getStringList("favourites") ?? [];
-      if (liked.contains(_realId)) {
-        setState(() {
-          isFavourite = true;
-        });
-      }
-    });
+
   }
 
   @override
@@ -318,31 +312,12 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     );
   }
 
-  void onLike() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String>? liked = prefs.getStringList("favourites");
-    if (liked == null) {
-      List<String> newLiked = [];
-      newLiked.add(_realId);
-      prefs.setStringList("favourites", newLiked);
-      setState(() {
-        isFavourite = true;
-      });
-    } else {
-      if (liked.contains(_realId)) {
-        List<String> newLiked = liked.where((e) => e != _realId).toList();
-        prefs.setStringList("favourites", newLiked);
-        setState(() {
-          isFavourite = false;
-        });
-      } else {
-        liked.add(_realId);
-        prefs.setStringList("favourites", liked);
-        setState(() {
-          isFavourite = true;
-        });
-      }
-    }
+  /// Отметка ставится в сторе — оттуда её видят и сердечко, и страница
+  /// избранного, — а на сервер уезжает сама, когда есть сеть.
+  void onLike() {
+    final store = StoreProvider.of<AppState>(context);
+    store.dispatch(ToggleFavouriteAction(_realId));
+    unawaited(syncFavourites(store));
   }
 
   List<TocEntry> _chapterToc(List<int> chapters) {
@@ -473,14 +448,19 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
               );
             },
           ),
-          IconButton(
+          // Сердечко берёт состояние из стора, а не из своего поля: раньше оно и
+          // страница избранного читали SharedPreferences по отдельности и
+          // расходились, пока экран не перезапросишь.
+          StoreConnector<AppState, bool>(
+            distinct: true,
+            converter: (store) => store.state.favourites.contains(_realId),
+            builder: (context, isFavourite) => IconButton(
               onPressed: onLike,
-              icon: isFavourite ? Icon(
-                Icons.favorite,
-                color: Colors.pink,
-              ) : Icon(
-                Icons.favorite_outline,
-              )
+              tooltip: isFavourite ? "Убрать из избранного" : "В избранное",
+              icon: isFavourite
+                  ? const Icon(Icons.favorite, color: Colors.pink)
+                  : const Icon(Icons.favorite_outline),
+            ),
           ),
           FutureBuilder<Reading>(
             future: reading,
