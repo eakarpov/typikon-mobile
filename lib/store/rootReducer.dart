@@ -3,6 +3,7 @@ import "reducers/loading.dart";
 import "reducers/settings.dart";
 import "reducers/common.dart";
 import "reducers/auth.dart";
+import "reducers/favourites.dart";
 import "models/models.dart";
 
 AppState appReducer(AppState state, action) {
@@ -11,5 +12,6 @@ AppState appReducer(AppState state, action) {
     settings: settingsReducer(state.settings, action),
     common: commonReducer(state.common, action),
     auth: authReducer(state.auth, action),
+    favourites: favouritesReducer(state.favourites, action),
   );
 }

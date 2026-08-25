@@ -22,6 +22,10 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
       action is ChangeBackgroundColorAction ||
       action is ChangeThemeModeAction ||
       action is ChangePreloadTextsAction ||
+      action is ToggleFavouriteAction ||
+      action is FavouritesLoadedAction ||
+      action is FavouritesQueueConfirmedAction ||
+      action is FavouritesClearedAction ||
       action is ResetReadingColorsAction ||
       action is ChangeCommonDateAction ||
       action is SignInSuccessAction ||
@@ -49,11 +53,48 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     await preferences.setString(APP_STATE_KEY, stateString);
   }
 
+  /// Ключ, которым избранное хранилось до переезда в стор: просто список id.
+  static const String _legacyFavouritesKey = "favourites";
+
+  /// Признак, что старый список уже перенесён. Без него избранное, из которого
+  /// человек всё удалил, возвращалось бы из старого ключа при каждом запуске.
+  static const String _favouritesMigratedKey = "favouritesMigratedToStore";
+
+  /// Поднимает избранное и, если нужно, переносит список из прежнего хранилища.
+  ///
+  /// Перенос обязателен: до этой версии избранное жило только под ключом
+  /// "favourites", и молча его потерять нельзя. Старый ключ не удаляем — он
+  /// ничему не мешает, а при откате на прежнюю версию список останется на месте.
+  Future _restoreFavourites(
+    Store<AppState> store,
+    SharedPreferences prefs,
+    FavouritesState restored,
+  ) async {
+    if (prefs.getBool(_favouritesMigratedKey) == true) {
+      store.dispatch(FavouritesRestoredAction(restored));
+      return;
+    }
+
+    final legacy = prefs.getStringList(_legacyFavouritesKey) ?? [];
+    final merged = <String>[
+      ...restored.textIds,
+      ...legacy.where((id) => id.isNotEmpty && !restored.textIds.contains(id)),
+    ];
+    store.dispatch(FavouritesRestoredAction(restored.copyWith(textIds: merged)));
+    await prefs.setBool(_favouritesMigratedKey, true);
+  }
+
   Future _loadStateFromPrefs(Store<AppState> store) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     var stateString = prefs.getString(APP_STATE_KEY);
-    if (stateString == null) return;
+    if (stateString == null) {
+      // Настройки человек мог ни разу не открыть, и тогда сохранённого
+      // состояния нет — а избранное под старым ключом всё равно может быть.
+      await _restoreFavourites(store, prefs, FavouritesState.init());
+      return;
+    }
     AppState state = AppState.fromJson(json.decode(stateString));
+    await _restoreFavourites(store, prefs, state.favourites);
     store.dispatch(ChangeFontSizeAction(state.settings.fontSize));
     store.dispatch(ChangeThemeModeAction(state.settings.themeMode));
     if (state.settings.preloadTexts != null) {

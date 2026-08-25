@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart' show ThemeMode;
 
 import 'package:typikon/models/color.dart';
+import '../models/favourites.dart';
 
 // abstract class AppActions {
 //   ActionDispatcher<Settings> changeFontSizeAction;
@@ -87,6 +88,57 @@ class ChangePreloadTextsAction {
   @override
   String toString() {
     return 'ChangePreloadTextsAction{preloadTexts: $preloadTexts}';
+  }
+}
+
+class ToggleFavouriteAction {
+  final String textId;
+  final DateTime at;
+
+  ToggleFavouriteAction(this.textId, {DateTime? at}) : at = at ?? DateTime.now();
+
+  @override
+  String toString() {
+    return 'ToggleFavouriteAction{textId: $textId, at: $at}';
+  }
+}
+
+/// Список, пришедший с сервера.
+class FavouritesLoadedAction {
+  final List<String> textIds;
+
+  FavouritesLoadedAction(this.textIds);
+
+  @override
+  String toString() {
+    return 'FavouritesLoadedAction{count: ${textIds.length}}';
+  }
+}
+
+/// Часть очереди доехала до сервера.
+class FavouritesQueueConfirmedAction {
+  final List<PendingFavourite> confirmed;
+
+  FavouritesQueueConfirmedAction(this.confirmed);
+
+  @override
+  String toString() {
+    return 'FavouritesQueueConfirmedAction{count: ${confirmed.length}}';
+  }
+}
+
+/// Вход под другим аккаунтом: чужое избранное на устройстве оставаться не должно.
+class FavouritesClearedAction {}
+
+/// Состояние, поднятое из хранилища при запуске (вместе с недоехавшей очередью).
+class FavouritesRestoredAction {
+  final FavouritesState state;
+
+  FavouritesRestoredAction(this.state);
+
+  @override
+  String toString() {
+    return 'FavouritesRestoredAction{count: ${state.textIds.length}, pending: ${state.pending.length}}';
   }
 }
 
