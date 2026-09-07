@@ -17,55 +17,29 @@ import 'verse_list.dart';
 /// потому что глава показывается по одной, а зачало может уходить в следующую.
 int _position(int chapter, int verse) => chapter * 1000 + verse;
 
-List<Widget> buildPericopeBlocks(
+/// Начинается ли зачало этим стихом — то есть нет ли в нём ничего раньше.
+bool startsPericope(List<PericopeRange> ranges, int chapter, int verse) =>
+    ranges.isNotEmpty &&
+    _position(chapter, verse) <=
+        _position(ranges.first.chapterFrom, ranges.first.verseFrom);
+
+/// Кончается ли зачало этим стихом.
+bool endsPericope(List<PericopeRange> ranges, int chapter, int verse) =>
+    ranges.isNotEmpty &&
+    _position(chapter, verse) >=
+        _position(ranges.last.chapterTo, ranges.last.verseTo);
+
+/// Рамка вокруг куска зачала: подложка, полоса слева и подписи.
+///
+/// Вынесена отдельно, потому что нужна двум видам сразу — сплошному тексту
+/// одного издания и построчному чередованию нескольких. Читатель, пришедший со
+/// страницы дня, вправе увидеть границы чтения в обоих: сличать зачало он идёт
+/// не реже, чем читать его.
+Widget pericopeFrame(
   BuildContext context, {
-  required List<PericopeVerse> verses,
-  required List<PericopeRange> ranges,
+  required Widget child,
+  required String rangesLabel,
   required double fontSize,
-  required String fontFamily,
-  required String rangesLabel,
-  GlobalKey? firstKey,
-}) {
-  if (ranges.isEmpty || verses.isEmpty) {
-    return [_plain(verses, fontSize, fontFamily)];
-  }
-
-  final start = _position(ranges.first.chapterFrom, ranges.first.verseFrom);
-  final end = _position(ranges.last.chapterTo, ranges.last.verseTo);
-
-  final blocks = <Widget>[];
-  for (final run in splitVerseRuns(verses, ranges)) {
-    if (!run.inPericope) {
-      blocks.add(_plain(run.verses, fontSize, fontFamily));
-      continue;
-    }
-
-    final first = _position(run.verses.first.chapter, run.verses.first.verse) <= start;
-    final last = _position(run.verses.last.chapter, run.verses.last.verse) >= end;
-
-    blocks.add(_highlighted(
-      context,
-      run.verses,
-      fontSize,
-      fontFamily,
-      rangesLabel: rangesLabel,
-      isFirst: first,
-      isLast: last,
-      anchorKey: first ? firstKey : null,
-    ));
-  }
-  return blocks;
-}
-
-Widget _plain(List<PericopeVerse> verses, double fontSize, String fontFamily) =>
-    VerseListView(verses: verses, fontSize: fontSize, fontFamily: fontFamily);
-
-Widget _highlighted(
-  BuildContext context,
-  List<PericopeVerse> verses,
-  double fontSize,
-  String fontFamily, {
-  required String rangesLabel,
   required bool isFirst,
   required bool isLast,
   GlobalKey? anchorKey,
@@ -97,7 +71,7 @@ Widget _highlighted(
             style: labelStyle,
           ),
         ),
-        _plain(verses, fontSize, fontFamily),
+        child,
         Padding(
           padding: const EdgeInsets.only(top: 4.0),
           child: Text(isLast ? "Конец зачала" : "Продолжение ниже", style: labelStyle),
@@ -106,3 +80,43 @@ Widget _highlighted(
     ),
   );
 }
+
+List<Widget> buildPericopeBlocks(
+  BuildContext context, {
+  required List<PericopeVerse> verses,
+  required List<PericopeRange> ranges,
+  required double fontSize,
+  required String fontFamily,
+  required String rangesLabel,
+  GlobalKey? firstKey,
+}) {
+  if (ranges.isEmpty || verses.isEmpty) {
+    return [_plain(verses, fontSize, fontFamily)];
+  }
+
+  final blocks = <Widget>[];
+  for (final run in splitVerseRuns(verses, ranges)) {
+    if (!run.inPericope) {
+      blocks.add(_plain(run.verses, fontSize, fontFamily));
+      continue;
+    }
+
+    final first = startsPericope(ranges, run.verses.first.chapter, run.verses.first.verse);
+    final last = endsPericope(ranges, run.verses.last.chapter, run.verses.last.verse);
+
+    blocks.add(pericopeFrame(
+      context,
+      child: _plain(run.verses, fontSize, fontFamily),
+      rangesLabel: rangesLabel,
+      fontSize: fontSize,
+      isFirst: first,
+      isLast: last,
+      anchorKey: first ? firstKey : null,
+    ));
+  }
+  return blocks;
+}
+
+Widget _plain(List<PericopeVerse> verses, double fontSize, String fontFamily) =>
+    VerseListView(verses: verses, fontSize: fontSize, fontFamily: fontFamily);
+

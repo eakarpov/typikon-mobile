@@ -67,7 +67,7 @@ void main() {
     final available = BibleEditionList([
       edition("grc-lxx-pat", "grc"),
       edition("cs-eliz", "cu", versification: "sla-lxx"),
-      edition("zh-1910", "hans"),
+      edition("zh-1910", "zh"),
     ]);
 
     test("по умолчанию берётся эталон, а не первый попавшийся", () {
@@ -90,7 +90,7 @@ void main() {
 
     test("без эталона берётся первое, что сборка умеет нарисовать", () {
       final noReference = BibleEditionList([
-        edition("zh-1910", "hans"),
+        edition("zh-1910", "zh"),
         edition("la-vulgata", "la"),
       ]);
 
@@ -99,7 +99,7 @@ void main() {
 
     test("нечего рисовать — просим без параметра, а не пустой экран", () {
       // Пустой набор сервер понимает как «все публичные издания».
-      final unreadable = BibleEditionList([edition("zh-1910", "hans")]);
+      final unreadable = BibleEditionList([edition("zh-1910", "zh")]);
 
       expect(resolveEditionCodes(const [], unreadable), isEmpty);
       expect(resolveEditionCodes(const [], const BibleEditionList([])), isEmpty);
@@ -118,11 +118,19 @@ void main() {
       expect(bibleFontFamily("la"), "OldStandard");
     });
 
+    test("латиница показуема, какой бы язык на ней ни был написан", () {
+      // Румынская синодальная 1914 объявляет письмо `ro`, и список, собранный по
+      // догадке, её вычеркнул: OldStandard рисует латиницу без труда, а издание
+      // пропало из выбора. Нашлось только на устройстве.
+      expect(canRenderEdition(edition("ro-1914", "ro")), isTrue);
+      expect(bibleFontFamily("ro"), "OldStandard");
+    });
+
     test("письмо, которого нет в сборке, честно признаётся непоказуемым", () {
       // Китайских иероглифов нет ни в одном из двух шрифтов, а zh-1910 сервер
       // отдаёт наравне с прочими: без проверки был бы экран квадратов.
-      expect(canRenderEdition(edition("zh-1910", "hans")), isFalse);
-      expect(editionUnavailableReason(edition("zh-1910", "hans")), isNotNull);
+      expect(canRenderEdition(edition("zh-1910", "zh")), isFalse);
+      expect(editionUnavailableReason(edition("zh-1910", "zh")), isNotNull);
       expect(editionUnavailableReason(edition("cs-eliz", "cu")), isNull);
     });
   });

@@ -268,7 +268,13 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (data.editions.length > 1)
-            BibleParallelView(chapter: data, fontSize: fontSize)
+            BibleParallelView(
+              chapter: data,
+              fontSize: fontSize,
+              highlight: widget.highlight,
+              rangesLabel: _rangesLabel,
+              firstKey: _pericopeKey,
+            )
           else
             _single(context, data, fontSize),
           ..._numberingNotes(context, data),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../dto/bible.dart';
+import '../dto/pericope.dart';
 import '../utils/bible_style.dart';
 import '../utils/reading_style.dart';
+import 'pericope_block.dart';
 
 /// Глава в нескольких изданиях — построчным чередованием.
 ///
@@ -18,22 +20,86 @@ class BibleParallelView extends StatelessWidget {
     super.key,
     required this.chapter,
     required this.fontSize,
+    this.highlight = const [],
+    this.rangesLabel = "",
+    this.firstKey,
   });
 
   final BibleChapter chapter;
   final double fontSize;
+
+  /// Границы зачала, если пришли со страницы дня.
+  ///
+  /// Подсветка нужна и здесь, а не только в сплошном тексте: сличать зачало по
+  /// двум изданиям идут не реже, чем читать его по одному, и без границ читатель
+  /// снова оказался бы перед задачей искать начало чтения глазами.
+  final List<PericopeRange> highlight;
+  final String rangesLabel;
+  final GlobalKey? firstKey;
 
   @override
   Widget build(BuildContext context) {
     final color = readingTextColor(context);
     final muted = color.withValues(alpha: 0.6);
 
+    if (highlight.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: chapter.rows.map((row) => _row(context, row, color, muted)).toList(),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: chapter.rows
-          .map((row) => _row(context, row, color, muted))
-          .toList(),
+      children: _withPericope(context, color, muted),
     );
+  }
+
+  /// Строки, сгруппированные в куски внутри и вне зачала.
+  ///
+  /// Группируем, а не обводим каждую строку по отдельности: подряд идущие стихи
+  /// зачала — один отрывок, и десяток рамок подряд читался бы как десяток разных
+  /// чтений.
+  List<Widget> _withPericope(BuildContext context, Color color, Color muted) {
+    bool inside(BibleRow row) =>
+        highlight.any((range) => range.contains(chapter.chapter, row.verse));
+
+    final blocks = <Widget>[];
+    var run = <BibleRow>[];
+    var runInside = false;
+
+    void flush() {
+      if (run.isEmpty) return;
+      final rows = run.map((row) => _row(context, row, color, muted)).toList();
+      final body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
+
+      if (!runInside) {
+        blocks.add(body);
+      } else {
+        final first = startsPericope(highlight, chapter.chapter, run.first.verse);
+        final last = endsPericope(highlight, chapter.chapter, run.last.verse);
+        blocks.add(pericopeFrame(
+          context,
+          child: body,
+          rangesLabel: rangesLabel,
+          fontSize: fontSize,
+          isFirst: first,
+          isLast: last,
+          anchorKey: first ? firstKey : null,
+        ));
+      }
+      run = <BibleRow>[];
+    }
+
+    for (final row in chapter.rows) {
+      final here = inside(row);
+      if (run.isNotEmpty && here != runInside) flush();
+      runInside = here;
+      run.add(row);
+    }
+    flush();
+
+    return blocks;
   }
 
   Widget _row(BuildContext context, BibleRow row, Color color, Color muted) {
