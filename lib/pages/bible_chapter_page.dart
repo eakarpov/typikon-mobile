@@ -12,6 +12,7 @@ import '../components/verse_list.dart';
 import '../dto/bible.dart';
 import '../dto/pericope.dart';
 import '../store/actions/actions.dart';
+import '../store/bible_bookmark.dart';
 import '../store/models/models.dart';
 import '../utils/bible_editions.dart';
 import '../utils/bible_route.dart';
@@ -94,8 +95,22 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
 
   @override
   void dispose() {
+    _rememberPlace();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Закладка ставится при уходе со страницы — но только с той, которую открыли
+  /// ради чтения.
+  ///
+  /// Приход из зачала закладку не двигает: это не чтение подряд, а справка по
+  /// службе. Иначе у того, кто каждое утро открывает Евангелие дня, закладка
+  /// вечно стояла бы на дневном чтении и никогда — на том, что он читает сам.
+  /// А вот шаг дальше («Глава 7 →») закладку уже ставит: у той страницы
+  /// подсветки нет, и открыта она намеренно.
+  void _rememberPlace() {
+    if (widget.highlight.isNotEmpty) return;
+    saveBibleBookmark(widget.canonId, widget.chapter);
   }
 
   Future<BibleChapter> _loadChapter() async {

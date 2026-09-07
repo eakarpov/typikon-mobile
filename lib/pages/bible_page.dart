@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../apiMapper/bible.dart';
 import '../components/api_error_view.dart';
 import '../dto/bible.dart';
+import '../store/bible_bookmark.dart';
 import '../utils/bible_route.dart';
 import '../utils/bible_sections.dart';
 
@@ -26,19 +27,36 @@ class BiblePage extends StatefulWidget {
 
 class _BiblePageState extends State<BiblePage> {
   late Future<BibleBookList> books;
+  BibleBookmark? bookmark;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadBookmark();
   }
 
   void _load() {
     books = getBibleBooks();
   }
 
+  Future<void> _loadBookmark() async {
+    final saved = await getBibleBookmark();
+    if (mounted) setState(() => bookmark = saved);
+  }
+
   void _openBook(BibleBook book) {
-    Navigator.pushNamed(context, "/bible", arguments: bibleRouteArgument(book.id));
+    _open(book.id, 1);
+  }
+
+  Future<void> _open(String canonId, int chapter) async {
+    await Navigator.pushNamed(
+      context,
+      "/bible",
+      arguments: bibleRouteArgument(canonId, chapter: chapter),
+    );
+    // Вернулись из главы — закладка могла сдвинуться.
+    await _loadBookmark();
   }
 
   @override
@@ -67,14 +85,49 @@ class _BiblePageState extends State<BiblePage> {
           // отдаёт и помечает, но у каждой своя длинная оговорка о том, почему
           // она вне канона; без неё читатель получит книги, которых не найдёт ни
           // в одном привычном издании, и решит, что у нас в оглавлении мусор.
-          final groups = groupBySection(future.data!.canon);
+          final books = future.data!;
+          final groups = groupBySection(books.canon);
+          final resume = _resume(context, books);
 
           return ListView.builder(
-            itemCount: groups.length,
-            itemBuilder: (context, index) => _section(context, groups[index]),
+            itemCount: groups.length + (resume == null ? 0 : 1),
+            itemBuilder: (context, index) {
+              if (resume != null) {
+                if (index == 0) return resume;
+                return _section(context, groups[index - 1]);
+              }
+              return _section(context, groups[index]);
+            },
           );
         },
       ),
+    );
+  }
+
+  /// «Вы читали» — место, а не доля прокрутки: глава помещается в один-два
+  /// экрана, и назвать её именем куда понятнее, чем процентом.
+  Widget? _resume(BuildContext context, BibleBookList books) {
+    final saved = bookmark;
+    if (saved == null) return null;
+
+    // Незнакомую книгу называем её же идентификатором, а не прячем строку:
+    // спрятанная закладка выглядела бы как потерянная.
+    final name = books.byId(saved.canonId)?.name ?? saved.canonId;
+
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.bookmark_outline),
+          title: const Text("Вы читали", style: TextStyle(fontFamily: "OldStandard")),
+          subtitle: Text(
+            "$name, глава ${saved.chapter}",
+            style: const TextStyle(fontFamily: "OldStandard"),
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _open(saved.canonId, saved.chapter),
+        ),
+        const Divider(height: 1.0),
+      ],
     );
   }
 
