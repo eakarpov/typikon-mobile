@@ -26,6 +26,7 @@ import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
 import '../utils/day_preloader.dart';
 import '../utils/bible_route.dart';
+import '../utils/route_observer.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
 
@@ -43,7 +44,7 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin {
+class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin, RouteAware {
   late Future<MainPageData> data;
   late Future<Version> version;
 
@@ -53,6 +54,10 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   ScaffoldMessengerState? _messenger;
   bool _preloadBannerShown = false;
   bool _preloadBannerVisible = false;
+
+  /// Тексты дня, о которых спрашивали. Держим, чтобы вернуть предложение, если
+  /// читатель ушёл на другой экран, не ответив.
+  List<String>? _preloadTextIds;
 
   @override
   void initState() {
@@ -67,14 +72,36 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     if (_preloadBannerVisible) _messenger?.hideCurrentMaterialBanner();
     super.dispose();
+  }
+
+  /// Поверх главной положили другой экран.
+  ///
+  /// Баннер снимаем: он живёт в `ScaffoldMessenger` выше `MaterialApp` и иначе
+  /// поедет с читателем в Библию, в калькулятор и куда угодно ещё.
+  @override
+  void didPushNext() => _hidePreloadBanner();
+
+  /// Вернулись на главную. Если так и не ответили — спрашиваем снова: вопрос
+  /// один и тот же, и молча забыть его значило бы никогда не включить
+  /// предзагрузку тому, кто в тот раз просто пролистал мимо.
+  @override
+  void didPopNext() {
+    if (!mounted) return;
+    final ids = _preloadTextIds;
+    if (ids == null) return;
+    if (!StoreProvider.of<AppState>(context).state.settings.shouldAskAboutPreload) return;
+    _showPreloadBanner(ids);
   }
 
   @override
   void didChangeDependencies() async {
     super.didChangeDependencies();
     _messenger = ScaffoldMessenger.of(context);
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) routeObserver.subscribe(this, route);
     var val = StoreProvider.of<AppState>(context).state.common.date != null
         ? StoreProvider.of<AppState>(context).state.common.date
         : DateTime.now().subtract(const Duration(days: 13));
@@ -105,6 +132,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       }
       // Спрашиваем не на пустом экране, а когда день уже показан: так понятно,
       // о каких именно чтениях речь.
+      _preloadTextIds = day.textIds;
       if (settings.shouldAskAboutPreload && !_preloadBannerShown) {
         _preloadBannerShown = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -122,6 +150,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   }
 
   void _answerPreload(bool enabled, List<String> textIds) {
+    _preloadTextIds = null;
     _hidePreloadBanner();
     StoreProvider.of<AppState>(context).dispatch(ChangePreloadTextsAction(enabled));
     if (enabled) unawaited(preloadTexts(textIds));

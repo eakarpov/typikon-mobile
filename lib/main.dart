@@ -25,6 +25,7 @@ import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
 import 'package:typikon/pages/book_page.dart';
 import 'package:typikon/utils/bible_route.dart';
+import 'package:typikon/utils/route_observer.dart';
 import 'package:typikon/pages/bible_chapter_page.dart';
 import 'package:typikon/pages/bible_page.dart';
 import 'package:typikon/pages/library_page.dart';
@@ -65,6 +66,7 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterL
 // Нужен, чтобы открыть текст по тапу на уведомление о новом тексте —
 // колбэк стрима вне дерева виджетов, без своего BuildContext.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 
 /// Streams are created so that app can respond to notification-related events
 /// since the plugin is initialised in the `main` function
@@ -443,6 +445,7 @@ class MyAppState extends State<MyApp> {
             builder: (context, store) {
               return MaterialApp(
                 navigatorKey: navigatorKey,
+                navigatorObservers: [routeObserver],
                 title: 'Typikon',
                 localizationsDelegates: [
                   GlobalMaterialLocalizations.delegate,
