@@ -22,6 +22,7 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
       action is ChangeBackgroundColorAction ||
       action is ChangeThemeModeAction ||
       action is ChangePreloadTextsAction ||
+      action is ChangeBibleEditionsAction ||
       action is ToggleFavouriteAction ||
       action is FavouritesLoadedAction ||
       action is FavouritesQueueConfirmedAction ||
@@ -99,6 +100,9 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     store.dispatch(ChangeThemeModeAction(state.settings.themeMode));
     if (state.settings.preloadTexts != null) {
       store.dispatch(ChangePreloadTextsAction(state.settings.preloadTexts!));
+    }
+    if (state.settings.bibleEditions.isNotEmpty) {
+      store.dispatch(ChangeBibleEditionsAction(state.settings.bibleEditions));
     }
     if (state.settings.fontColor != null) {
       store.dispatch(ChangeFontColorAction(state.settings.fontColor!));

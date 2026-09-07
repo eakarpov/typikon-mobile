@@ -4,9 +4,12 @@ import 'package:flutter_redux/flutter_redux.dart';
 import '../apiMapper/bible.dart';
 import '../apiMapper/v2/errors.dart';
 import '../components/api_error_view.dart';
+import '../components/bible_edition_picker.dart';
+import '../components/bible_parallel_view.dart';
 import '../components/chapter_grid.dart';
 import '../components/verse_list.dart';
 import '../dto/bible.dart';
+import '../store/actions/actions.dart';
 import '../store/models/models.dart';
 import '../utils/bible_editions.dart';
 import '../utils/bible_route.dart';
@@ -14,10 +17,10 @@ import '../utils/bible_style.dart';
 
 /// Глава Библии.
 ///
-/// В этой итерации показывается одно издание сплошным текстом через готовый
-/// `VerseListView`. Параллельный вид и выбор изданий — следующим шагом; выбор
-/// пока разрешается сам: эталонное издание, то есть та нумерация, которой
-/// записаны зачала Типикона.
+/// Вид переключается не тумблером, а самим выбором изданий: одно — сплошной
+/// текст через готовый `VerseListView`, это девяносто пять процентов случаев и
+/// это чтение книги; два и больше — построчное чередование, потому что в
+/// параллельном виде не читают, а сличают.
 class BibleChapterPage extends StatefulWidget {
   const BibleChapterPage(
     context, {
@@ -42,6 +45,10 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
   /// то же самое словами.
   int? chaptersInBook;
 
+  /// Список изданий — для листа выбора. Держим отдельно от главы: глава знает
+  /// только те издания, что у неё запрошены, а выбирать надо из всех.
+  BibleEditionList available = const BibleEditionList([]);
+
   @override
   void initState() {
     super.initState();
@@ -54,19 +61,37 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
   }
 
   Future<BibleChapter> _loadChapter() async {
-    // Список изданий нужен, чтобы узнать эталон, а не гадать про `cs-eliz`.
-    // Не пришёл — идём без параметра: сервер поймёт это как «все публичные»,
-    // и это лучше пустого экрана.
-    BibleEditionList editions = const BibleEditionList([]);
+    // Список изданий нужен и чтобы узнать эталон (а не гадать про `cs-eliz`), и
+    // чтобы было из чего выбирать. Не пришёл — идём без параметра: сервер поймёт
+    // это как «все публичные», и это лучше пустого экрана.
     try {
-      editions = await getBibleEditions();
+      final editions = await getBibleEditions();
+      if (mounted) setState(() => available = editions);
     } catch (_) {}
 
     return getBibleChapter(
       widget.canonId,
       widget.chapter,
-      editions: resolveEditionCodes(const [], editions),
+      editions: resolveEditionCodes(_chosenEditions, available),
     );
+  }
+
+  List<String> get _chosenEditions =>
+      StoreProvider.of<AppState>(context, listen: false).state.settings.bibleEditions;
+
+  Future<void> _pickEditions() async {
+    if (available.list.isEmpty) return;
+
+    final store = StoreProvider.of<AppState>(context, listen: false);
+    final picked = await showEditionPicker(
+      context,
+      editions: available.list,
+      selected: resolveEditionCodes(_chosenEditions, available),
+    );
+    if (picked == null || picked.isEmpty) return;
+
+    store.dispatch(ChangeBibleEditionsAction(picked));
+    if (mounted) setState(_load);
   }
 
   Future<void> _loadChapterCount() async {
@@ -119,6 +144,11 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.layers),
+            tooltip: "Издания",
+            onPressed: available.list.isEmpty ? null : _pickEditions,
+          ),
           FutureBuilder<BibleChapter>(
             future: chapter,
             builder: (context, future) {
@@ -178,29 +208,37 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
   }
 
   Widget _chapter(BuildContext context, BibleChapter data, double fontSize) {
-    final edition = data.editions.isEmpty ? null : data.editions.first;
-    final verses = data.versesFor(0);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (verses.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24.0),
-              child: Text("В этом издании главы нет."),
-            )
+          if (data.editions.length > 1)
+            BibleParallelView(chapter: data, fontSize: fontSize)
           else
-            VerseListView(
-              verses: verses,
-              fontSize: fontSize,
-              fontFamily: bibleFontFamily(edition?.language ?? ""),
-            ),
-          if (edition != null) _numberingNote(context, edition),
+            _single(context, data, fontSize),
+          ..._numberingNotes(context, data),
           _navigation(context),
         ],
       ),
+    );
+  }
+
+  Widget _single(BuildContext context, BibleChapter data, double fontSize) {
+    final edition = data.editions.isEmpty ? null : data.editions.first;
+    final verses = data.versesFor(0);
+
+    if (verses.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24.0),
+        child: Text("В этом издании главы нет."),
+      );
+    }
+
+    return VerseListView(
+      verses: verses,
+      fontSize: fontSize,
+      fontFamily: bibleFontFamily(edition?.language ?? ""),
     );
   }
 
@@ -210,17 +248,21 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
   /// а вот греческие Притчи открываются в славянском счёте, и читатель не найдёт
   /// своей 24-й главы там, где привык. Замолчать это нельзя — режим счёта самого
   /// издания в первой итерации не сделан, и цену отказа надо назвать.
-  Widget _numberingNote(BuildContext context, BibleEdition edition) {
-    if (edition.isReference) return const SizedBox.shrink();
+  List<Widget> _numberingNotes(BuildContext context, BibleChapter data) {
+    final others = data.editions.where((edition) => !edition.isReference).toList();
+    if (others.isEmpty) return const [];
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 16.0),
-      child: Text(
-        "Счёт глав и стихов — канонический, славянский. "
-        "В издании «${edition.shortTitle}» часть стихов напечатана под другими номерами.",
-        style: Theme.of(context).textTheme.bodySmall,
+    final names = others.map((edition) => "«${edition.shortTitle}»").join(", ");
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 16.0),
+        child: Text(
+          "Счёт глав и стихов — канонический, славянский. "
+          "В $names часть стихов напечатана под другими номерами.",
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
       ),
-    );
+    ];
   }
 
   /// Переход к соседним главам — внизу, а не только в шапке: читатель дочитал
