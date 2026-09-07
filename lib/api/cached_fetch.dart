@@ -17,11 +17,12 @@ Future<http.Response> cachedFetch(
   String key,
   Future<http.Response> Function() fetcher, {
   Duration ttl = const Duration(hours: 6),
+  bool Function(String body)? isCacheable,
 }) async {
   final entry = await _readCache(key);
   if (entry == null) {
     final response = await fetcher();
-    if (response.statusCode == 200) {
+    if (isResponseCacheable(response, isCacheable)) {
       unawaited(_writeCache(key, response.body));
     }
     return response;
@@ -29,7 +30,7 @@ Future<http.Response> cachedFetch(
 
   final isStale = DateTime.now().difference(entry.cachedAt) >= ttl;
   if (isStale) {
-    unawaited(_revalidate(key, fetcher));
+    unawaited(_revalidate(key, fetcher, isCacheable));
   }
   // http.Response defaults to ASCII encoding when no content-type is given,
   // which throws on the Church Slavonic / accented Cyrillic text this API
@@ -37,10 +38,37 @@ Future<http.Response> cachedFetch(
   return http.Response(entry.body, 200, headers: {'content-type': 'application/json; charset=utf-8'});
 }
 
-Future<void> _revalidate(String key, Future<http.Response> Function() fetcher) async {
+/// Стоит ли класть этот ответ на диск.
+///
+/// Кода 200 недостаточно, и это выяснилось дорого. Веб убрал прежнюю модель
+/// Библии, и `/api/v1/texts/{id}` на исчезнувший текст стал отвечать не `404`, а
+/// `200` с пустым телом. Пустое тело не разбирается, страница показывает ошибку —
+/// и эта ошибка ложилась в кэш на весь TTL, то есть поломка одного запроса
+/// продлевалась на сутки для всех последующих.
+///
+/// Поэтому у вызывающего есть право сказать, что считать годным ответом:
+/// [isCacheable] получает тело и решает. Не передали — как раньше, годен всякий
+/// ответ с кодом 200. Цена проверки — одна лишняя десериализация на первую
+/// загрузку; выигрыш — не показывать закэшированную поломку до конца TTL.
+bool isResponseCacheable(http.Response response, bool Function(String body)? isCacheable) {
+  if (response.statusCode != 200) return false;
+  if (isCacheable == null) return true;
+  try {
+    return isCacheable(response.body);
+  } catch (_) {
+    // Проверка сама не разобрала тело — значит класть его точно не стоит.
+    return false;
+  }
+}
+
+Future<void> _revalidate(
+  String key,
+  Future<http.Response> Function() fetcher,
+  bool Function(String body)? isCacheable,
+) async {
   try {
     final response = await fetcher();
-    if (response.statusCode == 200) {
+    if (isResponseCacheable(response, isCacheable)) {
       await _writeCache(key, response.body);
     }
   } catch (_) {
