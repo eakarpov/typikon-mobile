@@ -25,7 +25,7 @@ import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
 import '../utils/day_preloader.dart';
-import '../utils/pericope_route.dart';
+import '../utils/bible_route.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
 
@@ -250,6 +250,31 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     Navigator.pushNamed(context, "/calculator");
   }
 
+  /// Куда ведёт строка дневного чтения.
+  ///
+  /// `null` — вести некуда, и тогда строка не нажимается вовсе. Это не редкость:
+  /// зачало без книги канона приезжает из дневных ответов, что лежат в кэше
+  /// сутками, а вести его в текст нельзя — идентификатор зачала указывает на
+  /// книгу Библии, которой в коллекции текстов больше нет.
+  VoidCallback? _openItem(BuildContext context, CalendarDayPartItem item) {
+    if (item.isPericope) {
+      if (item.bookSlug == null || item.ranges.isEmpty) return null;
+      return () => Navigator.pushNamed(
+            context,
+            "/bible",
+            arguments: bibleRouteArgument(
+              item.bookSlug!,
+              chapter: item.ranges.first.chapterFrom,
+              ranges: item.ranges,
+            ),
+          );
+    }
+
+    final id = item.id;
+    if (id == null) return null;
+    return () => Navigator.pushNamed(context, "/reading", arguments: id);
+  }
+
   Widget renderItem(BuildContext context, CalendarDayPart? part, String title) {
     List<CalendarDayPartItem> list = [];
     if (part?.items != null) {
@@ -281,13 +306,11 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                         item.name ?? "Без названия",
                         style: TextStyle(fontFamily: "OldStandard", color: Colors.red),
                       ),
-                      onTap: item.id == null ? null : () => {
-                        Navigator.pushNamed(
-                          context,
-                          "/reading",
-                          arguments: readingRouteArgument(item.id!, ranges: item.ranges),
-                        )
-                      },
+                      // Зачало ведёт в раздел Библии, обычное чтение — в текст.
+                      // Прежде и то и другое шло в "/reading", и для зачал это
+                      // был путь в пустой ответ: их идентификатор указывает на
+                      // книгу Библии, которой в коллекции текстов больше нет.
+                      onTap: _openItem(context, item),
                     ),
                   );
                 },

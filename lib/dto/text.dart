@@ -18,8 +18,6 @@ class Reading {
   final String? dayId;
   final bool csSource;
   final bool newUi;
-  final String contentType; // "paragraphs" | "verses"
-  final String? bibleBookSlug;
 
   const Reading({
     required this.id,
@@ -37,11 +35,7 @@ class Reading {
     required this.dayId,
     required this.csSource,
     required this.newUi,
-    required this.contentType,
-    required this.bibleBookSlug,
   });
-
-  bool get isVerses => contentType == "verses";
 
   factory Reading.fromJson(Map<String, dynamic> json, Map<String, dynamic>? jsonDay) {
     var serializers = (Serializers().toBuilder()..add(Iso8601DateTimeSerializer())).build();
@@ -60,8 +54,6 @@ class Reading {
     var bookId = json["bookId"];
     var csSource = json["csSource"] ?? false;
     var newUi = json["newUi"] ?? false;
-    var contentType = json["contentType"] ?? "paragraphs";
-    var bibleBookSlug = json["bibleBookSlug"];
     List<String> footnotes = json["footnotes"] == null ? List<String>.empty() : List<String>.from(json["footnotes"] as List);
     var dayId = jsonDay != null ? jsonDay["id"] : null;
     return Reading(
@@ -80,8 +72,6 @@ class Reading {
       dayId: dayId,
       csSource: csSource,
       newUi: newUi,
-      contentType: contentType,
-      bibleBookSlug: bibleBookSlug,
     );
   }
 }

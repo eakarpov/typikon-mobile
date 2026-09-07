@@ -36,11 +36,9 @@ import 'package:typikon/dto/book.dart';
 import 'package:typikon/dto/pericope.dart';
 import 'package:typikon/utils/pericope_route.dart';
 import 'package:typikon/dto/text.dart';
-import 'package:typikon/dto/verse.dart';
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/dto/dneslov/images.dart';
 import '../apiMapper/reading.dart';
-import '../apiMapper/verses.dart';
 import '../apiMapper/user_notes.dart';
 import "../apiMapper/dneslov/images.dart";
 
@@ -56,18 +54,14 @@ class TextPage extends StatefulWidget {
 class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   late Future<Reading> reading;
   late Future<DneslovImageListD> dneslovImages;
-  Future<VerseList>? verses;
 
   // "Читать целиком" со страницы зачала кодирует его границы суффиксом в id
   // маршрута — см. utils/pericope_route.dart. Так не пришлось менять сигнатуру
   // всех существующих pushNamed(context, "/reading", ...).
-  late final ReadingTarget _target;
   late final String _realId;
-  final Map<int, GlobalKey> _chapterKeys = {};
 
   /// Якорь на начало зачала — к нему прокручиваем и по нему же ведёт
   /// оглавление. Ставится на первый подсвеченный блок.
-  final GlobalKey _pericopeKey = GlobalKey();
 
   List<UserNote> _userNotes = [];
 
@@ -84,13 +78,11 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   ScaffoldMessengerState? _messenger;
   bool _bannerVisible = false;
 
-  GlobalKey _chapterKey(int chapter) => _chapterKeys.putIfAbsent(chapter, () => GlobalKey());
 
   @override
   void initState() {
     super.initState();
-    _target = parseReadingArgument(widget.id);
-    _realId = _target.textId;
+    _realId = readingTextId(widget.id);
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
     _loadReading();
@@ -190,31 +182,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
       if (value.dneslovId != null) {
         dneslovImages = fetchDneslovImagesD(value.dneslovId!);
       }
-      if (value.isVerses) {
-        final versesFuture = getVerses(_realId);
-        verses = versesFuture;
-        versesFuture.then((list) {
-          if (!mounted) return;
-          final anchorChapter = _target.anchorChapter;
-          if (anchorChapter == null) return;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            // К самому зачалу, если знаем его границы; иначе — к главе, как
-            // это работало раньше.
-            final targetContext = _pericopeKey.currentContext ?? _chapterKey(anchorChapter).currentContext;
-            if (targetContext != null) {
-              Scrollable.ensureVisible(
-                targetContext,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                alignment: 0.05,
-              );
-            }
-          });
-        });
-        setState(() {});
-      } else {
-        _checkResumeProgress();
-      }
+      _checkResumeProgress();
     });
   }
 
@@ -328,77 +296,12 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     unawaited(syncFavourites(store));
   }
 
-  List<TocEntry> _chapterToc(List<int> chapters) {
-    return [
-      // Пришли со страницы дня "читать целиком" — первым пунктом даём вернуться
-      // к самому зачалу, иначе его в книге на десятки глав ещё поискать.
-      if (_target.ranges.isNotEmpty) TocEntry(
-        title: "Зачало (${_target.rangesLabel})",
-        anchorKey: _pericopeKey,
-      ),
-      ...chapters.map((c) => TocEntry(
-        title: "Глава $c",
-        anchorKey: _chapterKey(c),
-      )),
-    ];
-  }
 
-  Widget _verseRun(List<PericopeVerse> run, double fontSize) {
-    return VerseListView(
-      verses: run,
-      fontSize: fontSize,
-      fontFamily: "Monomakh",
-      notes: _userNotes,
-      onTapNote: _onTapUserNote,
-    );
-  }
 
   /// Само зачало внутри книги: подложка, полоса слева и подписи с обоих концов.
   ///
   /// Раньше "читать целиком" только прокручивало к нужной главе, и где чтение
   /// начинается, а главное — где кончается, приходилось угадывать.
-  Widget _pericopeRun(
-    BuildContext context,
-    List<PericopeVerse> run,
-    double fontSize, {
-    required bool isFirst,
-    required bool isLast,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    final labelStyle = TextStyle(
-      fontFamily: "OldStandard",
-      fontSize: fontSize * 0.8,
-      fontWeight: FontWeight.bold,
-      color: scheme.primary,
-    );
-    return Container(
-      key: isFirst ? _pericopeKey : null,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      padding: const EdgeInsets.fromLTRB(10.0, 8.0, 10.0, 8.0),
-      decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.10),
-        border: Border(left: BorderSide(color: scheme.primary, width: 3.0)),
-        borderRadius: const BorderRadius.all(Radius.circular(4.0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4.0),
-            child: Text(
-              isFirst ? "Начало зачала (${_target.rangesLabel})" : "Зачало, продолжение",
-              style: labelStyle,
-            ),
-          ),
-          _verseRun(run, fontSize),
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Text(isLast ? "Конец зачала" : "Продолжение ниже", style: labelStyle),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Режет главу на куски по границам зачала. Внутри границ — выделенный блок,
   /// остальное рисуется как обычно.
@@ -407,106 +310,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   /// [totalRuns] — сколько их всего: только зная и то, и другое, можно
   /// подписать первый кусок началом, а последний — концом. Зачало бывает и
   /// разорванным (две-три группы стихов), и переходящим через границу главы.
-  List<Widget> _chapterBlocks(
-    BuildContext context,
-    List<PericopeVerse> verses,
-    double fontSize, {
-    required int runsBefore,
-    required int totalRuns,
-  }) {
-    if (_target.ranges.isEmpty || verses.isEmpty) {
-      return [_verseRun(verses, fontSize)];
-    }
 
-    final blocks = <Widget>[];
-    var seen = runsBefore;
-    for (final run in splitVerseRuns(verses, _target.ranges)) {
-      if (!run.inPericope) {
-        blocks.add(_verseRun(run.verses, fontSize));
-        continue;
-      }
-      blocks.add(_pericopeRun(
-        context,
-        run.verses,
-        fontSize,
-        isFirst: seen == 0,
-        isLast: seen == totalRuns - 1,
-      ));
-      seen += 1;
-    }
-    return blocks;
-  }
-
-  Widget _buildVerses(BuildContext context) {
-    return FutureBuilder<VerseList>(
-      future: verses,
-      builder: (context, future) {
-        if (future.hasError) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Text("Не удалось загрузить текст Библии."),
-          );
-        }
-        if (!future.hasData) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final byChapter = future.data!.byChapter;
-        final chapters = byChapter.keys.toList()..sort();
-        final fontSize = StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble();
-        final versesByChapter = {
-          for (final chapter in chapters)
-            chapter: byChapter[chapter]!
-                .map((v) => PericopeVerse(chapter: v.chapter, verse: v.verse, content: v.content))
-                .toList(),
-        };
-        // Куски зачала считаем по всей книге разом: главу от главы подписи
-        // "начало"/"конец" иначе не согласовать.
-        final runsPerChapter = {
-          for (final chapter in chapters)
-            chapter: _target.ranges.isEmpty
-                ? 0
-                : splitVerseRuns(versesByChapter[chapter]!, _target.ranges).where((r) => r.inPericope).length,
-        };
-        final totalRuns = runsPerChapter.values.fold<int>(0, (sum, count) => sum + count);
-        var runsBefore = 0;
-        final chapterWidgets = <Widget>[];
-        for (final chapter in chapters) {
-          chapterWidgets.add(Padding(
-            key: _chapterKey(chapter),
-            padding: const EdgeInsets.only(bottom: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Глава $chapter", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                ..._chapterBlocks(
-                  context,
-                  versesByChapter[chapter]!,
-                  fontSize,
-                  runsBefore: runsBefore,
-                  totalRuns: totalRuns,
-                ),
-              ],
-            ),
-          ));
-          runsBefore += runsPerChapter[chapter]!;
-        }
-        return SelectionMenu(
-          enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
-          textId: _realId,
-          containers: future.data!.list.map((v) => TextContainer.verse(
-            chapter: v.chapter, verse: v.verse, text: "${v.content} ",
-          )).toList(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: chapterWidgets,
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -562,18 +366,6 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           }),
         ),
         actions: <Widget>[
-          FutureBuilder<VerseList>(
-            future: verses,
-            builder: (context, future) {
-              if (!future.hasData || future.data!.list.isEmpty) return const SizedBox.shrink();
-              final chapters = future.data!.byChapter.keys.toList()..sort();
-              return IconButton(
-                icon: Icon(Icons.toc, color: Colors.white),
-                tooltip: "Главы",
-                onPressed: () => showTableOfContents(context, _chapterToc(chapters)),
-              );
-            },
-          ),
           // Сердечко берёт состояние из стора, а не из своего поля: раньше оно и
           // страница избранного читали SharedPreferences по отдельности и
           // расходились, пока экран не перезапросишь.
@@ -631,8 +423,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                             )
                         ),
                       ),
-                      future.data!.isVerses ? _buildVerses(context) : (
-                        future.data!.newUi ? (
+                      future.data!.newUi ? (
                           SizedBox(
                             height: 350.0,
                             child: Markdown(
@@ -660,8 +451,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                                 ).toList(),
                               ),
                             )
-                        )
-                      ),
+                        ),
                       if (future.data!.dneslovId != null) FutureBuilder<DneslovImageListD>(
                           future: dneslovImages,
                           builder: (context, future) {

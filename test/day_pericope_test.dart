@@ -80,37 +80,23 @@ void main() {
   });
 
   group('аргумент маршрута /reading', () {
-    test('без границ остаётся голым id', () {
-      expect(readingRouteArgument("abc"), "abc");
+    // Хвост за решёткой нёс главу или границы зачала — всё это относилось к
+    // Библии, а она с 2.1 живёт своим разделом. Разбирать хвост всё равно
+    // приходится: он остался в старых заметках и будет приходить ещё долго.
+    test('голый идентификатор проходит как есть', () {
+      expect(readingTextId("abc"), "abc");
     });
 
-    test('кодирует и разбирает границы обратно', () {
-      final day = DayTexts.fromJson(jsonDecode(_dayJson));
-      final pericope = day.gospelLiturgy!.items!.first.pericope!;
-      final argument = readingRouteArgument(pericope.textId!, ranges: pericope.ranges);
-      expect(argument, "6a8205bc#6:31-6:34,7:9-7:11");
-
-      final target = parseReadingArgument(argument);
-      expect(target.textId, "6a8205bc");
-      expect(target.ranges.length, 2);
-      expect(target.anchorChapter, 6);
-      expect(target.contains(6, 33), isTrue);
-      expect(target.contains(7, 1), isFalse);
-      expect(target.rangesLabel, "гл. 6, ст. 31–34; гл. 7, ст. 9–11");
+    test('прежний хвост с главой отбрасывается, а не роняет экран', () {
+      expect(readingTextId("abc#12"), "abc");
     });
 
-    test('понимает прежний формат с одной главой', () {
-      final target = parseReadingArgument("abc#12");
-      expect(target.textId, "abc");
-      expect(target.ranges, isEmpty);
-      expect(target.anchorChapter, 12);
+    test('прежний хвост с границами зачала отбрасывается тоже', () {
+      expect(readingTextId("6a8205bc#6:31-6:34,7:9-7:11"), "6a8205bc");
     });
 
     test('мусор в суффиксе не мешает открыть текст', () {
-      final target = parseReadingArgument("abc#:-:");
-      expect(target.textId, "abc");
-      expect(target.ranges, isEmpty);
-      expect(target.anchorChapter, isNull);
+      expect(readingTextId("abc#:-:"), "abc");
     });
   });
 

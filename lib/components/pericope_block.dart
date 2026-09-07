@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../dto/pericope.dart';
-import '../utils/pericope_route.dart';
 import 'verse_list.dart';
 
 /// Зачало, подсвеченное внутри главы.
@@ -120,3 +119,38 @@ List<Widget> buildPericopeBlocks(
 Widget _plain(List<PericopeVerse> verses, double fontSize, String fontFamily) =>
     VerseListView(verses: verses, fontSize: fontSize, fontFamily: fontFamily);
 
+class VerseRun {
+  final List<PericopeVerse> verses;
+  final bool inPericope;
+
+  const VerseRun(this.verses, this.inPericope);
+}
+
+/// Режет подряд идущие стихи на куски внутри и вне зачала.
+///
+/// Границ может быть несколько (разорванное зачало), и они могут переходить
+/// через границу главы, поэтому куски считаются по всей книге разом — иначе не
+/// разметить, где зачало действительно началось, а где кончилось.
+/// Нарезка стихов на куски внутри и вне зачала.
+///
+/// Берёт границы, а не адрес: границам всё равно, откуда они приехали, и одна и
+/// та же нарезка годится и сплошному тексту, и построчному чередованию.
+List<VerseRun> splitVerseRuns(List<PericopeVerse> verses, List<PericopeRange> ranges) {
+  final runs = <VerseRun>[];
+  if (verses.isEmpty) return runs;
+  if (ranges.isEmpty) return [VerseRun(verses, false)];
+
+  bool inside(PericopeVerse verse) =>
+      ranges.any((range) => range.contains(verse.chapter, verse.verse));
+
+  var runStart = 0;
+  var runInside = inside(verses.first);
+  for (var i = 1; i <= verses.length; i++) {
+    final inside0 = i < verses.length && inside(verses[i]);
+    if (i < verses.length && inside0 == runInside) continue;
+    runs.add(VerseRun(verses.sublist(runStart, i), runInside));
+    runStart = i;
+    runInside = inside0;
+  }
+  return runs;
+}
