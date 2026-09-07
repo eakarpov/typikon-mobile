@@ -12,6 +12,7 @@ import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/components/verse_list.dart';
 import 'package:typikon/components/day_memories.dart';
+import 'package:typikon/utils/pericope_route.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage(context, {super.key});
@@ -227,9 +228,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   onPressed: () => Navigator.pushNamed(
                     context,
                     "/reading",
-                    arguments: item.verses != null && item.verses!.isNotEmpty
-                        ? "${item.id}#${item.verses!.first.chapter}"
-                        : item.id,
+                    arguments: readingRouteArgument(item.id!, ranges: item.ranges),
                   ),
                   child: const Text("Читать целиком →"),
                 ),
@@ -304,12 +303,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
               color: Theme.of(context).scaffoldBackgroundColor,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
-              child: Positioned.fill(
-                child: Align(
-                  alignment: Alignment.center,
-                  child: const CircularProgressIndicator(),
-                ),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             );
           },
         ),

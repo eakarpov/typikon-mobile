@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Тёмные двойники values/styles.xml. Без них окно, которое Android рисует
+         до и под Flutter-интерфейсом, остаётся стоковым светлым: при системной
+         тёмной теме приложение вспыхивает белым на запуске и просвечивает белым
+         везде, где Flutter не закрашивает фон сам. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <!-- Show a splash screen on the activity. Automatically removed when
+             the Flutter engine draws its first frame -->
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+    </style>
+</resources>

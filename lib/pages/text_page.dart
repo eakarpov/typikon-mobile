@@ -33,7 +33,8 @@ import 'package:typikon/store/favourites_sync.dart';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/reading_progress.dart';
 import 'package:typikon/dto/book.dart';
-import 'package:typikon/dto/calendar.dart' show PericopeVerse;
+import 'package:typikon/dto/pericope.dart';
+import 'package:typikon/utils/pericope_route.dart';
 import 'package:typikon/dto/text.dart';
 import 'package:typikon/dto/verse.dart';
 import 'package:typikon/dto/user_note.dart';
@@ -57,12 +58,16 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   late Future<DneslovImageListD> dneslovImages;
   Future<VerseList>? verses;
 
-  // "Читать целиком" со страницы зачала кодирует начальную главу как
-  // суффикс "$textId#$chapter" в id маршрута — так не пришлось менять
-  // сигнатуру всех 8 существующих pushNamed(context, "/reading", ...).
+  // "Читать целиком" со страницы зачала кодирует его границы суффиксом в id
+  // маршрута — см. utils/pericope_route.dart. Так не пришлось менять сигнатуру
+  // всех существующих pushNamed(context, "/reading", ...).
+  late final ReadingTarget _target;
   late final String _realId;
-  int? _initialChapter;
   final Map<int, GlobalKey> _chapterKeys = {};
+
+  /// Якорь на начало зачала — к нему прокручиваем и по нему же ведёт
+  /// оглавление. Ставится на первый подсвеченный блок.
+  final GlobalKey _pericopeKey = GlobalKey();
 
   List<UserNote> _userNotes = [];
 
@@ -84,9 +89,8 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    final parts = widget.id.split('#');
-    _realId = parts[0];
-    _initialChapter = parts.length > 1 ? int.tryParse(parts[1]) : null;
+    _target = parseReadingArgument(widget.id);
+    _realId = _target.textId;
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
     _loadReading();
@@ -190,9 +194,13 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
         final versesFuture = getVerses(_realId);
         verses = versesFuture;
         versesFuture.then((list) {
-          if (!mounted || _initialChapter == null) return;
+          if (!mounted) return;
+          final anchorChapter = _target.anchorChapter;
+          if (anchorChapter == null) return;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            final targetContext = _chapterKey(_initialChapter!).currentContext;
+            // К самому зачалу, если знаем его границы; иначе — к главе, как
+            // это работало раньше.
+            final targetContext = _pericopeKey.currentContext ?? _chapterKey(anchorChapter).currentContext;
             if (targetContext != null) {
               Scrollable.ensureVisible(
                 targetContext,
@@ -321,10 +329,112 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   }
 
   List<TocEntry> _chapterToc(List<int> chapters) {
-    return chapters.map((c) => TocEntry(
-      title: "Глава $c",
-      anchorKey: _chapterKey(c),
-    )).toList();
+    return [
+      // Пришли со страницы дня "читать целиком" — первым пунктом даём вернуться
+      // к самому зачалу, иначе его в книге на десятки глав ещё поискать.
+      if (_target.ranges.isNotEmpty) TocEntry(
+        title: "Зачало (${_target.rangesLabel})",
+        anchorKey: _pericopeKey,
+      ),
+      ...chapters.map((c) => TocEntry(
+        title: "Глава $c",
+        anchorKey: _chapterKey(c),
+      )),
+    ];
+  }
+
+  Widget _verseRun(List<PericopeVerse> run, double fontSize) {
+    return VerseListView(
+      verses: run,
+      fontSize: fontSize,
+      fontFamily: "Monomakh",
+      notes: _userNotes,
+      onTapNote: _onTapUserNote,
+    );
+  }
+
+  /// Само зачало внутри книги: подложка, полоса слева и подписи с обоих концов.
+  ///
+  /// Раньше "читать целиком" только прокручивало к нужной главе, и где чтение
+  /// начинается, а главное — где кончается, приходилось угадывать.
+  Widget _pericopeRun(
+    BuildContext context,
+    List<PericopeVerse> run,
+    double fontSize, {
+    required bool isFirst,
+    required bool isLast,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final labelStyle = TextStyle(
+      fontFamily: "OldStandard",
+      fontSize: fontSize * 0.8,
+      fontWeight: FontWeight.bold,
+      color: scheme.primary,
+    );
+    return Container(
+      key: isFirst ? _pericopeKey : null,
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.fromLTRB(10.0, 8.0, 10.0, 8.0),
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: 0.10),
+        border: Border(left: BorderSide(color: scheme.primary, width: 3.0)),
+        borderRadius: const BorderRadius.all(Radius.circular(4.0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4.0),
+            child: Text(
+              isFirst ? "Начало зачала (${_target.rangesLabel})" : "Зачало, продолжение",
+              style: labelStyle,
+            ),
+          ),
+          _verseRun(run, fontSize),
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Text(isLast ? "Конец зачала" : "Продолжение ниже", style: labelStyle),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Режет главу на куски по границам зачала. Внутри границ — выделенный блок,
+  /// остальное рисуется как обычно.
+  ///
+  /// [runsBefore] — сколько кусков зачала уже нарисовано в предыдущих главах, а
+  /// [totalRuns] — сколько их всего: только зная и то, и другое, можно
+  /// подписать первый кусок началом, а последний — концом. Зачало бывает и
+  /// разорванным (две-три группы стихов), и переходящим через границу главы.
+  List<Widget> _chapterBlocks(
+    BuildContext context,
+    List<PericopeVerse> verses,
+    double fontSize, {
+    required int runsBefore,
+    required int totalRuns,
+  }) {
+    if (_target.ranges.isEmpty || verses.isEmpty) {
+      return [_verseRun(verses, fontSize)];
+    }
+
+    final blocks = <Widget>[];
+    var seen = runsBefore;
+    for (final run in splitVerseRuns(verses, _target)) {
+      if (!run.inPericope) {
+        blocks.add(_verseRun(run.verses, fontSize));
+        continue;
+      }
+      blocks.add(_pericopeRun(
+        context,
+        run.verses,
+        fontSize,
+        isFirst: seen == 0,
+        isLast: seen == totalRuns - 1,
+      ));
+      seen += 1;
+    }
+    return blocks;
   }
 
   Widget _buildVerses(BuildContext context) {
@@ -346,6 +456,43 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
         final byChapter = future.data!.byChapter;
         final chapters = byChapter.keys.toList()..sort();
         final fontSize = StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble();
+        final versesByChapter = {
+          for (final chapter in chapters)
+            chapter: byChapter[chapter]!
+                .map((v) => PericopeVerse(chapter: v.chapter, verse: v.verse, content: v.content))
+                .toList(),
+        };
+        // Куски зачала считаем по всей книге разом: главу от главы подписи
+        // "начало"/"конец" иначе не согласовать.
+        final runsPerChapter = {
+          for (final chapter in chapters)
+            chapter: _target.ranges.isEmpty
+                ? 0
+                : splitVerseRuns(versesByChapter[chapter]!, _target).where((r) => r.inPericope).length,
+        };
+        final totalRuns = runsPerChapter.values.fold<int>(0, (sum, count) => sum + count);
+        var runsBefore = 0;
+        final chapterWidgets = <Widget>[];
+        for (final chapter in chapters) {
+          chapterWidgets.add(Padding(
+            key: _chapterKey(chapter),
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Глава $chapter", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                ..._chapterBlocks(
+                  context,
+                  versesByChapter[chapter]!,
+                  fontSize,
+                  runsBefore: runsBefore,
+                  totalRuns: totalRuns,
+                ),
+              ],
+            ),
+          ));
+          runsBefore += runsPerChapter[chapter]!;
+        }
         return SelectionMenu(
           enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
           textId: _realId,
@@ -353,29 +500,8 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
             chapter: v.chapter, verse: v.verse, text: "${v.content} ",
           )).toList(),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: chapters.map((chapter) {
-            final chapterVerses = byChapter[chapter]!
-                .map((v) => PericopeVerse(chapter: v.chapter, verse: v.verse, content: v.content))
-                .toList();
-            return Padding(
-              key: _chapterKey(chapter),
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Глава $chapter", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                  VerseListView(
-                    verses: chapterVerses,
-                    fontSize: fontSize,
-                    fontFamily: "Monomakh",
-                    notes: _userNotes,
-                    onTapNote: _onTapUserNote,
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: chapterWidgets,
           ),
         );
       },

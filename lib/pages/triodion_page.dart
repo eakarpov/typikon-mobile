@@ -70,12 +70,7 @@ class _TriodionPageState extends State<TriodionPage> {
               color: Theme.of(context).scaffoldBackgroundColor,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
-              child: Positioned.fill(
-                child: Align(
-                  alignment: Alignment.center,
-                  child: const CircularProgressIndicator(),
-                ),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             );
           },
         ),

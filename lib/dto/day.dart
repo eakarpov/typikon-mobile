@@ -1,3 +1,7 @@
+import 'package:typikon/dto/pericope.dart';
+
+export 'package:typikon/dto/pericope.dart';
+
 class DayTextBook {
   final String id;
   final String name;
@@ -45,17 +49,33 @@ class DayTextsPart {
   final DayText? text;
   final int? statia;
 
+  /// Зачало вместо своего текста: Евангелие, Апостол и паремии сервер отдаёт
+  /// ссылкой на книгу Библии с границами и уже вынутыми стихами.
+  final Pericope? pericope;
+  final String cite;
+  final String description;
+
   const DayTextsPart({
     required this.text,
     required this.statia,
+    this.pericope,
+    this.cite = "",
+    this.description = "",
   });
 
+  bool get isPericope => pericope != null;
+
   factory DayTextsPart.fromJson(Map<String, dynamic> json) {
-    var dayText = json["text"] == null ? null : DayText.fromJson(json["text"]);
+    final rawText = json["text"];
+    // У зачал место текста занято заглушкой {"_id": null} — это не текст.
+    final hasText = rawText is Map<String, dynamic> && rawText["_id"] != null;
     var statiaVal = json["statia"] == null ? null : json["statia"];
     return DayTextsPart(
-      text: dayText,
+      text: hasText ? DayText.fromJson(rawText) : null,
       statia: statiaVal,
+      pericope: Pericope.fromJson(json["pericope"]),
+      cite: json["cite"] ?? "",
+      description: json["description"] ?? "",
     );
   }
 }
@@ -84,39 +104,55 @@ class DayTextsParts {
 class DayTexts {
   final String? id;
   final String? name;
+  final DayTextsParts? vespersProkimenon;
+  final DayTextsParts? vigil;
   final DayTextsParts? kathisma1;
   final DayTextsParts? kathisma2;
   final DayTextsParts? kathisma3;
   final DayTextsParts? before50;
   final DayTextsParts? ipakoi;
   final DayTextsParts? polyeleos;
+  final DayTextsParts? gospelMatins;
   final DayTextsParts? song3;
   final DayTextsParts? song6;
   final DayTextsParts? apolutikaTroparia;
   final DayTextsParts? before1h;
+  final DayTextsParts? h1;
   final DayTextsParts? h3;
   final DayTextsParts? h6;
   final DayTextsParts? h9;
+  final DayTextsParts? apostleLiturgy;
+  final DayTextsParts? gospelLiturgy;
+  final DayTextsParts? panagia;
 
   const DayTexts({
     required this.id,
     required this.name,
+    this.vespersProkimenon,
+    this.vigil,
     required this.kathisma1,
     required this.kathisma2,
     required this.kathisma3,
     required this.before50,
     required this.ipakoi,
     required this.polyeleos,
+    this.gospelMatins,
     required this.song3,
     required this.song6,
     required this.apolutikaTroparia,
     required this.before1h,
+    this.h1,
     required this.h3,
     required this.h6,
     required this.h9,
+    this.apostleLiturgy,
+    this.gospelLiturgy,
+    this.panagia,
   });
 
   factory DayTexts.fromJson(Map<String, dynamic> json) {
+    DayTextsParts? part(String key) =>
+        json[key] == null ? null : DayTextsParts.fromJson(json[key]);
     var kathisma1 = json["kathisma1"] == null ? null : DayTextsParts.fromJson(json["kathisma1"]);
     var kathisma2 = json["kathisma2"] == null ? null : DayTextsParts.fromJson(json["kathisma2"]);
     var kathisma3 = json["kathisma3"] == null ? null : DayTextsParts.fromJson(json["kathisma3"]);
@@ -134,19 +170,26 @@ class DayTexts {
     return DayTexts(
       id: json["id"],
       name: json["name"],
+      vespersProkimenon: part("vespersProkimenon"),
+      vigil: part("vigil"),
       kathisma1: kathisma1,
       kathisma2: kathisma2,
       kathisma3: kathisma3,
       before50: before50,
       ipakoi: ipakoi,
       polyeleos: polyeleos,
+      gospelMatins: part("gospelMatins"),
       song3: song3,
       song6: song6,
       apolutikaTroparia: apolutikaTroparia,
       before1h: before1h,
+      h1: part("h1"),
       h3: h3,
       h6: h6,
       h9: h9,
+      apostleLiturgy: part("apostleLiturgy"),
+      gospelLiturgy: part("gospelLiturgy"),
+      panagia: part("panagia"),
     );
   }
 }

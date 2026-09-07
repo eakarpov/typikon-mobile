@@ -73,12 +73,7 @@ class _MonthPageState extends State<MonthPage> {
               color: Theme.of(context).scaffoldBackgroundColor,
               width: double.infinity,
               height: double.infinity,
-              child: Positioned.fill(
-                child: Align(
-                  alignment: Alignment.center,
-                  child: const CircularProgressIndicator(),
-                ),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             );
           },
         ),

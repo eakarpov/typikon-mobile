@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:typikon/dto/calendar.dart';
+import 'package:typikon/utils/reading_style.dart';
 import 'package:typikon/utils/signs.dart';
 
 /// Компактный информационный блок "Святые дня" по месяцеслову Типикона
@@ -12,7 +13,10 @@ class DayMemoriesView extends StatelessWidget {
 
   const DayMemoriesView({super.key, required this.memories});
 
-  Widget _row(DayMemory memory, {required bool isDefault}) {
+  /// [textColor] приходит снаружи, потому что RichText ничего не наследует:
+  /// при color == null движок рисует текст белым. Раньше здесь стоял жёстко
+  /// прибитый Colors.black — на тёмной теме святые дня были чёрным по тёмному.
+  Widget _row(DayMemory memory, {required bool isDefault, required Color textColor}) {
     final glyph = signGlyph(memory.sign);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -20,13 +24,13 @@ class DayMemoriesView extends StatelessWidget {
         text: TextSpan(
           style: TextStyle(
             fontFamily: "OldStandard",
-            color: Colors.black,
+            color: textColor,
             fontWeight: isDefault ? FontWeight.bold : FontWeight.normal,
           ),
           children: [
             if (glyph != null) TextSpan(
               text: "${glyph.glyph} ",
-              style: TextStyle(color: glyph.color),
+              style: TextStyle(color: glyph.color ?? textColor),
             ),
             TextSpan(text: memory.name),
           ],
@@ -38,14 +42,16 @@ class DayMemoriesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (memories.isEmpty) return const SizedBox.shrink();
+    final textColor = readingTextColor(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text("Святые дня", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-          if (memories.defaultMemory != null) _row(memories.defaultMemory!, isDefault: true),
-          ...memories.secondary.map((m) => _row(m, isDefault: false)),
+          if (memories.defaultMemory != null)
+            _row(memories.defaultMemory!, isDefault: true, textColor: textColor),
+          ...memories.secondary.map((m) => _row(m, isDefault: false, textColor: textColor)),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton(

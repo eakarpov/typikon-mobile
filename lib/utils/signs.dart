@@ -14,9 +14,14 @@ const Map<String, String> signLabels = {
 
 class SignGlyph {
   final String glyph;
-  final Color color;
 
-  const SignGlyph(this.glyph, this.color);
+  /// null — глиф рисуется цветом обычного текста. Красный у знаков от
+  /// славословной и выше — уставная киноварь, а вот шестеричный знак в
+  /// источнике чёрный, то есть "цвета текста": прибивать его к Colors.black
+  /// нельзя, иначе на тёмной теме он пропадает.
+  final Color? color;
+
+  const SignGlyph(this.glyph, [this.color]);
 }
 
 // Юникод-символы U+1F540..U+1F543 — те же, что использует источник
@@ -26,7 +31,7 @@ final Map<String, SignGlyph> signGlyphs = {
   'VIGIL': const SignGlyph('\u{1F541}', Colors.red),
   'POLYELEOS': const SignGlyph('\u{1F542}', Colors.red),
   'DOXOLOGIC': const SignGlyph('\u{1F543}', Colors.red),
-  'SIX_STICHERA': const SignGlyph('\u{1F543}', Colors.black),
+  'SIX_STICHERA': const SignGlyph('\u{1F543}'),
 };
 
 String signLabel(String sign) => signLabels[sign] ?? sign;

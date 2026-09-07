@@ -9,7 +9,7 @@ const Duration apiTimeout = Duration(seconds: 15);
 //
 // Версию держим здесь строкой и поднимаем вместе с version в pubspec.yaml.
 const String appHeaderName = 'X-Typikon-App';
-const String appVersion = '1.5.0+6';
+const String appVersion = '2.0.0+7';
 
 // Подписной календарь чтений на сайте. Хост и путь отдельно — из них же
 // собирается webcal://-ссылка, которую календари понимают как подписку.

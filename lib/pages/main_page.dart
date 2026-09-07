@@ -25,6 +25,7 @@ import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
 import '../utils/day_preloader.dart';
+import '../utils/pericope_route.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
 
@@ -284,9 +285,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                         Navigator.pushNamed(
                           context,
                           "/reading",
-                          arguments: item.verses != null && item.verses!.isNotEmpty
-                              ? "${item.id}#${item.verses!.first.chapter}"
-                              : item.id,
+                          arguments: readingRouteArgument(item.id!, ranges: item.ranges),
                         )
                       },
                     ),

@@ -4,10 +4,14 @@ import 'cached_fetch.dart';
 import 'client.dart';
 import 'constants.dart';
 
-Future<http.Response> fetchSigns() {
+/// Список памятей со знаком. Ответ постраничный, размер страницы задаёт
+/// сервер, поэтому кэшируем каждую страницу отдельным ключом.
+Future<http.Response> fetchSigns({int page = 1}) {
   return cachedFetch(
-    'signs',
-    () => apiClient.get(Uri.parse('$apiBaseUrl/api/v1/signs')).timeout(apiTimeout),
+    'signs:p$page',
+    () => apiClient
+        .get(Uri.parse('$apiBaseUrl/api/v1/signs?page=$page'))
+        .timeout(apiTimeout),
     ttl: const Duration(hours: 24),
   );
 }

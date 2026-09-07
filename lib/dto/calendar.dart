@@ -1,22 +1,6 @@
-class PericopeVerse {
-  final int chapter;
-  final int verse;
-  final String content;
+import 'package:typikon/dto/pericope.dart';
 
-  const PericopeVerse({
-    required this.chapter,
-    required this.verse,
-    required this.content,
-  });
-
-  factory PericopeVerse.fromJson(Map<String, dynamic> json) {
-    return PericopeVerse(
-      chapter: json["chapter"] is int ? json["chapter"] : int.tryParse("${json["chapter"]}") ?? 0,
-      verse: json["verse"] is int ? json["verse"] : int.tryParse("${json["verse"]}") ?? 0,
-      content: json["content"] ?? "",
-    );
-  }
-}
+export 'package:typikon/dto/pericope.dart';
 
 /// Один айтем литургического слота дня — либо прямая ссылка на текст
 /// (`text`), либо резолвленное зачало (`pericope`), присланное бекендом
@@ -29,6 +13,10 @@ class CalendarDayPartItem {
   final String description;
   final String? pericopeSource; // "gospel" | "apostle" | "paremia" | null
   final List<PericopeVerse>? verses; // не null только для зачал с найденными стихами
+
+  /// Границы зачала в книге. Пусто для прямых чтений; для зачал по ним
+  /// страница полного текста подсвечивает, где чтение начинается и кончается.
+  final List<PericopeRange> ranges;
   final bool isPericope;
 
   const CalendarDayPartItem({
@@ -39,26 +27,25 @@ class CalendarDayPartItem {
     required this.description,
     required this.pericopeSource,
     required this.verses,
+    this.ranges = const [],
     required this.isPericope,
   });
 
   factory CalendarDayPartItem.fromJson(Map<String, dynamic> json) {
     var text = json["text"];
-    var pericope = json["pericope"];
     var cite = json["cite"] ?? "";
     var description = json["description"] ?? "";
+    final pericope = Pericope.fromJson(json["pericope"]);
     if (pericope != null) {
-      var rawVerses = pericope["verses"];
       return CalendarDayPartItem(
-        name: pericope["label"] ?? pericope["textName"] ?? "",
-        id: pericope["textId"],
+        name: pericope.label,
+        id: pericope.textId,
         content: "",
         cite: cite,
         description: description,
-        pericopeSource: pericope["source"],
-        verses: rawVerses is List
-            ? rawVerses.map((v) => PericopeVerse.fromJson(v)).toList()
-            : null,
+        pericopeSource: pericope.source,
+        verses: pericope.verses.isEmpty ? null : pericope.verses,
+        ranges: pericope.ranges,
         isPericope: true,
       );
     }
@@ -70,6 +57,7 @@ class CalendarDayPartItem {
       description: description,
       pericopeSource: null,
       verses: null,
+      ranges: const [],
       isPericope: false,
     );
   }
