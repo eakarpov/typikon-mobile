@@ -54,7 +54,10 @@
                 <data android:scheme="http" />
                 <data android:scheme="https" />
                 <data android:scheme="app" />
+                <!-- Оба домена: пока старый жив, ссылки с него ходят по рукам
+                     и должны открываться в приложении так же, как с нового. -->
                 <data android:host="typikon.su" />
+                <data android:host="typikon.info" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

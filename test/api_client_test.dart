@@ -53,6 +53,30 @@ void main() {
     expect(seen.single.headers[appHeaderName], appVersion);
   });
 
+  test('новый домен считается своим наравне со старым', () async {
+    // Переезд на typikon.info: если сверка останется на одном старом домене,
+    // приложение перестанет представляться ровно в тот день, когда сменит
+    // адрес, — и сервер прочтёт молчание как «старых клиентов не осталось».
+    await client.get(Uri.parse('https://typikon.info/api/v1/months'));
+    await client.get(Uri.parse('https://www.typikon.info/api/v1/months'));
+
+    expect(seen.map((r) => r.headers[appHeaderName]), [appVersion, appVersion]);
+  });
+
+  test('адрес сайта собран из одного домена', () {
+    // Смысл правки: переезд — это смена siteHost, а не поиск по файлам.
+    expect(apiBaseUrl, 'https://$siteHostFull');
+    expect(calendarFeedHost, siteHostFull);
+    expect(calendarFeedUrl, 'https://$siteHostFull$calendarFeedPath');
+    expect(siteHostFull, endsWith(siteHost));
+  });
+
+  test('домен, на который ходим, числится среди своих', () {
+    // ownHosts перечислен отдельно от siteHost ради нахлёста, и разъехаться
+    // они могут молча: заголовок просто перестанет уходить.
+    expect(ownHosts, contains(siteHost));
+  });
+
   test('заголовок не затирает остальные', () async {
     await client.post(
       Uri.parse('$apiBaseUrl/api/v1/texts/batch'),

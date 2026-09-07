@@ -1,4 +1,22 @@
-const String apiBaseUrl = 'https://www.typikon.su';
+// Домен сайта записан в приложении один раз — здесь. Переезд правится сменой
+// siteHost, а не поиском по файлам: до этой правки адрес стоял в пяти местах
+// (базовый адрес API, хост подписного календаря, сверка «свой ли хост» в
+// client.dart, подпись в fb2-выгрузке и хост ссылок в AndroidManifest), и одно
+// из них ломалось тише прочих — см. ownHosts ниже.
+//
+// siteHost — как домен пишется в тексте, без протокола и www.
+// siteHostFull — имя хоста, на который приложение ходит.
+const String siteHost = 'typikon.su';
+const String siteHostFull = 'www.$siteHost';
+
+// Домены, которые приложение считает своими и которым представляется заголовком
+// appHeaderName. Список, а не один siteHost, из-за переезда на typikon.info:
+// пока старый домен отвечает, обе формы наши — выпущенные копии продолжают
+// ходить на старую, а обновлённые уже на новую. Старую убирать не раньше, чем
+// она перестанет отвечать.
+const List<String> ownHosts = <String>['typikon.su', 'typikon.info'];
+
+const String apiBaseUrl = 'https://$siteHostFull';
 const String dneslovBaseUrl = 'http://dneslov.org';
 
 const Duration apiTimeout = Duration(seconds: 15);
@@ -13,7 +31,7 @@ const String appVersion = '2.0.0+7';
 
 // Подписной календарь чтений на сайте. Хост и путь отдельно — из них же
 // собирается webcal://-ссылка, которую календари понимают как подписку.
-const String calendarFeedHost = 'www.typikon.su';
+const String calendarFeedHost = siteHostFull;
 const String calendarFeedPath = '/calendar.ics';
 const String calendarFeedUrl = 'https://$calendarFeedHost$calendarFeedPath';
 

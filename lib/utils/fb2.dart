@@ -5,6 +5,8 @@
 // файл. Заодно весь текст уезжал одним абзацем, автор был "No author", дата
 // зашита в код, а язык объявлен английским.
 
+import '../api/constants.dart';
+
 /// Экранирование для текстовых узлов xml. Амперсанд обязан идти первым, иначе
 /// он повторно экранирует уже подставленные сущности.
 String escapeXml(String value) {
@@ -77,7 +79,7 @@ String buildFb2({
     <lang>ru</lang>
   </title-info>
   <document-info>
-    <author><nickname>typikon.su</nickname></author>
+    <author><nickname>$siteHost</nickname></author>
     <program-used>Уставные чтения</program-used>
     <date value="$dateValue">$dateLabel</date>
     <id>${escapeXml(id)}</id>
