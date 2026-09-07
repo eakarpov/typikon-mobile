@@ -83,6 +83,21 @@ class ApiRateLimitedException implements Exception {
   String toString() => message;
 }
 
+/// Раздел не отдан: ключа нет, он не признан или не даёт этого раздела.
+///
+/// Своё исключение нужно, чтобы не потерять сообщение сервера. Оно объясняет
+/// причину точнее нашего («Этот раздел доступен по ключу») и говорит, где ключ
+/// взять, — а общее «не удалось выполнить поиск» на его месте было бы прямым
+/// враньём: поиск не сломался, его просто не дали.
+class ApiUnauthorizedException implements Exception {
+  const ApiUnauthorizedException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// Сервер честно ответил, что такого нет. Сообщение — его собственное.
 class ApiNotFoundException implements Exception {
   const ApiNotFoundException(this.message);
@@ -104,6 +119,10 @@ Never throwV2Error(http.Response response, String fallback) {
       // Ключа нет в сборке или сервер его не признал — снаружи это одно и то же.
       anonymous: apiKey == null,
     );
+  }
+
+  if (response.statusCode == 401 || response.statusCode == 403) {
+    throw ApiUnauthorizedException(v2ErrorMessage(response, fallback));
   }
 
   if (response.statusCode == 404) {

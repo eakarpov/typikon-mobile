@@ -128,6 +128,25 @@ void main() {
       expect(withKey, 1, reason: 'негодный ключ пробуется один раз, а не на каждом запросе');
     });
 
+    test('там, где анониму не полагается вовсе, повтора нет', () async {
+      // Поиск по песнопениям и зачинам живёт в разделе `search`, единственном
+      // вне бесплатных. Повторять там нечего: второй запрос вернёт тот же 401,
+      // зато ключ окажется помечен негодным из-за ручки, которая его отвергла
+      // не потому, что он плох.
+      readRawApiKey = () => 'tk_abcdef123456';
+      var calls = 0;
+      final client = MockClient((request) async {
+        calls++;
+        return json('{"error":{"code":"unauthorized","message":"Доступно по ключу."}}', 401);
+      });
+
+      final response = await v2Get(v2Uri('/chants'), client: client, retryAnonymously: false);
+
+      expect(calls, 1, reason: 'повтора быть не должно');
+      expect(response.statusCode, 401);
+      expect(apiKey, isNotNull, reason: 'ключ ни при чём, метить его негодным нельзя');
+    });
+
     test('обычная ошибка сервера повтором без ключа не лечится', () async {
       // 500 — не про ключ, и терять его, второй раз дёргая сервер, незачем.
       readRawApiKey = () => 'tk_abcdef123456';
@@ -194,6 +213,18 @@ void main() {
         throwsA(isA<ApiRateLimitedException>()
             .having((e) => e.retryAfter, 'retryAfter', isNull)
             .having((e) => e.message, 'message', isNot(contains('через')))),
+      );
+    });
+
+    test('отказ по ключу несёт сообщение сервера, а не общее', () {
+      // «Этот раздел доступен по ключу» точнее нашего «не удалось выполнить
+      // поиск» — и говорит правду: поиск не сломался, его просто не дали.
+      final response = error(401, 'unauthorized', 'Этот раздел доступен по ключу.');
+
+      expect(
+        () => throwV2Error(response, 'Не удалось выполнить поиск'),
+        throwsA(isA<ApiUnauthorizedException>()
+            .having((e) => e.message, 'message', 'Этот раздел доступен по ключу.')),
       );
     });
 

@@ -25,8 +25,10 @@ import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
 import 'package:typikon/pages/book_page.dart';
 import 'package:typikon/utils/bible_route.dart';
+import 'package:typikon/utils/incipit_route.dart';
 import 'package:typikon/utils/route_observer.dart';
 import 'package:typikon/pages/bible_chapter_page.dart';
+import 'package:typikon/pages/incipit_page.dart';
 import 'package:typikon/pages/bible_page.dart';
 import 'package:typikon/pages/library_page.dart';
 import 'package:typikon/pages/main_page.dart';
@@ -484,6 +486,25 @@ class MyAppState extends State<MyApp> {
                           },
                         );
                       }
+                    // У зачина нет своего идентификатора: ключ и есть
+                    // идентификатор. Поэтому аргумент несёт язык и ключ разом,
+                    // разбор — в utils/incipit_route.dart.
+                    case '/incipit':
+                      if (arguments is String) {
+                        final target = parseIncipitArgument(arguments);
+                        if (target.isValid) {
+                          return MaterialPageRoute(
+                            builder: (context) {
+                              return IncipitPage(
+                                context,
+                                language: target.language,
+                                incipit: target.incipit,
+                              );
+                            },
+                          );
+                        }
+                      }
+                      return null;
                     case '/library':
                       if (arguments is String) {
                         return MaterialPageRoute(

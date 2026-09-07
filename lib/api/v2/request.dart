@@ -35,14 +35,26 @@ Uri v2Uri(String path, [Map<String, String>? query]) {
 /// анонимом. Отзыв ключа тогда понижает квоту, а не гасит раздел у всех
 /// установленных копий разом.
 ///
+/// **Но не везде.** Поиск по песнопениям и по зачинам живёт в разделе доступа
+/// `search`, единственном, который анониму не полагается вовсе. Повторять там
+/// нечего: второй запрос вернёт тот же `401`, зато ключ окажется помечен
+/// негодным из-за ручки, которая его отвергла не потому, что он плох. Такие
+/// вызовы передают [retryAnonymously] `false` и получают отказ сервера как есть —
+/// он и написан для человека: «Этот раздел доступен по ключу».
+///
 /// [client] подменяется тестами; в приложении всегда общий [apiClient].
-Future<http.Response> v2Get(Uri uri, {http.Client? client}) async {
+Future<http.Response> v2Get(
+  Uri uri, {
+  http.Client? client,
+  bool retryAnonymously = true,
+}) async {
   final http.Client transport = client ?? apiClient;
   final headers = apiKeyHeaders();
 
   final response = await transport.get(uri, headers: headers).timeout(apiTimeout);
   if (headers.isEmpty) return response;
   if (response.statusCode != 401 && response.statusCode != 403) return response;
+  if (!retryAnonymously) return response;
 
   markApiKeyRefused('сервер ответил ${response.statusCode} на запрос с ключом');
   return transport.get(uri).timeout(apiTimeout);
