@@ -672,6 +672,13 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   },
                 ),
                 ListTile(
+                  title: const Text('Библия', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/bible",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/bible");
+                  },
+                ),
+                ListTile(
                   title: const Text('Библиотека', style: TextStyle(fontSize: 14.0),),
                   selected: ModalRoute.of(context)?.settings.name == "/library",
                   onTap: () {

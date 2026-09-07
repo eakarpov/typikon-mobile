@@ -24,6 +24,9 @@ import "utils/crash_reporter.dart";
 import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
 import 'package:typikon/pages/book_page.dart';
+import 'package:typikon/utils/bible_route.dart';
+import 'package:typikon/pages/bible_chapter_page.dart';
+import 'package:typikon/pages/bible_page.dart';
 import 'package:typikon/pages/library_page.dart';
 import 'package:typikon/pages/main_page.dart';
 import 'package:typikon/pages/text_page.dart';
@@ -454,6 +457,29 @@ class MyAppState extends State<MyApp> {
                 onGenerateRoute: (RouteSettings settings) {
                   final arguments = settings.arguments;
                   switch (settings.name) {
+                    // Аргумент необязателен, как у '/library': без него —
+                    // оглавление, с ним — глава. Разбор аргумента живёт в
+                    // utils/bible_route.dart, потому что собирают его из
+                    // нескольких мест сразу.
+                    case '/bible':
+                      if (arguments is String) {
+                        final target = parseBibleArgument(arguments);
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return BibleChapterPage(
+                              context,
+                              canonId: target.canonId,
+                              chapter: target.chapter,
+                            );
+                          },
+                        );
+                      } else {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return BiblePage(context);
+                          },
+                        );
+                      }
                     case '/library':
                       if (arguments is String) {
                         return MaterialPageRoute(

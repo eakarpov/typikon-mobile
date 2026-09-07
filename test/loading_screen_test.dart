@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:typikon/pages/bible_page.dart';
 import 'package:typikon/pages/outside_page.dart';
 import 'package:typikon/pages/signs_page.dart';
 
@@ -13,6 +14,17 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       theme: ThemeData(brightness: Brightness.dark),
       home: OutsidePage(null),
+    ));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets("оглавление Библии грузится без исключений", (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(brightness: Brightness.dark),
+      home: BiblePage(null),
     ));
     await tester.pump();
 
