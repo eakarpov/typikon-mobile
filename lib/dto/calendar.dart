@@ -12,6 +12,9 @@ class CalendarDayPartItem {
   final String cite;
   final String description;
   final String? pericopeSource; // "gospel" | "apostle" | "paremia" | null
+
+  /// Книга канона, из которой взято зачало, — адрес для раздела Библии.
+  final String? bookSlug;
   final List<PericopeVerse>? verses; // не null только для зачал с найденными стихами
 
   /// Границы зачала в книге. Пусто для прямых чтений; для зачал по ним
@@ -26,6 +29,7 @@ class CalendarDayPartItem {
     required this.cite,
     required this.description,
     required this.pericopeSource,
+    required this.bookSlug,
     required this.verses,
     this.ranges = const [],
     required this.isPericope,
@@ -39,11 +43,17 @@ class CalendarDayPartItem {
     if (pericope != null) {
       return CalendarDayPartItem(
         name: pericope.label,
-        id: pericope.textId,
+        // Идентификатор зачала сюда НЕ кладём. Прежде здесь стоял
+        // pericope.textId, а он с переездом Библии указывает на bible_books:
+        // всякий, кто им воспользуется, уедет в пустой ответ. Заодно это чистит
+        // textIds, по которым предзагрузчик заранее качал тексты дня — он качал
+        // пустоту и складывал её в кэш.
+        id: null,
         content: "",
         cite: cite,
         description: description,
         pericopeSource: pericope.source,
+        bookSlug: pericope.bookSlug,
         verses: pericope.verses.isEmpty ? null : pericope.verses,
         ranges: pericope.ranges,
         isPericope: true,
@@ -56,6 +66,7 @@ class CalendarDayPartItem {
       cite: cite,
       description: description,
       pericopeSource: null,
+      bookSlug: null,
       verses: null,
       ranges: const [],
       isPericope: false,

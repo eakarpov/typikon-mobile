@@ -47,14 +47,14 @@ void main() {
     ];
 
     test('без границ отдаёт всё одним куском', () {
-      final runs = splitVerseRuns(chapter(6, 1, 5), const ReadingTarget(textId: "a"));
+      final runs = splitVerseRuns(chapter(6, 1, 5), const []);
       expect(runs.length, 1);
       expect(runs.single.inPericope, isFalse);
     });
 
     test('вырезает зачало из середины главы', () {
       final target = parseReadingArgument("a#6:3-6:4");
-      final runs = splitVerseRuns(chapter(6, 1, 6), target);
+      final runs = splitVerseRuns(chapter(6, 1, 6), target.ranges);
 
       expect(runs.map((r) => r.inPericope).toList(), [false, true, false]);
       expect(runs[1].verses.map((v) => v.verse).toList(), [3, 4]);
@@ -62,7 +62,7 @@ void main() {
 
     test('зачало с начала главы не даёт пустого куска перед собой', () {
       final target = parseReadingArgument("a#6:1-6:2");
-      final runs = splitVerseRuns(chapter(6, 1, 4), target);
+      final runs = splitVerseRuns(chapter(6, 1, 4), target.ranges);
 
       expect(runs.map((r) => r.inPericope).toList(), [true, false]);
       expect(runs.first.verses.map((v) => v.verse).toList(), [1, 2]);
@@ -70,7 +70,7 @@ void main() {
 
     test('разорванное зачало даёт два выделенных куска', () {
       final target = parseReadingArgument("a#6:2-6:3,6:5-6:6");
-      final runs = splitVerseRuns(chapter(6, 1, 7), target);
+      final runs = splitVerseRuns(chapter(6, 1, 7), target.ranges);
 
       expect(runs.map((r) => r.inPericope).toList(), [false, true, false, true, false]);
       expect(runs.where((r) => r.inPericope).length, 2);

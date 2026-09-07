@@ -15,6 +15,7 @@ CalendarDayPart _part(List<String?> ids) {
               cite: "",
               description: "",
               pericopeSource: null,
+              bookSlug: null,
               verses: null,
               isPericope: false,
             ))

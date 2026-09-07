@@ -12,7 +12,7 @@ import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/components/verse_list.dart';
 import 'package:typikon/components/day_memories.dart';
-import 'package:typikon/utils/pericope_route.dart';
+import 'package:typikon/utils/bible_route.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage(context, {super.key});
@@ -220,15 +220,19 @@ class _CalculatorPageState extends State<CalculatorPage> {
                 textAlign: TextAlign.justify,
                 style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize),
               ),
-            if (item.isPericope && item.id != null)
+            if (item.isPericope && item.bookSlug != null && item.ranges.isNotEmpty)
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton(
                   style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
                   onPressed: () => Navigator.pushNamed(
                     context,
-                    "/reading",
-                    arguments: readingRouteArgument(item.id!, ranges: item.ranges),
+                    "/bible",
+                    arguments: bibleRouteArgument(
+                      item.bookSlug!,
+                      chapter: item.ranges.first.chapterFrom,
+                      ranges: item.ranges,
+                    ),
                   ),
                   child: const Text("Читать целиком →"),
                 ),

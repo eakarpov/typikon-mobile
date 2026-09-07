@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:typikon/dto/calendar.dart';
 import 'package:typikon/dto/day.dart';
+import 'package:typikon/utils/bible_route.dart';
 import 'package:typikon/utils/pericope_route.dart';
 
 /// Урезанный ответ /api/v1/days/:id — важно, что Евангелие и Апостол приходят
@@ -15,7 +17,8 @@ const String _dayJson = '''
   "gospelLiturgy": {"items": [{
     "cite": "", "description": "Мф. 19", "pericopeId": "6a82", "text": {"_id": null},
     "pericope": {
-      "id": "6a82", "source": "gospel", "label": "Мф. 19", "textId": "6a8205bc", "textName": "От Матфея",
+      "id": "6a82", "source": "gospel", "label": "Мф. 19", "bookSlug": "matfeya",
+      "textId": "6a8205bc", "textName": "От Матфея",
       "ranges": [
         {"chapterFrom": 6, "verseFrom": 31, "chapterTo": 6, "verseTo": 34},
         {"chapterFrom": 7, "verseFrom": 9, "chapterTo": 7, "verseTo": 11}
@@ -26,7 +29,8 @@ const String _dayJson = '''
   "apostleLiturgy": {"items": [{
     "cite": "", "description": "Рим. 83", "text": {"_id": null},
     "pericope": {
-      "id": "6a83", "source": "apostle", "label": "Рим. 83", "textId": "6a8206", "textName": "К Римлянам",
+      "id": "6a83", "source": "apostle", "label": "Рим. 83", "bookSlug": "k-rimlyanam",
+      "textId": "6a8206", "textName": "К Римлянам",
       "ranges": [{"chapterFrom": 2, "verseFrom": 28, "chapterTo": 3, "verseTo": 18}],
       "verses": []
     }
@@ -108,5 +112,60 @@ void main() {
       expect(target.ranges, isEmpty);
       expect(target.anchorChapter, isNull);
     });
+  });
+
+  group('дорога в раздел Библии', () {
+    final day = DayTexts.fromJson(jsonDecode(_dayJson));
+
+    test('зачало несёт книгу канона, а не только книгу издания', () {
+      // По bookSlug открывается глава. textId с переездом Библии указывает на
+      // bible_books, и открывать по нему нельзя: /api/v1/texts/{id} отвечает на
+      // него двумястами с пустым телом.
+      final pericope = day.gospelLiturgy!.items!.first.pericope!;
+
+      expect(pericope.bookSlug, "matfeya");
+    });
+
+    test('из зачала собирается адрес главы с подсветкой', () {
+      final pericope = day.gospelLiturgy!.items!.first.pericope!;
+      final argument = bibleRouteArgument(
+        pericope.bookSlug!,
+        chapter: pericope.ranges.first.chapterFrom,
+        ranges: pericope.ranges,
+      );
+
+      expect(argument, "matfeya/6#6:31-6:34,7:9-7:11");
+
+      final target = parseBibleArgument(argument);
+      expect(target.canonId, "matfeya");
+      expect(target.chapter, 6);
+      expect(target.contains(6, 33), isTrue);
+      expect(target.contains(7, 1), isFalse);
+    });
+
+    test('зачало без книги канона кнопку не показывает', () {
+      // Дневные ответы лежат в кэше сутками: ответ, отданный до появления
+      // bookSlug, не должен уводить в ошибку.
+      final pericope = Pericope.fromJson({
+        "id": "x", "source": "gospel", "label": "Мф. 19",
+        "ranges": [{"chapterFrom": 6, "verseFrom": 31, "chapterTo": 6, "verseTo": 34}],
+      })!;
+
+      expect(pericope.bookSlug, isNull);
+    });
+  });
+
+  test('идентификатор зачала не подставляется в id дневного слота', () {
+    // Прежде здесь стоял pericope.textId, и по нему предзагрузчик заранее качал
+    // тексты дня — то есть складывал в кэш пустые ответы.
+    final calendar = CalendarDayPartItem.fromJson(jsonDecode('''
+      {"cite": "", "description": "Мф. 19", "pericope": {
+        "id": "6a82", "label": "Мф. 19", "bookSlug": "matfeya", "textId": "6a8205bc",
+        "ranges": [], "verses": []}}
+    '''));
+
+    expect(calendar.isPericope, isTrue);
+    expect(calendar.bookSlug, "matfeya");
+    expect(calendar.id, isNull);
   });
 }

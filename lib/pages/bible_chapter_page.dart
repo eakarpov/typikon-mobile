@@ -7,8 +7,10 @@ import '../components/api_error_view.dart';
 import '../components/bible_edition_picker.dart';
 import '../components/bible_parallel_view.dart';
 import '../components/chapter_grid.dart';
+import '../components/pericope_block.dart';
 import '../components/verse_list.dart';
 import '../dto/bible.dart';
+import '../dto/pericope.dart';
 import '../store/actions/actions.dart';
 import '../store/models/models.dart';
 import '../utils/bible_editions.dart';
@@ -27,10 +29,14 @@ class BibleChapterPage extends StatefulWidget {
     super.key,
     required this.canonId,
     required this.chapter,
+    this.highlight = const [],
   });
 
   final String canonId;
   final int chapter;
+
+  /// Границы зачала, если пришли со страницы дня. Пусто — обычное чтение главы.
+  final List<PericopeRange> highlight;
 
   @override
   State<BibleChapterPage> createState() => _BibleChapterPageState();
@@ -49,6 +55,13 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
   /// только те издания, что у неё запрошены, а выбирать надо из всех.
   BibleEditionList available = const BibleEditionList([]);
 
+  /// Якорь на начало зачала: к нему прокручиваем после первого кадра, иначе
+  /// читатель, пришедший за чтением дня, оказался бы в начале главы и искал
+  /// зачало глазами — ровно то, от чего эта работа и затевалась.
+  final GlobalKey _pericopeKey = GlobalKey();
+  final ScrollController _scrollController = ScrollController();
+  bool _scrolledToPericope = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,7 +70,32 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
   }
 
   void _load() {
+    _scrolledToPericope = false;
     chapter = _loadChapter();
+    if (widget.highlight.isNotEmpty) {
+      chapter.then((_) => _scrollToPericope()).catchError((_) => null);
+    }
+  }
+
+  void _scrollToPericope() {
+    if (_scrolledToPericope || !mounted) return;
+    _scrolledToPericope = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _pericopeKey.currentContext;
+      if (target == null) return;
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        alignment: 0.05,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<BibleChapter> _loadChapter() async {
@@ -209,6 +247,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
 
   Widget _chapter(BuildContext context, BibleChapter data, double fontSize) {
     return SingleChildScrollView(
+      controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,6 +266,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
   Widget _single(BuildContext context, BibleChapter data, double fontSize) {
     final edition = data.editions.isEmpty ? null : data.editions.first;
     final verses = data.versesFor(0);
+    final fontFamily = bibleFontFamily(edition?.language ?? "");
 
     if (verses.isEmpty) {
       return const Padding(
@@ -235,12 +275,25 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
       );
     }
 
-    return VerseListView(
-      verses: verses,
-      fontSize: fontSize,
-      fontFamily: bibleFontFamily(edition?.language ?? ""),
+    if (widget.highlight.isEmpty) {
+      return VerseListView(verses: verses, fontSize: fontSize, fontFamily: fontFamily);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: buildPericopeBlocks(
+        context,
+        verses: verses,
+        ranges: widget.highlight,
+        fontSize: fontSize,
+        fontFamily: fontFamily,
+        rangesLabel: _rangesLabel,
+        firstKey: _pericopeKey,
+      ),
     );
   }
+
+  String get _rangesLabel => widget.highlight.map((range) => range.label).join("; ");
 
   /// Оговорка про счёт.
   ///

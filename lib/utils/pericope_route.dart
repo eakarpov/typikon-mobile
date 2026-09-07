@@ -91,19 +91,26 @@ class VerseRun {
 /// Границ может быть несколько (разорванное зачало), и они могут переходить
 /// через границу главы, поэтому куски считаются по всей книге разом — иначе не
 /// разметить, где зачало действительно началось, а где кончилось.
-List<VerseRun> splitVerseRuns(List<PericopeVerse> verses, ReadingTarget target) {
+/// Нарезка стихов на куски внутри и вне зачала.
+///
+/// Берёт границы, а не цель маршрута: границам всё равно, откуда они приехали, а
+/// `ReadingTarget` тянет за собой `textId`, которого у главы Библии нет вовсе.
+List<VerseRun> splitVerseRuns(List<PericopeVerse> verses, List<PericopeRange> ranges) {
   final runs = <VerseRun>[];
   if (verses.isEmpty) return runs;
-  if (target.ranges.isEmpty) return [VerseRun(verses, false)];
+  if (ranges.isEmpty) return [VerseRun(verses, false)];
+
+  bool inside(PericopeVerse verse) =>
+      ranges.any((range) => range.contains(verse.chapter, verse.verse));
 
   var runStart = 0;
-  var runInside = target.contains(verses.first.chapter, verses.first.verse);
+  var runInside = inside(verses.first);
   for (var i = 1; i <= verses.length; i++) {
-    final inside = i < verses.length && target.contains(verses[i].chapter, verses[i].verse);
-    if (i < verses.length && inside == runInside) continue;
+    final inside0 = i < verses.length && inside(verses[i]);
+    if (i < verses.length && inside0 == runInside) continue;
     runs.add(VerseRun(verses.sublist(runStart, i), runInside));
     runStart = i;
-    runInside = inside;
+    runInside = inside0;
   }
   return runs;
 }

@@ -420,7 +420,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
 
     final blocks = <Widget>[];
     var seen = runsBefore;
-    for (final run in splitVerseRuns(verses, _target)) {
+    for (final run in splitVerseRuns(verses, _target.ranges)) {
       if (!run.inPericope) {
         blocks.add(_verseRun(run.verses, fontSize));
         continue;
@@ -468,7 +468,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           for (final chapter in chapters)
             chapter: _target.ranges.isEmpty
                 ? 0
-                : splitVerseRuns(versesByChapter[chapter]!, _target).where((r) => r.inPericope).length,
+                : splitVerseRuns(versesByChapter[chapter]!, _target.ranges).where((r) => r.inPericope).length,
         };
         final totalRuns = runsPerChapter.values.fold<int>(0, (sum, count) => sum + count);
         var runsBefore = 0;

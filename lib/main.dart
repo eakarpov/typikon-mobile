@@ -470,6 +470,7 @@ class MyAppState extends State<MyApp> {
                               context,
                               canonId: target.canonId,
                               chapter: target.chapter,
+                              highlight: target.ranges,
                             );
                           },
                         );

@@ -71,7 +71,19 @@ class Pericope {
   final String? id;
   final String? source; // "gospel" | "apostle" | "paremia"
   final String label; // "Мф. 19"
-  final String? textId; // книга Библии, в которой лежит зачало
+  /// Идентификатор книги в каноне — он же адрес книги в разделе Библии.
+  ///
+  /// По нему открывается глава: `bookSlug` + границы дают всё, что нужно, и
+  /// ничего сверх того.
+  final String? bookSlug;
+
+  /// Книга издания, из которой собрано чтение.
+  ///
+  /// Прежде это был `texts._id`, и по нему открывалась страница чтения. С
+  /// переездом Библии на свою модель это `bible_books._id`: в коллекции текстов
+  /// такого документа больше нет, и `/api/v1/texts/{id}` отвечает на него
+  /// двумястами с пустым телом. Открывать по нему нельзя — только показывать.
+  final String? textId;
   final String? textName;
   final List<PericopeRange> ranges;
   final List<PericopeVerse> verses;
@@ -80,6 +92,7 @@ class Pericope {
     required this.id,
     required this.source,
     required this.label,
+    required this.bookSlug,
     required this.textId,
     required this.textName,
     required this.ranges,
@@ -94,6 +107,7 @@ class Pericope {
       id: json["id"] ?? json["_id"],
       source: json["source"],
       label: json["label"] ?? json["textName"] ?? "",
+      bookSlug: json["bookSlug"],
       textId: json["textId"],
       textName: json["textName"],
       ranges: rawRanges is List
