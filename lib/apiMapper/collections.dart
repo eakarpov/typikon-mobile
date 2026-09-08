@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import "package:typikon/dto/day.dart";
 import "package:typikon/dto/penticostarion.dart";
+import "package:typikon/dto/week.dart";
 import "package:typikon/dto/triodion.dart";
 import "package:typikon/api/collections.dart";
 
@@ -32,4 +34,14 @@ Future<TriodionCollection> getOutTriodion() async {
   } else {
     throw Exception('Не получены результаты');
   }
+}
+
+/// Дни седмицы. Спрашиваются по раскрытии, а не вместе с перечнем.
+Future<List<DayTexts>> getWeekDays(String alias) async {
+  final response = await fetchWeek(alias);
+
+  if (response.statusCode == 200) {
+    return WeekWithDays.fromJson(jsonDecode(response.body)).days;
+  }
+  throw Exception('Не получена седмица');
 }

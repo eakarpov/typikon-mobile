@@ -5,7 +5,7 @@ import '../dto/book.dart';
 import '../dto/library.dart';
 
 Future<BookList> getBooks() async {
-  final response = await fetchBooks();
+  final response = await fetchLibrary();
 
   if (response.statusCode == 200) {
     return BookList.fromJson(jsonDecode(response.body));

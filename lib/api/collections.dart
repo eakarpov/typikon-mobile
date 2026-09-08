@@ -1,29 +1,38 @@
 import 'package:http/http.dart' as http;
 
 import 'cached_fetch.dart';
-import 'client.dart';
-import 'constants.dart';
+import 'v2/request.dart';
 
-Future<http.Response> fetchPenticostarion() {
+/// Седмицы года по кругам.
+///
+/// Первая версия API держала три отдельные ручки, вторая — одну с кругом в
+/// запросе. Кэш остаётся раздельным: круги листают порознь, и общий ключ гонял
+/// бы по сети то, что уже лежит на диске.
+///
+/// **Круг «вне Триоди» пришлось сперва завести на сервере.** Он там был
+/// пропущен, и запрос на него отвечал не отказом, а союзом двух других кругов:
+/// двадцать седмиц вместо пятидесяти трёх, и по виду ответа не отличить.
+Future<http.Response> _weeks(String cycle) {
   return cachedFetch(
-    'collections:penticostarion',
-    () => apiClient.get(Uri.parse('$apiBaseUrl/api/v1/collections/penticostarion')).timeout(apiTimeout),
+    'collections:$cycle',
+    () => v2Get(v2Uri('/weeks', {'cycle': cycle, 'limit': '100'})),
     ttl: const Duration(days: 7),
   );
 }
 
-Future<http.Response> fetchTriodion() {
-  return cachedFetch(
-    'collections:triodion',
-    () => apiClient.get(Uri.parse('$apiBaseUrl/api/v1/collections/triodion')).timeout(apiTimeout),
-    ttl: const Duration(days: 7),
-  );
-}
+Future<http.Response> fetchPenticostarion() => _weeks('penticostarion');
 
-Future<http.Response> fetchOutTriodion() {
+Future<http.Response> fetchTriodion() => _weeks('triodion');
+
+Future<http.Response> fetchOutTriodion() => _weeks('out-triodion');
+
+/// Одна седмица со своими днями.
+///
+/// Кэш длинный: состав седмицы меняется реже всего в корпусе.
+Future<http.Response> fetchWeek(String alias) {
   return cachedFetch(
-    'collections:out-triodion',
-    () => apiClient.get(Uri.parse('$apiBaseUrl/api/v1/collections/out-triodion')).timeout(apiTimeout),
+    'weeks:$alias',
+    () => v2Get(v2Uri('/weeks/$alias')),
     ttl: const Duration(days: 7),
   );
 }

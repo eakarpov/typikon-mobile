@@ -25,12 +25,3 @@ Future<http.Response> fetchCalendarDay(String dateTime) {
     ttl: isPast ? const Duration(days: 3650) : const Duration(hours: 24),
   );
 }
-
-Future<http.Response> fetchCalendarReadingForDate(int dateTime) {
-  return apiClient.get(
-    Uri.parse('$apiBaseUrl/api/v1/calendar/$dateTime'),
-    headers: <String, String>{
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
-  ).timeout(apiTimeout);
-}

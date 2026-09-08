@@ -19,20 +19,26 @@ class WeekWithDays {
     required this.days,
   });
 
+  /// Дней в перечне седмиц нет — там только их число; они приезжают с карточкой
+  /// седмицы. Пустой список здесь означает «ещё не спрашивали», а не «дней нет».
   factory WeekWithDays.fromJson(Map<String, dynamic> json) {
-    var list = json["days"];
-    List<DayTexts> items = List<DayTexts>.from(
-        list
-            .map((item) => DayTexts.fromJson(item))
+    final raw = json["days"];
+    final items = raw is List
+        ? raw
+            .whereType<Map>()
+            .map((item) => DayTexts.fromJson(Map<String, dynamic>.from(item)))
             .toList()
-    );
+        : const <DayTexts>[];
+
     return WeekWithDays(
       id: json["id"],
       value: json["value"],
       alias: json["alias"],
       label: json["label"],
       type: json["type"],
-      penticostration: json["penticostration"],
+      // Вторая версия API исправила опечатку первой: было `penticostration`,
+      // стало `penticostarion`. Читаем оба написания.
+      penticostration: json["penticostarion"] ?? json["penticostration"],
       days: items,
     );
   }

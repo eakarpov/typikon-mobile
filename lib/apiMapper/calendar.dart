@@ -13,13 +13,3 @@ Future<CalendarDay> getCalendarDay(String dateTime) async {
     throw Exception('Календарь пока недоступен');
   }
 }
-
-Future<DayResult> getCalendarReadingForDate(int dateTime) async {
-  final response = await fetchCalendarReadingForDate(dateTime);
-
-  if (response.statusCode == 200) {
-    return DayResult.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception('Календарь пока недоступен');
-  }
-}

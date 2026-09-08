@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/collections.dart';
 import 'package:typikon/dto/penticostarion.dart';
 import "package:typikon/dto/week.dart";
+import 'package:typikon/components/week_tile.dart';
 
 String getTitle(int? value, String? type) {
   if (value is int && type is String) {
@@ -49,19 +50,8 @@ class _PenticostarionPageState extends State<PenticostarionPage> {
                 itemCount: list.length,
                 itemBuilder: (context, index) {
                   final item = list[index];
-                  return Container(
-                    child: ExpansionTile(
-                      title: Text(getTitle(item.value, item.type)),
-                      children: item.days!.map<Widget>((day) =>
-                        ListTile(
-                          title: Text(day.name??"test"),
-                          onTap: () => {
-                            Navigator.pushNamed(context, "/days", arguments: day.id)
-                          },
-                        )
-                      ).toList(),
-                    )
-                  );
+                  // Дни грузятся по раскрытии: перечень их больше не несёт.
+                  return WeekTile(week: item, title: getTitle(item.value, item.type));
                 },
               );
             } else if (future.hasError) {

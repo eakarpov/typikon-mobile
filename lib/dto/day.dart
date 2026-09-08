@@ -162,19 +162,3 @@ class DayTexts {
             : const <DaySection>[],
       );
 }
-
-
-class DayResult {
-  final DayTexts? data;
-
-  const DayResult({
-    required this.data,
-  });
-
-  factory DayResult.fromJson(Map<String, dynamic> json) {
-    var day = json["data"] == null ? null : DayTexts.fromJson(json["data"]);
-    return DayResult(
-      data: day,
-    );
-  }
-}

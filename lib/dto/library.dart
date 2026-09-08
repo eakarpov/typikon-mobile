@@ -13,7 +13,9 @@ class Book {
     return Book(
       name: json["name"],
       author: json["author"],
-      id: json["_id"],
+      // Вторая версия API зовёт его `id`; `_id` остаётся понятным ради ответов
+      // прежней версии, лежащих в кэше сутками.
+      id: json["id"] ?? json["_id"],
     );
   }
 }
@@ -25,8 +27,9 @@ class BookList {
     required this.list,
   });
 
-  factory BookList.fromJson(List<dynamic> json) {
-    var list = json;
+  /// Конверт второй версии API или голый список первой.
+  factory BookList.fromJson(dynamic json) {
+    final list = json is Map ? (json["items"] as List? ?? const []) : json as List;
     List<Book> items = List<Book>.from(
         list
             .map((item) => Book.fromJson(item))

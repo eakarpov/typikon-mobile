@@ -7,8 +7,9 @@ class PenticostarionCollection {
     required this.weeks,
   });
 
-  factory PenticostarionCollection.fromJson(List<dynamic> json) {
-    var list = json;
+  /// Конверт второй версии API или голый список первой.
+  factory PenticostarionCollection.fromJson(dynamic json) {
+    final list = json is Map ? (json["items"] as List? ?? const []) : json as List;
     List<WeekWithDays> items = List<WeekWithDays>.from(
         list
             .map((item) => WeekWithDays.fromJson(item))
