@@ -316,11 +316,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     return () => Navigator.pushNamed(context, "/reading", arguments: id);
   }
 
-  Widget renderItem(BuildContext context, CalendarDayPart? part, String title) {
-    List<CalendarDayPartItem> list = [];
-    if (part?.items != null) {
-      list = part?.items ?? [];
-    }
+  Widget renderItem(BuildContext context, List<CalendarDayPartItem> list, String title) {
     var textStyle = TextStyle(
       fontFamily: "OldStandard",
       fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
@@ -494,106 +490,13 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       padding: EdgeInsets.symmetric(horizontal: 10.0),
                       child: DayMemoriesView(memories: calendarDay.memories),
                     ),
-                    if (calendarDay?.vespersProkimenon?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.vespersProkimenon,
-                      "На паремиях вечерни по прокимне",
-                    ),
-                    if (calendarDay?.vigil?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.vigil,
-                      "На всенощном бдении перед шестопсалмием",
-                    ),
-                    if (calendarDay?.kathisma1?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.kathisma1,
-                      "По седальнах первой кафизмы",
-                    ),
-                    if (calendarDay?.kathisma2?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.kathisma2,
-                      "По седальнах второй кафизмы",
-                    ),
-                    if (calendarDay?.kathisma3?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.kathisma3,
-                      "По седальнах третьей кафизмы",
-                    ),
-                    if (calendarDay?.before50?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.before50,
-                      "После Евангелия перед 50-м псалмом",
-                    ),
-                    if (calendarDay?.ipakoi?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.ipakoi,
-                      "По ипакои",
-                    ),
-                    if (calendarDay?.polyeleos?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.polyeleos,
-                      "По седальнах полиелея",
-                    ),
-                    if (calendarDay?.gospelMatins?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.gospelMatins,
-                      "Евангелие на утрени",
-                    ),
-                    if (calendarDay?.song3?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.song3,
-                      "По седальнах третьей песни",
-                    ),
-                    if (calendarDay?.song6?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.song6,
-                      "По кондаке и икосе шестой песни",
-                    ),
-                    if (calendarDay?.apolutikaTroparia?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.apolutikaTroparia,
-                      "По отпустительным тропарям",
-                    ),
-                    if (calendarDay?.before1h?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.before1h,
-                      "Перед первым часом",
-                    ),
-                    if (calendarDay?.h1?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.h1,
-                      "На первом часе",
-                    ),
-                    if (calendarDay?.h3?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.h3,
-                      "На 3-м часе",
-                    ),
-                    if (calendarDay?.h6?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.h6,
-                      "На 6-м часе",
-                    ),
-                    if (calendarDay?.h9?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.h9,
-                      "На 9-м часе",
-                    ),
-                    if (calendarDay?.apostleLiturgy?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.apostleLiturgy,
-                      "Апостол на Литургии",
-                    ),
-                    if (calendarDay?.gospelLiturgy?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.gospelLiturgy,
-                      "Евангелие на Литургии",
-                    ),
-                    if (calendarDay?.panagia?.items?.isNotEmpty == true) renderItem(
-                      context,
-                      calendarDay?.panagia,
-                      "На панагии",
-                    ),
+                    // Места службы приходят с сервера — списком, с готовыми
+                    // подписями и в порядке хода службы. Прежде здесь стоял
+                    // двадцать один повтор с зашитыми названиями: третья копия
+                    // того же перечня в приложении. Две первые уже однажды
+                    // разошлись, и Великий пяток потерял два чтения.
+                    ...?calendarDay?.readings.map((section) =>
+                        renderItem(context, section.items, section.title)),
                   ],
                   ),
                   ),

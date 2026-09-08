@@ -61,9 +61,14 @@ class SearchResults {
     required this.texts,
   });
 
-  factory SearchResults.fromJson(List<dynamic> json) {
+  /// Конверт второй версии API или голый список первой.
+  factory SearchResults.fromJson(dynamic json) {
+    final list = json is Map ? (json["items"] as List? ?? const []) : json as List;
     return SearchResults(
-      texts: json.map((item) => SearchBookText.fromJson(item)).toList(),
+      texts: list
+          .whereType<Map>()
+          .map((item) => SearchBookText.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
     );
   }
 

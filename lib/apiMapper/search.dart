@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import "package:typikon/api/search.dart";
+import "package:typikon/apiMapper/v2/errors.dart";
 import "package:typikon/dto/search.dart";
 
 /// Запрос короче [minSearchQueryLength] — не ошибка сети и не пустая выдача,
@@ -21,14 +22,17 @@ Future<List<SearchBookText>> getSearchResult(String? query) async {
 
   final response = await searchString(trimmed);
 
-  // 400 от бекенда приходит без тела, и единственная его штатная причина —
-  // слишком короткий запрос, который мы отсекли выше.
+  // Единственная штатная причина отказа по запросу — слишком короткий, и его мы
+  // отсекли выше. Прочее — не про запрос.
   if (response.statusCode == 400) {
     throw const SearchQueryTooShortException();
   }
   if (response.statusCode != 200) {
-    throw Exception('Не получены результаты (${response.statusCode})');
+    // Вторая версия API называет причину сама: раздел не дан по ключу, слишком
+    // часто, корпус недоступен. Прежде всё это сводилось к «не получены
+    // результаты (403)» — числу, которое читателю не говорит ничего.
+    throwV2Error(response, 'Не удалось выполнить поиск');
   }
 
-  return SearchResults.fromJson(jsonDecode(response.body)).texts;
+  return SearchResults.fromJson(jsonDecode(utf8.decode(response.bodyBytes))).texts;
 }

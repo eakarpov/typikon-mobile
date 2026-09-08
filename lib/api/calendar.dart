@@ -1,27 +1,24 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
 import 'cached_fetch.dart';
-import 'client.dart';
-import 'constants.dart';
+import 'v2/request.dart';
 
+/// День наряду: чтения, памяти и положение в подвижном круге.
+///
+/// **Прошедшие даты кладутся в кэш надолго.** День, который уже прошёл,
+/// перемениться не может; перепроверять его — тратить сеть на заведомо тот же
+/// ответ.
+///
+/// Тела текстов не просим: главная показывает, куда вести, а не сами тексты.
 Future<http.Response> fetchCalendarDay(String dateTime) {
-  // Past dates are effectively immutable, so cache them indefinitely; only
-  // today/future dates get revalidated on the usual TTL.
-  DateTime? parsed = DateTime.tryParse(dateTime);
-  final isPast = parsed != null && parsed.isBefore(DateTime.now().toUtc().copyWith(hour: 0, minute: 0, second: 0, millisecond: 0, microsecond: 0));
+  final parsed = DateTime.tryParse(dateTime);
+  final isPast = parsed != null &&
+      parsed.isBefore(DateTime.now().toUtc().copyWith(
+          hour: 0, minute: 0, second: 0, millisecond: 0, microsecond: 0));
+
   return cachedFetch(
     'calc:$dateTime',
-    () => apiClient.post(
-        Uri.parse('$apiBaseUrl/api/calc'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(<String, String>{
-          'date': dateTime,
-        }),
-    ).timeout(apiTimeout),
+    () => v2Get(v2Uri('/calendar/$dateTime')),
     ttl: isPast ? const Duration(days: 3650) : const Duration(hours: 24),
   );
 }

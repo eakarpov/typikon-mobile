@@ -135,7 +135,11 @@ class DayMemories {
     }
     var secondaryList = json["secondary"];
     return DayMemories(
-      defaultMemory: json["default"] == null ? null : DayMemory.fromJson(json["default"]),
+      // Вторая версия API зовёт её `primary`, движок устава звал `default`.
+      // Слово одно и то же — память, которой день назван; читаем оба.
+      defaultMemory: (json["primary"] ?? json["default"]) == null
+          ? null
+          : DayMemory.fromJson(json["primary"] ?? json["default"]),
       secondary: secondaryList is List
           ? secondaryList.map((m) => DayMemory.fromJson(m)).toList()
           : [],
@@ -172,10 +176,20 @@ class CalendarDay {
   final CalendarDayPart? apostleLiturgy;
   final CalendarDayPart? gospelLiturgy;
 
+  /// Места службы списком, как их отдаёт вторая версия API: с готовым
+  /// заголовком и в порядке хода службы.
+  ///
+  /// Двадцать полей выше остаются ради ответов первой версии, лежащих в кэше
+  /// сутками (а прошедшие даты — годами). Новый показ идёт по этому списку:
+  /// третьей копии перечня мест службы в приложении быть не должно — две уже
+  /// однажды разошлись, и Великий пяток потерял два чтения.
+  final List<CalendarSection> readings;
+
   final DayMemories memories;
 
   const CalendarDay({
     required this.name,
+    this.readings = const [],
     required this.vespersProkimenon,
     required this.vigil,
     required this.kathisma1,
@@ -263,7 +277,79 @@ class CalendarDay {
       panagia: part("panagia"),
       apostleLiturgy: part("apostleLiturgy"),
       gospelLiturgy: part("gospelLiturgy"),
+      readings: day is Map && day["readings"] is List
+          ? (day["readings"] as List)
+              .whereType<Map>()
+              .map((r) => CalendarSection.fromJson(Map<String, dynamic>.from(r)))
+              .toList()
+          : _sectionsFromSlots(day),
       memories: DayMemories.fromJson(json["memories"]),
     );
   }
+
+  /// Ответ первой версии: места службы полями по имени.
+  ///
+  /// Порядок и подписи приходится знать самим — другого источника у такого
+  /// ответа нет. Список нужен только для того, что уже лежит в кэше; новые
+  /// ответы несут `readings` с сервера.
+  static List<CalendarSection> _sectionsFromSlots(dynamic day) {
+    if (day is! Map) return const [];
+
+    const slots = <String, String>{
+      "vespersProkimenon": "На паремиях вечерни по прокимне",
+      "vigil": "На всенощном бдении перед шестопсалмием",
+      "kathisma1": "По седальнах первой кафизмы",
+      "kathisma2": "По седальнах второй кафизмы",
+      "kathisma3": "По седальнах третьей кафизмы",
+      "before50": "Перед 50 псалмом",
+      "ipakoi": "По ипакои",
+      "polyeleos": "По седальнах полиелея",
+      "gospelMatins": "Евангелие на утрени",
+      "song3": "По седальнах третьей песни",
+      "song6": "По шестой песни",
+      "apolutikaTroparia": "По отпустительным тропарям",
+      "before1h": "Перед первым часом",
+      "h1": "На первом часе",
+      "h3": "На третьем часе",
+      "h6": "На шестом часе",
+      "h9": "На девятом часе",
+      "panagia": "На панагии",
+      "apostleLiturgy": "Апостол на Литургии",
+      "gospelLiturgy": "Евангелие на Литургии",
+    };
+
+    final out = <CalendarSection>[];
+    slots.forEach((slot, title) {
+      final raw = day[slot];
+      if (raw is! Map) return;
+      final part = CalendarDayPart.fromJson(Map<String, dynamic>.from(raw));
+      if (part.items?.isEmpty ?? true) return;
+      out.add(CalendarSection(slot: slot, title: title, items: part.items!));
+    });
+    return out;
+  }
+}
+
+/// Место службы в ответе календаря.
+class CalendarSection {
+  final String slot;
+  final String title;
+  final List<CalendarDayPartItem> items;
+
+  const CalendarSection({
+    required this.slot,
+    required this.title,
+    this.items = const [],
+  });
+
+  factory CalendarSection.fromJson(Map<String, dynamic> json) => CalendarSection(
+        slot: json["slot"] ?? "",
+        title: json["title"] ?? "",
+        items: json["items"] is List
+            ? (json["items"] as List)
+                .whereType<Map>()
+                .map((i) => CalendarDayPartItem.fromJson(Map<String, dynamic>.from(i)))
+                .toList()
+            : const <CalendarDayPartItem>[],
+      );
 }
