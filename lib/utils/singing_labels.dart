@@ -99,3 +99,30 @@ String correspondenceLabel(IncipitCorrespondence link) {
   if (link.method == "structure") return "совпало место в службе";
   return link.method ?? "";
 }
+
+/// Знак службы у памяти корпуса.
+///
+/// Словарь здесь **не тот**, что в `lib/utils/signs.dart`. Тех знаков семь, они
+/// заглавными (`DOXOLOGIC`) и приходят из месяцеслова Типикона; эти — из
+/// разметки самих служб корпуса, их больше, и записаны они слугами
+/// (`slavoslovie`). Перепутать легко и незаметно: `signGlyph("slavoslovie")`
+/// вернёт null, и знак просто не нарисуется, ничего не сломав.
+///
+/// Поэтому здесь слово, а не глиф: глифов у половины этих знаков нет вовсе.
+const Map<String, String> _serviceSigns = {
+  // «velikiy» приходит только из Соборника Минеи общей: по строению
+  // напечатанной службы великий праздник от бденного не отличить.
+  "velikiy": "великий праздник",
+  "velikoe-bdenie": "великое бдение",
+  "bdenie": "бдение",
+  "polieley": "полиелей",
+  "slavoslovie": "славословие",
+  "shesterichnaya": "шестеричная",
+  "bez-znaka": "без знака",
+  "alliluynaya": "аллилуйная",
+  "alliluinaya-postnaya": "аллилуйная постная",
+  "povecherie": "повечерие",
+};
+
+String serviceSignLabel(String? code) =>
+    code == null || code.isEmpty ? "" : (_serviceSigns[code] ?? code);
