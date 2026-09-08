@@ -9,6 +9,8 @@ import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import "package:background_fetch/background_fetch.dart";
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:typikon/pages/outside_page.dart';
@@ -19,6 +21,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import "version.dart";
 import "api/constants.dart";
 import "utils/app_version.dart";
+import "utils/push.dart";
 import "utils/crash_reporter.dart";
 
 import "package:typikon/apiMapper/version.dart";
@@ -145,7 +148,25 @@ Future<void> main() async {
   );
 
   await dotenv.load(fileName: ".env");
+
+  // Толчки поднимаем до магазина состояния, но не ждём от них ничего: не
+  // поднялись — приложение остаётся приложением, а напоминания за фоновой
+  // задачей. Падать на запуске из-за службы уведомлений несоразмерно.
+  if (await initPush()) {
+    FirebaseMessaging.onBackgroundMessage(pushHandler);
+    // То же сообщение при открытом приложении: система в этом случае фоновый
+    // обработчик не зовёт, и без этой строки напоминание приходило бы всем,
+    // кроме тех, кто держит приложение открытым.
+    FirebaseMessaging.onMessage.listen((message) => pushHandler(message));
+  }
+
   final store = await createReduxStore();
+
+  // Ключ доставки не вечен и меняется молча: не перепривязав его, мы перестали
+  // бы получать толчки без единой ошибки на экране.
+  unawaited(refreshPushRegistration(wanted: store.state.settings.remindsFromServer));
+  watchPushToken(wanted: () => store.state.settings.remindsFromServer);
+
   runApp(MyApp(store));
   // Register to receive BackgroundFetch events after app is terminated.
   // Requires {stopOnTerminate: false, enableHeadless: true}
@@ -161,6 +182,34 @@ void backgroundFetchHeadlessTask(HeadlessTask task) async {
   await _checkNewTextsAndNotify();
   await _checkPomyannikAndNotify();
   BackgroundFetch.finish(taskId);
+}
+
+/// Толчок о поминальном дне.
+///
+/// **Приходит пустым.** Сервер говорит лишь, что сегодня у этого человека
+/// поминальный день; текст складывается здесь, из своего зеркала, тем же
+/// правилом `pomyannikVerdict`, что и без сети. Оттого напоминание с сервера и
+/// напоминание от фоновой задачи выглядят одинаково — это одно и то же
+/// напоминание, у которого разный будильник.
+///
+/// Ворота внутри правила остаются в силе: и «сегодня уже говорили», и время
+/// суток, и «показывать ли имена». Толчок их не обходит — он только приходит
+/// вовремя.
+@pragma('vm:entry-point')
+Future<void> pushHandler(RemoteMessage message) async {
+  if (message.data["kind"] != "pomyannik") return;
+
+  // Фоновый обработчик поднимается в своей изоляции: ни магазина состояния, ни
+  // подключённых плагинов в ней нет, и уведомления надо поднять заново.
+  await Firebase.initializeApp();
+  await flutterLocalNotificationsPlugin.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(),
+    ),
+  );
+
+  await _checkPomyannikAndNotify();
 }
 
 @pragma('vm:entry-point')

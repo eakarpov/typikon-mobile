@@ -41,6 +41,19 @@ class Settings {
   /// в развороте строка во всю ширину заставляет глаз искать начало следующей.
   final double? readingMeasure;
 
+  /// Кто шлёт напоминания помянника: `device` или `server`.
+  ///
+  /// **Различие честное, и в настройках оно названо словами.** Приложение
+  /// напоминает всегда, в том числе без сети, но показывает напоминание тогда,
+  /// когда система даст фоновой задаче окно, — то есть когда придётся, а иной
+  /// день и никогда. Сервер будит в минуту, но только при сети и только если
+  /// приложение не остановлено силой через настройки системы: остановленному
+  /// Android не отдаёт толчков вовсе, и обойти это нельзя.
+  ///
+  /// Имена при этом не ездят ни в том, ни в другом случае: толчок пуст, а что
+  /// сказать, решает то же правило в `utils/pomyannik_reminders.dart`.
+  final String reminderSource;
+
   /// Издания Библии, выбранные читателем, в порядке выбора.
   ///
   /// Пустой список — «по умолчанию», а не «ни одного»: код издания по умолчанию
@@ -62,8 +75,12 @@ class Settings {
     this.lineHeight = 1.5,
     this.readingAlign = "justify",
     this.readingMeasure,
+    this.reminderSource = "device",
     this.bibleEditions = const [],
   });
+
+  /// Ждать ли толчка с сервера.
+  bool get remindsFromServer => reminderSource == "server";
 
   /// Качаем только по явному согласию.
   bool get isPreloadEnabled => preloadTexts == true;
@@ -85,6 +102,7 @@ class Settings {
     // ширину»), а не «не меняем»: без него ширину нельзя было бы сбросить.
     bool clearMeasure = false,
     double? readingMeasure,
+    String? reminderSource,
     List<String>? bibleEditions,
   }) {
     return Settings(
@@ -96,6 +114,7 @@ class Settings {
       lineHeight: lineHeight ?? this.lineHeight,
       readingAlign: readingAlign ?? this.readingAlign,
       readingMeasure: clearMeasure ? null : (readingMeasure ?? this.readingMeasure),
+      reminderSource: reminderSource ?? this.reminderSource,
       bibleEditions: bibleEditions ?? this.bibleEditions,
     );
   }
@@ -110,6 +129,7 @@ class Settings {
       lineHeight.hashCode ^
       readingAlign.hashCode ^
       readingMeasure.hashCode ^
+      reminderSource.hashCode ^
       Object.hashAll(bibleEditions);
 
   @override
@@ -124,6 +144,7 @@ class Settings {
               lineHeight == other.lineHeight &&
               readingAlign == other.readingAlign &&
               readingMeasure == other.readingMeasure &&
+              reminderSource == other.reminderSource &&
               listEquals(bibleEditions, other.bibleEditions);
 
   @override
@@ -141,6 +162,7 @@ class Settings {
       'lineHeight': lineHeight,
       'readingAlign': readingAlign,
       'readingMeasure': readingMeasure,
+      'reminderSource': reminderSource,
       'bibleEditions': bibleEditions,
     };
   }
@@ -174,6 +196,9 @@ class Settings {
       lineHeight: (json["lineHeight"] as num?)?.toDouble() ?? 1.5,
       readingAlign: json["readingAlign"] == "left" ? "left" : "justify",
       readingMeasure: (json["readingMeasure"] as num?)?.toDouble(),
+      // Умолчание — приложение: толчки требуют и сети, и живого ключа доставки,
+      // и включаться сами, без спроса, не должны.
+      reminderSource: json["reminderSource"] == "server" ? "server" : "device",
       // Ключа нет — значит настройки сохранены прежней версией: пустой список
       // означает «по умолчанию», и старое состояние переживает обновление без
       // отдельной миграции.

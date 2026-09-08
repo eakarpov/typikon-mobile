@@ -12,6 +12,7 @@ import '../store/auth_token.dart';
 import '../store/pomyannik_cache.dart';
 import '../store/models/models.dart';
 import '../store/store.dart';
+import '../utils/push.dart';
 
 Future<void>? _googleSignInInit;
 
@@ -110,6 +111,13 @@ Future<void> forgetSession() async {
   try {
     await clearPomyannikCache();
   } catch (_) {}
+  // И устройство отвязывается: иначе сервер продолжал бы будить этот телефон
+  // помянником того, кто с него уже вышел. Здесь сессии может уже не быть —
+  // тогда отвязка не удастся, и мёртвый ключ доставки сервер забудет сам при
+  // первой неудачной посылке.
+  try {
+    await disablePush();
+  } catch (_) {}
   try {
     await _ensureGoogleSignInInitialized();
     await GoogleSignIn.instance.signOut();
@@ -165,5 +173,8 @@ Future<void> signOut(Store<AppState> store) async {
   // диске остаться не должны тем более. Обнаружено на устройстве: очистка стояла
   // на одном из двух путей, и по коду это не читалось.
   await clearPomyannikCache();
+  // Отвязываем до того, как погаснет сессия: осознанный выход — единственный
+  // случай, когда отвязка проходит наверняка.
+  await disablePush();
   store.dispatch(SignOutAction());
 }

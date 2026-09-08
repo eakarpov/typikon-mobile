@@ -118,3 +118,17 @@ Future<http.Response> fetchReceivedNotes({int offset = 0}) =>
 
 Future<http.Response> markNote(String id, String mark) =>
     v2Send("PATCH", v2Uri("/pomyannik/prinyatye/$id"), body: {"mark": mark});
+
+// --- Устройства ---------------------------------------------------------------
+
+/// Запомнить устройство, чтобы толчок о поминальном дне приходил в минуту.
+///
+/// Часовой пояс обязателен: сервер считает утро по месту телефона, а не по
+/// своему. Восемь утра в Петропавловске и восемь утра в Калининграде —
+/// одиннадцать часов разницы.
+Future<http.Response> registerDevice(String token, String timeZone) =>
+    v2Send("POST", v2Uri("/pomyannik/devices"),
+        body: {"token": token, "timeZone": timeZone, "platform": "android"});
+
+Future<http.Response> forgetDevice(String token) =>
+    v2Send("DELETE", v2Uri("/pomyannik/devices", {"token": token}));

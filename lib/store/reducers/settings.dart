@@ -6,6 +6,7 @@ import '../models/models.dart';
 final settingsReducer = combineReducers<Settings>([
   TypedReducer<Settings, ChangeFontSizeAction>(_changeFontSize),
   TypedReducer<Settings, ChangeLineHeightAction>(_changeLineHeight),
+  TypedReducer<Settings, ChangeReminderSourceAction>(_changeReminderSource),
   TypedReducer<Settings, ChangeReadingAlignAction>(_changeReadingAlign),
   TypedReducer<Settings, ChangeReadingMeasureAction>(_changeReadingMeasure),
   TypedReducer<Settings, ChangeBackgroundColorAction>(_changeBackgroundColor),
@@ -18,6 +19,10 @@ final settingsReducer = combineReducers<Settings>([
 
 Settings _changeFontSize(Settings state, ChangeFontSizeAction action) {
   return state.copyWith(fontSize: action.fontSize);
+}
+
+Settings _changeReminderSource(Settings state, ChangeReminderSourceAction action) {
+  return state.copyWith(reminderSource: action.reminderSource);
 }
 
 Settings _changeLineHeight(Settings state, ChangeLineHeightAction action) {
@@ -70,6 +75,7 @@ Settings _resetReadingColors(Settings state, ResetReadingColorsAction action) {
     lineHeight: state.lineHeight,
     readingAlign: state.readingAlign,
     readingMeasure: state.readingMeasure,
+    reminderSource: state.reminderSource,
     bibleEditions: state.bibleEditions,
   );
 }

@@ -36,6 +36,16 @@ class ChangeCommonDateAction {
   }
 }
 
+/// Кто шлёт напоминания помянника: `device` или `server`.
+class ChangeReminderSourceAction {
+  final String reminderSource;
+
+  ChangeReminderSourceAction(this.reminderSource);
+
+  @override
+  String toString() => 'ChangeReminderSourceAction{reminderSource: $reminderSource}';
+}
+
 /// Междустрочный интервал чтений.
 class ChangeLineHeightAction {
   final double lineHeight;

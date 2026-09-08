@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "798720080241",
+    "project_id": "typikon-info",
+    "storage_bucket": "typikon-info.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798720080241:android:eac1171d6677b41e3d1ed0",
+        "android_client_info": {
+          "package_name": "su.typikon.typikon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgOdFEev1A_biK4gm8wfAETOr_GWPjxEs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

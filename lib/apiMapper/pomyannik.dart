@@ -165,3 +165,32 @@ Future<void> markNote(String id, String mark) async {
   if (response.statusCode == 200) return;
   throwV2Error(response, "Не удалось отметить записку");
 }
+
+// --- Устройства ---------------------------------------------------------------
+
+/// Сказать серверу, куда стучаться.
+///
+/// Возвращает `false` вместо броска: привязка устройства — не то, ради чего
+/// стоит показывать окно с ошибкой. Не вышло — напоминания просто останутся за
+/// приложением, а следующий запуск попробует снова.
+Future<bool> registerDevice(String token, String timeZone) async {
+  try {
+    final response = await withSession(() => api.registerDevice(token, timeZone));
+    return response.statusCode == 200;
+  } catch (_) {
+    return false;
+  }
+}
+
+/// Отвязать устройство: выключили толчки или вышли из учётной записи.
+///
+/// Тоже молча. Хуже всего было бы помешать выходу из учётной записи из-за
+/// неудавшегося сетевого запроса.
+Future<bool> forgetDevice(String token) async {
+  try {
+    final response = await withSession(() => api.forgetDevice(token));
+    return response.statusCode == 200;
+  } catch (_) {
+    return false;
+  }
+}

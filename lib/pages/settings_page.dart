@@ -13,6 +13,7 @@ import 'package:typikon/store/pomyannik_cache.dart';
 import 'package:typikon/store/store.dart';
 import 'package:typikon/utils/pomyannik_reminders.dart';
 import 'package:typikon/utils/reading_schemes.dart';
+import 'package:typikon/utils/push.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage(context, {super.key});
@@ -49,6 +50,10 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _reminders = false;
   bool _namesInReminders = false;
 
+  /// Ключ доставки берётся с задержкой: пока идёт, кнопки заперты, иначе два
+  /// нажатия подряд завели бы два разных устройства.
+  bool _switchingSource = false;
+
   Future<void> _loadReminderSettings() async {
     final reminders = await remindersEnabled();
     final names = await namesInReminders();
@@ -66,6 +71,34 @@ class _SettingsPageState extends State<SettingsPage> {
     // Включили — сразу и собираем зеркало, иначе первое напоминание пришло бы
     // только после следующего открытия помянника.
     await refreshPomyannikMirror(appStore?.state.auth.userId);
+  }
+
+  /// Кто будит: приложение или сервер.
+  ///
+  /// Выбрав сервер, надо тут же отдать ему ключ доставки — иначе настройка
+  /// стояла бы «сервер», а стучаться было бы некуда. Не вышло (отказали в
+  /// разрешении, нет сети, не поднялся Firebase) — честно возвращаемся к
+  /// приложению и говорим об этом: молчаливая настройка, которая не работает,
+  /// хуже отсутствующей.
+  Future<void> _onReminderSource(String value) async {
+    if (value == "server") {
+      setState(() => _switchingSource = true);
+      final ok = await enablePush();
+      if (!mounted) return;
+      setState(() => _switchingSource = false);
+
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Не вышло включить толчки: нужны разрешение на "
+              "уведомления и сеть. Напоминания остаются за приложением."),
+        ));
+        return;
+      }
+    } else {
+      await disablePush();
+    }
+
+    appStore?.dispatch(ChangeReminderSourceAction(value));
   }
 
   Future<void> _onNamesInReminders(bool value) async {
@@ -346,6 +379,40 @@ class _SettingsPageState extends State<SettingsPage> {
                       value: _reminders,
                       onChanged: _onReminders,
                     ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12, left: 16, right: 16),
+                      child: Text("Кто напоминает",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    // Различие названо словами, а не «обычные» и «точные»:
+                    // выбор здесь не «лучше или хуже», а «всегда, но когда
+                    // придётся» против «в минуту, но при сети».
+                    RadioListTile<String>(
+                      title: const Text("Приложение"),
+                      subtitle: const Text(
+                        "Работает и без сети, но время выбирает система: напоминание "
+                        "может прийти позже или не прийти вовсе.",
+                      ),
+                      value: "device",
+                      groupValue: viewModel.reminderSource,
+                      onChanged: _reminders && !_switchingSource
+                          ? (value) => _onReminderSource(value!)
+                          : null,
+                    ),
+                    RadioListTile<String>(
+                      title: const Text("Сервер"),
+                      subtitle: const Text(
+                        "Приходит утром в срок. Нужна сеть; не дойдёт, если приложение "
+                        "остановлено через настройки системы. Имена при этом никуда не "
+                        "отправляются: сервер лишь будит приложение, а что сказать, оно "
+                        "решает само.",
+                      ),
+                      value: "server",
+                      groupValue: viewModel.reminderSource,
+                      onChanged: _reminders && !_switchingSource
+                          ? (value) => _onReminderSource(value!)
+                          : null,
+                    ),
                     SwitchListTile(
                       title: const Text("Показывать имена в уведомлении"),
                       subtitle: const Text(
@@ -389,6 +456,8 @@ class SettingsViewModel {
   final double? readingMeasure;
   final Function(double?) onChangeReadingMeasure;
 
+  final String reminderSource;
+
   final VoidCallback onResetReadingColors;
 
   final bool isPreloadEnabled;
@@ -413,6 +482,7 @@ class SettingsViewModel {
     this.onChangeReadingAlign = SettingsViewModel.stubString,
     this.readingMeasure,
     this.onChangeReadingMeasure = SettingsViewModel.stubMeasure,
+    this.reminderSource = "device",
     this.onResetReadingColors = SettingsViewModel.stubVoid,
     this.isPreloadEnabled = false,
     this.onChangePreloadTexts = SettingsViewModel.stubBool,
@@ -467,6 +537,7 @@ class SettingsViewModel {
       onChangeReadingMeasure: (value) {
         store.dispatch(ChangeReadingMeasureAction(value));
       },
+      reminderSource: store.state.settings.reminderSource,
       onResetReadingColors: () {
         store.dispatch(ResetReadingColorsAction());
       },
