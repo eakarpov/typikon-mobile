@@ -733,6 +733,23 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                     Navigator.pushNamed(context, "/notes");
                   },
                 ),
+                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
+                  title: const Text('Помянник', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/pomyannik",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/pomyannik");
+                  },
+                ),
+                // Приём записок открыт не всякому, и проверяет это сервер.
+                // Прятать пункт по своему флагу нельзя: флаг протухнет молча, а
+                // экран сам скажет «приём вам пока не открыт» словами сервера.
+                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
+                  title: const Text('Поданные записки', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/pomyannik/prinyatye",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/pomyannik/prinyatye");
+                  },
+                ),
                 ListTile(
                   title: const Text('Библия', style: TextStyle(fontSize: 14.0),),
                   selected: ModalRoute.of(context)?.settings.name == "/bible",

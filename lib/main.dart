@@ -51,6 +51,11 @@ import 'package:typikon/pages/saint_page.dart';
 import 'package:typikon/pages/place_page.dart';
 import 'package:typikon/pages/favourite_page.dart';
 import 'package:typikon/pages/notes_page.dart';
+import 'package:typikon/pages/pomyannik_page.dart';
+import 'package:typikon/pages/pomyannik_person_page.dart';
+import 'package:typikon/pages/pomyannik_upcoming_page.dart';
+import 'package:typikon/pages/pomyannik_note_page.dart';
+import 'package:typikon/pages/pomyannik_prinyatye_page.dart';
 import 'package:typikon/pages/contact_page.dart';
 import 'package:typikon/pages/resources_page.dart';
 
@@ -671,6 +676,29 @@ class MyAppState extends State<MyApp> {
                             context,
                           );
                         },
+                      );
+                    // Как у '/library' и '/imeniny': без аргумента разворот
+                    // помянника, с ним — карточка лица.
+                    case "/pomyannik":
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => PomyannikPersonPage(context, id: arguments),
+                        );
+                      }
+                      return MaterialPageRoute(
+                        builder: (context) => PomyannikPage(context),
+                      );
+                    case "/pomyannik/upcoming":
+                      return MaterialPageRoute(
+                        builder: (context) => PomyannikUpcomingPage(context),
+                      );
+                    case "/pomyannik/zapiska":
+                      return MaterialPageRoute(
+                        builder: (context) => PomyannikNotePage(context),
+                      );
+                    case "/pomyannik/prinyatye":
+                      return MaterialPageRoute(
+                        builder: (context) => PomyannikPrinyatyePage(context),
                       );
                     case "/notes":
                       return MaterialPageRoute(
