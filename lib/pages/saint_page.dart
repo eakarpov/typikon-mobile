@@ -246,6 +246,12 @@ class _SaintPageState extends State<SaintPage> {
                 .map((akathist) => _Line(
                       title: akathist.title ?? akathist.memory ?? "Акафист",
                       subtitle: akathist.stanzas == null ? "" : "икосов и кондаков: ${akathist.stanzas}",
+                      // Вероятнее всего, это и будет главным входом в раздел:
+                      // акафист ищут по святому, а не по перечню из тысячи.
+                      onTap: (akathist.id ?? "").isEmpty
+                          ? null
+                          : () => Navigator.pushNamed(context, "/akathists",
+                              arguments: akathist.id),
                     ))
                 .toList(),
           ),
@@ -405,23 +411,35 @@ class _Section extends StatelessWidget {
 }
 
 class _Line extends StatelessWidget {
-  const _Line({required this.title, required this.subtitle});
+  const _Line({required this.title, required this.subtitle, this.onTap});
 
   final String title;
   final String subtitle;
 
+  /// Есть ли куда вести. Строки досье по большей части никуда не ведут —
+  /// подчёркнутая строка без перехода обещала бы страницу, которой нет.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontFamily: "OldStandard",
+            color: onTap == null ? null : Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        if (subtitle.isNotEmpty)
+          Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 4.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontFamily: "OldStandard")),
-          if (subtitle.isNotEmpty)
-            Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
+      child: onTap == null ? body : InkWell(onTap: onTap, child: body),
     );
   }
 }

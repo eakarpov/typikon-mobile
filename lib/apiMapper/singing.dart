@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import '../api/singing.dart' as api;
 import '../api/singing.dart';
 import '../dto/chant.dart';
+import '../dto/corpus.dart';
 import '../dto/incipit.dart';
 import '../dto/paged.dart';
 import 'v2/errors.dart';
@@ -73,4 +75,83 @@ Future<IncipitDetail> getIncipit(String language, String incipit) async {
     return IncipitDetail.fromJson(jsonDecode(response.body));
   }
   _throw(response, "Не удалось открыть зачин");
+}
+
+// --- Каноны, акафисты, молитвы -------------------------------------------------
+//
+// Отказы разбираются тем же `_throw`, что и поиск: невыложенный корпус приходит
+// своим кодом и своим исключением, и `searchErrorView` уже умеет не предлагать
+// «Повторить» там, где повторять нечего.
+
+Future<FacetedPage<Canon, CanonFacets>> getCanons({
+  String? query,
+  int offset = 0,
+  String? book,
+  int? tone,
+  String? service,
+  String? role,
+}) async {
+  final response = await api.fetchCanons(
+    query: query, offset: offset, book: book, tone: tone, service: service, role: role,
+  );
+  if (response.statusCode == 200) {
+    return FacetedPage.fromJson<Canon, CanonFacets>(
+      jsonDecode(response.body), Canon.fromJson, CanonFacets.fromJson,
+    );
+  }
+  _throw(response, "Не удалось открыть каноны");
+}
+
+Future<CanonDetail> getCanon(String id) async {
+  final response = await api.fetchCanon(id);
+  if (response.statusCode == 200) {
+    return CanonDetail.fromJson(jsonDecode(response.body));
+  }
+  _throw(response, "Не удалось открыть канон");
+}
+
+Future<FacetedPage<Akathist, AkathistFacets>> getAkathists({
+  String? query,
+  int offset = 0,
+  String? subject,
+  String? status,
+}) async {
+  final response =
+      await api.fetchAkathists(query: query, offset: offset, subject: subject, status: status);
+  if (response.statusCode == 200) {
+    return FacetedPage.fromJson<Akathist, AkathistFacets>(
+      jsonDecode(response.body), Akathist.fromJson, AkathistFacets.fromJson,
+    );
+  }
+  _throw(response, "Не удалось открыть акафисты");
+}
+
+Future<AkathistDetail> getAkathist(String id) async {
+  final response = await api.fetchAkathist(id);
+  if (response.statusCode == 200) {
+    return AkathistDetail.fromJson(jsonDecode(response.body));
+  }
+  _throw(response, "Не удалось открыть акафист");
+}
+
+Future<FacetedPage<Prayer, PrayerFacets>> getPrayers({
+  String? query,
+  int offset = 0,
+  String? kind,
+}) async {
+  final response = await api.fetchPrayers(query: query, offset: offset, kind: kind);
+  if (response.statusCode == 200) {
+    return FacetedPage.fromJson<Prayer, PrayerFacets>(
+      jsonDecode(response.body), Prayer.fromJson, PrayerFacets.fromJson,
+    );
+  }
+  _throw(response, "Не удалось открыть молитвы");
+}
+
+Future<PrayerDetail> getPrayer(String id) async {
+  final response = await api.fetchPrayer(id);
+  if (response.statusCode == 200) {
+    return PrayerDetail.fromJson(jsonDecode(response.body));
+  }
+  _throw(response, "Не удалось открыть молитву");
 }
