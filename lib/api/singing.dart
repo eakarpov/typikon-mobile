@@ -75,3 +75,90 @@ Future<http.Response> fetchIncipit(String language, String incipit) {
 /// в один файл.
 String incipitCacheKey(String language, String incipit) =>
     "incipit:$language:${incipit.length}:$incipit";
+
+// --- Каноны, акафисты, молитвы -------------------------------------------------
+//
+// В отличие от двух поисков выше, эти живут в разделе доступа `texts`: они
+// бесплатны и анониму полагаются. Оттого и `retryAnonymously` здесь не нужен —
+// откатываться не с чего.
+//
+// Кэшируем карточки, но не перечни. Карточка — текст, который не меняется до
+// пересборки корпуса, и открывают её подряд по нескольку раз (вышел, вернулся);
+// перечень же зависит от запроса и отборов, и класть на диск каждое их
+// сочетание значило бы засорить кэш ради выдачи, которую пролистают раз.
+
+const int corpusPageSize = 25;
+
+Map<String, String> _corpusPage(
+  int offset, {
+  String? query,
+  Map<String, String?> filters = const {},
+}) {
+  final trimmed = (query ?? "").trim();
+  return {
+    "limit": "$corpusPageSize",
+    if (offset > 0) "offset": "$offset",
+    if (trimmed.isNotEmpty) "q": trimmed,
+    for (final entry in filters.entries)
+      if ((entry.value ?? "").isNotEmpty) entry.key: entry.value!,
+  };
+}
+
+Future<http.Response> fetchCanons({
+  String? query,
+  int offset = 0,
+  String? book,
+  int? tone,
+  String? service,
+  String? role,
+}) =>
+    v2Get(v2Uri("/canons", _corpusPage(offset, query: query, filters: {
+      "book": book,
+      "tone": tone?.toString(),
+      "service": service,
+      "role": role,
+    })));
+
+Future<http.Response> fetchCanon(String id) => cachedFetch(
+      "canon:${id.length}:$id",
+      () => v2Get(v2Uri("/canons/${Uri.encodeComponent(id)}")),
+      ttl: const Duration(days: 30),
+      isCacheable: (body) {
+        final decoded = jsonDecode(body);
+        return decoded is Map && decoded["odesList"] is List;
+      },
+    );
+
+Future<http.Response> fetchAkathists({
+  String? query,
+  int offset = 0,
+  String? subject,
+  String? status,
+}) =>
+    v2Get(v2Uri("/akathists", _corpusPage(offset, query: query, filters: {
+      "subject": subject,
+      "status": status,
+    })));
+
+Future<http.Response> fetchAkathist(String id) => cachedFetch(
+      "akathist:${id.length}:$id",
+      () => v2Get(v2Uri("/akathists/${Uri.encodeComponent(id)}")),
+      ttl: const Duration(days: 30),
+      isCacheable: (body) {
+        final decoded = jsonDecode(body);
+        return decoded is Map && decoded["stanzasList"] is List;
+      },
+    );
+
+Future<http.Response> fetchPrayers({String? query, int offset = 0, String? kind}) =>
+    v2Get(v2Uri("/prayers", _corpusPage(offset, query: query, filters: {"kind": kind})));
+
+Future<http.Response> fetchPrayer(String id) => cachedFetch(
+      "prayer:${id.length}:$id",
+      () => v2Get(v2Uri("/prayers/${Uri.encodeComponent(id)}")),
+      ttl: const Duration(days: 30),
+      isCacheable: (body) {
+        final decoded = jsonDecode(body);
+        return decoded is Map && decoded.containsKey("text");
+      },
+    );

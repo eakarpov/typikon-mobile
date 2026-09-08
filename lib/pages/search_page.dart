@@ -14,6 +14,7 @@ import '../dto/incipit.dart';
 import '../dto/search.dart';
 import '../store/models/models.dart';
 import '../utils/incipit_route.dart';
+import '../utils/chant_style.dart';
 import '../utils/singing_labels.dart';
 
 /// Поиск: по текстам чтений, по первым словам песнопения и по самим песнопениям.
@@ -274,7 +275,11 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SnippetText(parts: item.snippet, fontSize: _fontSize, fontFamily: "Monomakh"),
+          SnippetText(
+            parts: item.snippet,
+            fontSize: _fontSize,
+            fontFamily: chantFontFamily(item.language),
+          ),
           if (subtitle.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 6.0),

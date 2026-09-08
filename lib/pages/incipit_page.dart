@@ -5,6 +5,7 @@ import '../apiMapper/singing.dart';
 import '../components/paged_list.dart';
 import '../dto/incipit.dart';
 import '../store/models/models.dart';
+import '../utils/chant_style.dart';
 import '../utils/singing_labels.dart';
 
 /// Карточка зачина: где это песнопение встречается и что ему соответствует.
@@ -75,7 +76,9 @@ class _IncipitPageState extends State<IncipitPage> {
       children: [
         Text(
           data.text,
-          style: TextStyle(fontFamily: "Monomakh", fontSize: fontSize),
+          // Шрифт по начертанию, а не наугад: `cu_gr` — церковнославянский
+          // гражданкой, и уставным шрифтом он набран не был.
+          style: TextStyle(fontFamily: chantFontFamily(data.language), fontSize: fontSize),
         ),
         const SizedBox(height: 8.0),
         Text(
