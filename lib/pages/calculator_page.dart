@@ -12,6 +12,7 @@ import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/components/verse_list.dart';
 import 'package:typikon/components/day_memories.dart';
+import 'package:typikon/components/trapeza_line.dart';
 import 'package:typikon/utils/bible_route.dart';
 
 class CalculatorPage extends StatefulWidget {
@@ -294,6 +295,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Своим запросом: служба устава отвечает до восьми
+                        // секунд, и чтения ждать её не должны.
+                        TrapezaLine(
+                          date: StoreProvider.of<AppState>(context).state.common.date,
+                        ),
                         DayMemoriesView(memories: future.data!.memories),
                         ...sections.map((section) => renderItem(context, section)),
                       ],

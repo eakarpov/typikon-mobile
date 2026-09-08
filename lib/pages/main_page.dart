@@ -25,6 +25,7 @@ import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
 import '../utils/day_preloader.dart';
+import '../components/trapeza_line.dart';
 import '../utils/bible_route.dart';
 import '../utils/route_observer.dart';
 
@@ -467,6 +468,15 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       child: Text(
                         "Чтения на выбранную дату: ${calendarDay?.name}",
                         style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    // Строка о трапезе идёт своим запросом и никогда не
+                    // задерживает чтения: за ней стоит служба устава, отвечающая
+                    // до восьми секунд. Пока её нет — на её месте ничего нет.
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                      child: TrapezaLine(
+                        date: StoreProvider.of<AppState>(context).state.common.date,
                       ),
                     ),
                     if (calendarDay != null) Padding(
