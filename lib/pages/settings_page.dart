@@ -9,6 +9,9 @@ import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/api/cached_fetch.dart';
 import 'package:typikon/components/calendar_subscription.dart';
 import 'package:typikon/apiMapper/auth.dart' as auth_api;
+import 'package:typikon/store/pomyannik_cache.dart';
+import 'package:typikon/store/store.dart';
+import 'package:typikon/utils/pomyannik_reminders.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage(context, {super.key});
@@ -20,6 +23,11 @@ class SettingsPage extends StatefulWidget {
 typedef OnFontSizeChange = Function(int fontSize);
 
 class _SettingsPageState extends State<SettingsPage> {
+  @override
+  void initState() {
+    super.initState();
+    _loadReminderSettings();
+  }
 
   void onPress() {
     StoreProvider.of<AppState>(context).dispatch(ChangeFontSizeAction(StoreProvider.of<AppState>(context).state.settings.fontSize + 1));
@@ -34,6 +42,37 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   bool _authInProgress = false;
+
+  // Обычными ключами хранилища, а не полем состояния: их читает фоновая задача,
+  // а она живёт в отдельном изоляте, где хранилища состояния нет вовсе.
+  bool _reminders = false;
+  bool _namesInReminders = false;
+
+  Future<void> _loadReminderSettings() async {
+    final reminders = await remindersEnabled();
+    final names = await namesInReminders();
+    if (!mounted) return;
+    setState(() {
+      _reminders = reminders;
+      _namesInReminders = names;
+    });
+  }
+
+  Future<void> _onReminders(bool value) async {
+    setState(() => _reminders = value);
+    await setRemindersEnabled(value);
+    if (!value) return;
+    // Включили — сразу и собираем зеркало, иначе первое напоминание пришло бы
+    // только после следующего открытия помянника.
+    await refreshPomyannikMirror(appStore?.state.auth.userId);
+  }
+
+  Future<void> _onNamesInReminders(bool value) async {
+    setState(() => _namesInReminders = value);
+    // Выключение действует назад: имена стираются и из уже записанного зеркала.
+    await setNamesInReminders(value);
+    if (value) await refreshPomyannikMirror(appStore?.state.auth.userId);
+  }
 
   void onSignIn(BuildContext context) async {
     if (_authInProgress) return;
@@ -219,6 +258,32 @@ class _SettingsPageState extends State<SettingsPage> {
                             onPressed: _authInProgress ? null : () => onSignIn(context),
                           ),
                   ),
+                  if (viewModel.isSignedIn) ...[
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
+                      child: Text("Напоминания помянника",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    SwitchListTile(
+                      title: const Text("Напоминать о поминальных днях"),
+                      subtitle: const Text(
+                        "Утром того дня, когда он приходится. Напоминание может прийти позже "
+                        "или не прийти вовсе: время выбирает система, а не приложение — "
+                        "поэтому полагаться на него как на единственную память не стоит.",
+                      ),
+                      value: _reminders,
+                      onChanged: _onReminders,
+                    ),
+                    SwitchListTile(
+                      title: const Text("Показывать имена в уведомлении"),
+                      subtitle: const Text(
+                        "Пока выключено, уведомление говорит только, что день есть. Имена — "
+                        "чужие, а уведомление видно на экране блокировки.",
+                      ),
+                      value: _namesInReminders,
+                      onChanged: _reminders ? _onNamesInReminders : null,
+                    ),
+                  ],
                   SizedBox(height: 20),
                 ],
               ),

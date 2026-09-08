@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../apiMapper/pomyannik.dart';
 import '../apiMapper/session.dart';
+import '../store/pomyannik_cache.dart';
+import '../store/store.dart';
 import '../components/api_error_view.dart';
 import '../components/sign_in_needed.dart';
 import '../dto/pomyannik.dart';
@@ -34,6 +36,25 @@ class _PomyannikUpcomingPageState extends State<PomyannikUpcomingPage> {
   void _load() {
     _from = today();
     upcoming = getUpcoming(from: _from, days: _windowDays);
+
+    // Заодно обновляем зеркало, из которого складывается напоминание: данные уже
+    // на руках, и второго запроса ради них не нужно. Обновляется оно только из
+    // работающего приложения — в фоне сессию продлить нечем (см.
+    // `refreshPomyannikMirror`).
+    upcoming.then((value) async {
+      final userId = appStore?.state.auth.userId;
+      if (userId == null || userId.isEmpty) return;
+      await writePomyannikMirror(
+        PomyannikMirror(
+          userId: userId,
+          fetchedAt: DateTime.now(),
+          from: value.from.isEmpty ? _from : value.from,
+          days: value.days,
+          events: value.events,
+        ),
+        withNames: await namesInReminders(),
+      );
+    }).catchError((Object _) {});
   }
 
   @override

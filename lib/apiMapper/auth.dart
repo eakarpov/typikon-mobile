@@ -9,6 +9,7 @@ import '../api/auth.dart';
 import '../api/constants.dart';
 import '../store/actions/actions.dart';
 import '../store/auth_token.dart';
+import '../store/pomyannik_cache.dart';
 import '../store/models/models.dart';
 import '../store/store.dart';
 
@@ -103,6 +104,11 @@ Future<bool> _doRefreshSession() async {
 Future<void> forgetSession() async {
   try {
     await clearSessionCookie();
+  } catch (_) {}
+  // Выход СТИРАЕТ помянник с устройства, а не прячет его: в зеркале ближайших
+  // дней лежат чужие даты смерти, и держать их после выхода не за что.
+  try {
+    await clearPomyannikCache();
   } catch (_) {}
   try {
     await _ensureGoogleSignInInitialized();

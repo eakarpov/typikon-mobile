@@ -63,6 +63,8 @@ import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
 import "package:typikon/store/actions/actions.dart";
 import "package:typikon/store/store.dart";
+import "package:typikon/store/pomyannik_cache.dart";
+import "package:typikon/utils/pomyannik_reminders.dart";
 
 int id = 0;
 
@@ -71,6 +73,7 @@ const String navigationActionId = 'id_3';
 const String wantToGetUpdate = "wantToGetUpdate";
 
 const String newTextPayloadPrefix = "newText:";
+const String pomyannikPayloadPrefix = "pomyannik:";
 const String _lastSeenTextIdKey = "last_seen_text_id";
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -150,6 +153,7 @@ void backgroundFetchHeadlessTask(HeadlessTask task) async {
   String taskId = task.taskId;
   await _checkVersionAndNotify("");
   await _checkNewTextsAndNotify();
+  await _checkPomyannikAndNotify();
   BackgroundFetch.finish(taskId);
 }
 
@@ -204,6 +208,39 @@ Future _checkVersionAndNotify(String type) async {
   } catch (error) {
     print("Не получена версия");
   }
+}
+
+/// Напоминание о поминальном дне.
+///
+/// Едет тем же колбэком, что и проверка новых текстов, — третьей периодической
+/// задачи ради этого не заводим. Само решение, говорить ли, живёт в
+/// `utils/pomyannik_reminders.dart`: тут только показ.
+///
+/// Канал свой и негромкий: обычная важность вместо `max` и без звука на iOS.
+/// Напоминание о сороковом дне в восемь утра — не то, ради чего телефон должен
+/// вздрагивать; отдельным каналом его вдобавок можно приглушить, не глуша
+/// уведомлений об обновлении.
+Future<void> _checkPomyannikAndNotify() async {
+  await checkPomyannikAndNotify(show: (body, payload) async {
+    await flutterLocalNotificationsPlugin.show(
+      // Постоянный номер, а не id++: второй показ за день заменяет прежнее
+      // уведомление, а не копит их стопкой.
+      900,
+      "Помянник",
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'pomyannikChannelId',
+          'pomyannikChannel',
+          channelDescription: 'Напоминания о поминальных днях',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: false),
+      ),
+      payload: payload,
+    );
+  });
 }
 
 // Едет на том же background_fetch-колбэке, что и _checkVersionAndNotify —
@@ -343,6 +380,12 @@ class MyAppState extends State<MyApp> {
       // This is the fetch-event callback.
       await _checkVersionAndNotify("");
       await _checkNewTextsAndNotify();
+      // Зеркало обновляется отсюда, а не из фоновой задачи: там сессию продлить
+      // нечем — окна входа показать некому.
+      if (await remindersEnabled()) {
+        await refreshPomyannikMirror(appStore?.state.auth.userId);
+      }
+      await _checkPomyannikAndNotify();
       // IMPORTANT:  You must signal completion of your task or the OS can punish your app
       // for taking too long in the background.
       BackgroundFetch.finish(taskId);
@@ -437,6 +480,14 @@ class MyAppState extends State<MyApp> {
       if (payload != null && payload.startsWith(newTextPayloadPrefix)) {
         final textId = payload.substring(newTextPayloadPrefix.length);
         navigatorKey.currentState?.pushNamed("/reading", arguments: textId);
+      }
+      if (payload != null && payload.startsWith(pomyannikPayloadPrefix)) {
+        final what = payload.substring(pomyannikPayloadPrefix.length);
+        // «upcoming» — весь список ближайшего; иначе это лицо, о котором речь.
+        navigatorKey.currentState?.pushNamed(
+          what == "upcoming" ? "/pomyannik/upcoming" : "/pomyannik",
+          arguments: what == "upcoming" ? null : what,
+        );
       }
     });
   }
