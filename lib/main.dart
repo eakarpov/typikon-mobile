@@ -28,6 +28,12 @@ import 'package:typikon/utils/bible_route.dart';
 import 'package:typikon/utils/incipit_route.dart';
 import 'package:typikon/utils/route_observer.dart';
 import 'package:typikon/pages/bible_chapter_page.dart';
+import 'package:typikon/pages/akathist_page.dart';
+import 'package:typikon/pages/akathists_page.dart';
+import 'package:typikon/pages/canon_page.dart';
+import 'package:typikon/pages/canons_page.dart';
+import 'package:typikon/pages/prayer_page.dart';
+import 'package:typikon/pages/prayers_page.dart';
 import 'package:typikon/pages/chronology_page.dart';
 import 'package:typikon/pages/dictionary_page.dart';
 import 'package:typikon/pages/imeniny_page.dart';
@@ -596,6 +602,35 @@ class MyAppState extends State<MyApp> {
                       }
                       return MaterialPageRoute(
                         builder: (context) => DictionaryPage(context),
+                      );
+                    // Певческий корпус: три раздела по одному обычаю —
+                    // без аргумента перечень, с ним чтение целиком.
+                    case '/canons':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => CanonPage(context, id: arguments),
+                        );
+                      }
+                      return MaterialPageRoute(
+                        builder: (context) => CanonsPage(context),
+                      );
+                    case '/akathists':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => AkathistPage(context, id: arguments),
+                        );
+                      }
+                      return MaterialPageRoute(
+                        builder: (context) => AkathistsPage(context),
+                      );
+                    case '/prayers':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => PrayerPage(context, id: arguments),
+                        );
+                      }
+                      return MaterialPageRoute(
+                        builder: (context) => PrayersPage(context),
                       );
                     case '/chronology':
                       return MaterialPageRoute(

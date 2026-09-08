@@ -109,6 +109,11 @@ class Canon {
   final String? acrostic;
   final String? service;
   final String? role;
+
+  /// Язык издания. Без него английский канон в перечне неотличим от
+  /// славянского: подписи у них одни и те же, а текст — на разных языках.
+  final String? language;
+
   final int odes;
 
   const Canon({
@@ -127,6 +132,7 @@ class Canon {
     this.acrostic,
     this.service,
     this.role,
+    this.language,
     this.odes = 0,
   });
 
@@ -152,6 +158,7 @@ class Canon {
         acrostic: json["acrostic"],
         service: json["service"],
         role: json["role"],
+        language: json["language"],
         odes: json["odes"] is int ? json["odes"] : 0,
       );
 }

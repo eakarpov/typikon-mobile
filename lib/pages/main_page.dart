@@ -782,6 +782,27 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   },
                 ),
                 ListTile(
+                  title: const Text('Каноны', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/canons",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/canons");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Акафисты', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/akathists",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/akathists");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Молитвы', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/prayers",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/prayers");
+                  },
+                ),
+                ListTile(
                   title: const Text('Библиотека', style: TextStyle(fontSize: 14.0),),
                   selected: ModalRoute.of(context)?.settings.name == "/library",
                   onTap: () {
