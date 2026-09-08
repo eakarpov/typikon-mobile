@@ -34,22 +34,36 @@ class PlaceInfo {
     required this.longitude,
   });
 
+  /// Координата: числом, строкой или её отсутствием.
+  ///
+  /// В базе они лежат строками, вторая версия API приводит их к числу, а места
+  /// без точки бывают и вовсе — у пустыни Иорданской её нет. Прежде здесь стоял
+  /// `double.parse`, и первое же такое место роняло бы карточку целиком.
+  static double? _coordinate(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
   factory PlaceInfo.fromJson(Map<String, dynamic> json) {
-    List<String> synonyms = List<String>.from(json["synonyms"] as List);
-    var list = json["links"];
-    List<TextLink> items = List<TextLink>.from(
-        list
-            .map((item) => TextLink.fromJson(item))
+    final synonyms = json["synonyms"] is List
+        ? List<String>.from((json["synonyms"] as List).whereType<String>())
+        : const <String>[];
+    final links = json["links"] is List
+        ? (json["links"] as List)
+            .whereType<Map>()
+            .map((item) => TextLink.fromJson(Map<String, dynamic>.from(item)))
             .toList()
-    );
+        : const <TextLink>[];
+
     return PlaceInfo(
-      id: json["id"],
+      id: json["id"] ?? json["_id"],
       name: json["name"],
       description: json["description"],
       synonyms: synonyms,
-      links: items,
-      latitude: double.parse(json["latitude"]),
-      longitude: double.parse(json["longitude"]),
+      links: links,
+      latitude: _coordinate(json["latitude"]),
+      longitude: _coordinate(json["longitude"]),
     );
   }
 }

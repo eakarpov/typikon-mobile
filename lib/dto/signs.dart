@@ -57,10 +57,15 @@ class SignsList {
   /// Есть ли что грузить после этой страницы.
   bool get hasMore => page * pageSize < total;
 
-  /// Принимает и объект {items, total, page, pageSize}, и голый список.
+  /// Принимает три формы: конверт v2 `{items, total, limit, offset}`, конверт
+  /// первой версии `{items, total, page, pageSize}` и голый список.
   ///
-  /// Голый список — форма прежних версий API: страница памятей падала именно
-  /// потому, что разбирала только его, а сервер уже отдавал объект.
+  /// Голый список — форма самых ранних версий API: страница памятей падала
+  /// именно потому, что разбирала только его, а сервер уже отдавал объект.
+  ///
+  /// Счёт страниц у версий разный: первая считала страницами от единицы, вторая
+  /// — смещением от нуля. Внутри остаётся страница: `hasMore` и вызывающий код
+  /// написаны на ней, и переучивать их ради формы ответа незачем.
   factory SignsList.fromJson(dynamic json) {
     if (json is List) {
       final items = json.map<Sign>((item) => Sign.fromJson(item)).toList();
@@ -73,6 +78,19 @@ class SignsList {
         : <Sign>[];
     int asInt(dynamic value, int fallback) =>
         value is int ? value : int.tryParse("$value") ?? fallback;
+    // Вторая версия API про страницы не знает: она говорит, сколько отдано и с
+    // какого места. Страницу считаем из этого.
+    if (map.containsKey("limit") && !map.containsKey("page")) {
+      final limit = asInt(map["limit"], items.isEmpty ? 1 : items.length);
+      final offset = asInt(map["offset"], 0);
+      return SignsList(
+        list: items,
+        total: asInt(map["total"], items.length),
+        page: limit > 0 ? (offset ~/ limit) + 1 : 1,
+        pageSize: limit > 0 ? limit : (items.isEmpty ? 1 : items.length),
+      );
+    }
+
     return SignsList(
       list: items,
       total: asInt(map["total"], items.length),

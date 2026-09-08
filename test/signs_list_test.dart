@@ -80,4 +80,39 @@ void main() {
       expect(runs.where((r) => r.inPericope).length, 2);
     });
   });
+
+  group("конверт второй версии API", () {
+    // Счёт страниц у версий разный: первая считала страницами от единицы,
+    // вторая — смещением от нуля. Экран написан на страницах, и ошибка в
+    // пересчёте выглядит не поломкой, а пропавшими памятями в конце списка.
+    test("страница считается из смещения", () {
+      final page3 = SignsList.fromJson({
+        "items": [], "total": 250, "limit": 100, "offset": 200,
+      });
+
+      expect(page3.page, 3);
+      expect(page3.pageSize, 100);
+      expect(page3.hasMore, isFalse);
+    });
+
+    test("первая страница — смещение ноль", () {
+      final first = SignsList.fromJson({
+        "items": [], "total": 250, "limit": 100, "offset": 0,
+      });
+
+      expect(first.page, 1);
+      expect(first.hasMore, isTrue);
+    });
+
+    test("конверт первой версии по-прежнему читается", () {
+      // На диске лежат ответы, записанные прежней версией приложения: кэш
+      // знаков живёт сутки.
+      final old = SignsList.fromJson({
+        "items": [], "total": 250, "page": 2, "pageSize": 100,
+      });
+
+      expect(old.page, 2);
+      expect(old.hasMore, isTrue);
+    });
+  });
 }

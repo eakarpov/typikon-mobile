@@ -46,8 +46,12 @@ class Reading {
     var author = json["author"];
     var readiness = json["readiness"];
     var content = json["content"];
-    var ruLink = json["ruLink"];
-    var link = json["link"];
+    // Вторая версия API переименовала обе ссылки: `ruLink` стал `russianUrl`,
+    // `link` — `scanUrl`. Читаем оба имени: в кэше на диске сутки лежат ответы
+    // прежней версии, а имена эти ведут к переводу и к скану, то есть к тому,
+    // что читатель ищет чаще прочего.
+    var ruLink = json["russianUrl"] ?? json["ruLink"];
+    var link = json["scanUrl"] ?? json["link"];
     var type = json["type"];
     var dneslovId = json["dneslovId"];
     var updatedAtString = json["updatedAt"];
@@ -83,8 +87,9 @@ class ReadingList {
     required this.list,
   });
 
-  factory ReadingList.fromJson(List<dynamic> json) {
-    var list = json;
+  /// Конверт второй версии API или голый список первой.
+  factory ReadingList.fromJson(dynamic json) {
+    final list = json is Map ? (json["items"] as List? ?? const []) : json as List;
     List<Reading> items = List<Reading>.from(
         list
             .map((item) => Reading.fromJson(item, null))
