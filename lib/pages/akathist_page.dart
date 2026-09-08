@@ -76,7 +76,7 @@ class _AkathistPageState extends State<AkathistPage> {
         ],
       ),
       body: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: readingBackgroundColor(context),
         child: FutureBuilder<AkathistDetail>(
           future: akathist,
           builder: (context, future) {
@@ -193,6 +193,7 @@ class _Refrain extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: chantFontFamily(null),
                   fontSize: fontSize,
+                  height: readingLineHeight(context),
                   fontStyle: FontStyle.italic,
                   color: readingTextColor(context),
                 ),
@@ -247,6 +248,7 @@ class _Stanza extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: chantFontFamily(null),
                   fontSize: fontSize,
+                  height: readingLineHeight(context),
                   color: readingTextColor(context),
                 ),
               )),

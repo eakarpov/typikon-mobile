@@ -46,7 +46,7 @@ class _PrayerPageState extends State<PrayerPage> {
         title: const Text("Молитва", style: TextStyle(fontFamily: "OldStandard")),
       ),
       body: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: readingBackgroundColor(context),
         child: FutureBuilder<PrayerDetail>(
           future: prayer,
           builder: (context, future) {
@@ -127,6 +127,7 @@ class _PrayerPageState extends State<PrayerPage> {
                 style: TextStyle(
                   fontFamily: font,
                   fontSize: fontSize,
+                  height: readingLineHeight(context),
                   color: readingTextColor(context),
                 ),
               )),

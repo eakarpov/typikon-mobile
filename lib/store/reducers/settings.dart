@@ -5,6 +5,9 @@ import '../models/models.dart';
 
 final settingsReducer = combineReducers<Settings>([
   TypedReducer<Settings, ChangeFontSizeAction>(_changeFontSize),
+  TypedReducer<Settings, ChangeLineHeightAction>(_changeLineHeight),
+  TypedReducer<Settings, ChangeReadingAlignAction>(_changeReadingAlign),
+  TypedReducer<Settings, ChangeReadingMeasureAction>(_changeReadingMeasure),
   TypedReducer<Settings, ChangeBackgroundColorAction>(_changeBackgroundColor),
   TypedReducer<Settings, ChangeFontColorAction>(_changeFontColor),
   TypedReducer<Settings, ChangeThemeModeAction>(_changeThemeMode),
@@ -15,6 +18,23 @@ final settingsReducer = combineReducers<Settings>([
 
 Settings _changeFontSize(Settings state, ChangeFontSizeAction action) {
   return state.copyWith(fontSize: action.fontSize);
+}
+
+Settings _changeLineHeight(Settings state, ChangeLineHeightAction action) {
+  return state.copyWith(lineHeight: action.lineHeight);
+}
+
+Settings _changeReadingAlign(Settings state, ChangeReadingAlignAction action) {
+  return state.copyWith(readingAlign: action.readingAlign);
+}
+
+Settings _changeReadingMeasure(Settings state, ChangeReadingMeasureAction action) {
+  // `null` здесь — «во всю ширину», а не «не меняем»: обычный copyWith такое
+  // значение проглотил бы, и ширину нельзя было бы вернуть в полную.
+  return state.copyWith(
+    readingMeasure: action.readingMeasure,
+    clearMeasure: action.readingMeasure == null,
+  );
 }
 
 Settings _changeFontColor(Settings state, ChangeFontColorAction action) {
@@ -44,8 +64,12 @@ Settings _resetReadingColors(Settings state, ResetReadingColorsAction action) {
     backgroundColor: null,
     fontColor: null,
     preloadTexts: state.preloadTexts,
-    // Сброс цветов чтения не должен трогать выбор изданий: конструктор здесь
-    // полный, и пропущенное поле молча вернулось бы к умолчанию.
+    // Сброс цветов чтения не должен трогать ни выбор изданий, ни читаемость:
+    // конструктор здесь полный, и пропущенное поле молча вернулось бы к
+    // умолчанию.
+    lineHeight: state.lineHeight,
+    readingAlign: state.readingAlign,
+    readingMeasure: state.readingMeasure,
     bibleEditions: state.bibleEditions,
   );
 }

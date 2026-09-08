@@ -98,6 +98,10 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     await _restoreFavourites(store, prefs, state.favourites);
     store.dispatch(ChangeFontSizeAction(state.settings.fontSize));
     store.dispatch(ChangeThemeModeAction(state.settings.themeMode));
+    store.dispatch(ChangeLineHeightAction(state.settings.lineHeight));
+    store.dispatch(ChangeReadingAlignAction(state.settings.readingAlign));
+    // Отправляем и `null`: «во всю ширину» — такой же выбор, как прочие.
+    store.dispatch(ChangeReadingMeasureAction(state.settings.readingMeasure));
     if (state.settings.preloadTexts != null) {
       store.dispatch(ChangePreloadTextsAction(state.settings.preloadTexts!));
     }

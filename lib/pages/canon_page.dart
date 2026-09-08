@@ -77,7 +77,7 @@ class _CanonPageState extends State<CanonPage> {
         ],
       ),
       body: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: readingBackgroundColor(context),
         child: FutureBuilder<CanonDetail>(
           future: canon,
           builder: (context, future) {
@@ -281,6 +281,7 @@ class _Line extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: font,
                     fontSize: fontSize,
+                    height: readingLineHeight(context),
                     color: readingTextColor(context),
                   ),
                 )),

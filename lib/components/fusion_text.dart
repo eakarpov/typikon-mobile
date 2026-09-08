@@ -45,6 +45,7 @@ class FusionTextWidgets extends StatelessWidget {
             style: TextStyle(
               fontFamily: fontFamily,
               fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
+              height: readingLineHeight(context),
               color: readingTextColor(context),
             ),
             children: buildFootlinks(
@@ -67,6 +68,7 @@ class FusionTextWidgets extends StatelessWidget {
             style: TextStyle(
               fontFamily: fontFamily,
               fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
+              height: readingLineHeight(context),
               color: Colors.red,
             ),
             // children: buildFootlinks(
@@ -89,6 +91,7 @@ class FusionTextWidgets extends StatelessWidget {
           style: TextStyle(
             fontFamily: fontFamily,
             fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
+            height: readingLineHeight(context),
             color: readingTextColor(context),
           ),
           children: buildFootlinks(
@@ -105,7 +108,7 @@ class FusionTextWidgets extends StatelessWidget {
     }
 
     return RichText(
-      textAlign: TextAlign.justify,
+      textAlign: readingTextAlign(context),
       text: TextSpan(
         children: widgets,
       ),

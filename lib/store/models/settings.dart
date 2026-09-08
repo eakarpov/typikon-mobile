@@ -20,6 +20,27 @@ class Settings {
   /// `null` — это ещё и признак, что главной странице нужно предложить.
   final bool? preloadTexts;
 
+  /// Междустрочный интервал чтений.
+  ///
+  /// **Не украшение.** Церковнославянский набор несёт надстрочные знаки —
+  /// ударения, титла, придыхания, — и при тесных строках они сливаются со
+  /// строкой над собой. Полтора — то же значение, что взял сайт, и текст в
+  /// обоих местах читается одинаково.
+  final double lineHeight;
+
+  /// Выключка чтений: `justify` или `left`.
+  ///
+  /// Переносов у нас нет, и выключка по ширине местами разгоняет пробелы до
+  /// прогалин. Кому это мешает больше, чем неровный край, — выбирает левый.
+  final String readingAlign;
+
+  /// Наибольшая ширина колонки чтения в логических точках; `null` — во всю
+  /// ширину.
+  ///
+  /// На телефоне разницы нет, и потому умолчание — во всю ширину. На планшете и
+  /// в развороте строка во всю ширину заставляет глаз искать начало следующей.
+  final double? readingMeasure;
+
   /// Издания Библии, выбранные читателем, в порядке выбора.
   ///
   /// Пустой список — «по умолчанию», а не «ни одного»: код издания по умолчанию
@@ -38,6 +59,9 @@ class Settings {
     this.backgroundColor,
     this.fontColor,
     this.preloadTexts,
+    this.lineHeight = 1.5,
+    this.readingAlign = "justify",
+    this.readingMeasure,
     this.bibleEditions = const [],
   });
 
@@ -55,6 +79,12 @@ class Settings {
     Color? backgroundColor,
     Color? fontColor,
     bool? preloadTexts,
+    double? lineHeight,
+    String? readingAlign,
+    // Отдельным признаком, потому что `null` здесь — это значение («во всю
+    // ширину»), а не «не меняем»: без него ширину нельзя было бы сбросить.
+    bool clearMeasure = false,
+    double? readingMeasure,
     List<String>? bibleEditions,
   }) {
     return Settings(
@@ -63,6 +93,9 @@ class Settings {
       backgroundColor: backgroundColor ?? this.backgroundColor,
       fontColor: fontColor ?? this.fontColor,
       preloadTexts: preloadTexts ?? this.preloadTexts,
+      lineHeight: lineHeight ?? this.lineHeight,
+      readingAlign: readingAlign ?? this.readingAlign,
+      readingMeasure: clearMeasure ? null : (readingMeasure ?? this.readingMeasure),
       bibleEditions: bibleEditions ?? this.bibleEditions,
     );
   }
@@ -74,6 +107,9 @@ class Settings {
       backgroundColor.hashCode ^
       fontColor.hashCode ^
       preloadTexts.hashCode ^
+      lineHeight.hashCode ^
+      readingAlign.hashCode ^
+      readingMeasure.hashCode ^
       Object.hashAll(bibleEditions);
 
   @override
@@ -85,6 +121,9 @@ class Settings {
               backgroundColor == other.backgroundColor &&
               fontColor == other.fontColor &&
               preloadTexts == other.preloadTexts &&
+              lineHeight == other.lineHeight &&
+              readingAlign == other.readingAlign &&
+              readingMeasure == other.readingMeasure &&
               listEquals(bibleEditions, other.bibleEditions);
 
   @override
@@ -99,6 +138,9 @@ class Settings {
       'backgroundColor': backgroundColor == null ? null : HexColor.toHex(backgroundColor!),
       'fontColor': fontColor == null ? null : HexColor.toHex(fontColor!),
       'preloadTexts': preloadTexts,
+      'lineHeight': lineHeight,
+      'readingAlign': readingAlign,
+      'readingMeasure': readingMeasure,
       'bibleEditions': bibleEditions,
     };
   }
@@ -126,6 +168,12 @@ class Settings {
       // Отсутствие ключа — это ровно "не спрашивали": у тех, кто обновился
       // с прежней версии, предзагрузка не включится сама, им предложат.
       preloadTexts: json["preloadTexts"] is bool ? json["preloadTexts"] as bool : null,
+      // Ключей нет — значит состояние сохранено прежней версией, и читатель
+      // получает те же умолчания, что и новый. Число может прийти целым: JSON
+      // не различает 2 и 2.0, а `as double` на целом бросает.
+      lineHeight: (json["lineHeight"] as num?)?.toDouble() ?? 1.5,
+      readingAlign: json["readingAlign"] == "left" ? "left" : "justify",
+      readingMeasure: (json["readingMeasure"] as num?)?.toDouble(),
       // Ключа нет — значит настройки сохранены прежней версией: пустой список
       // означает «по умолчанию», и старое состояние переживает обновление без
       // отдельной миграции.

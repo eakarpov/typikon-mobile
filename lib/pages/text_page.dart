@@ -41,6 +41,7 @@ import 'package:typikon/dto/dneslov/images.dart';
 import '../apiMapper/reading.dart';
 import '../apiMapper/user_notes.dart';
 import "../apiMapper/dneslov/images.dart";
+import 'package:typikon/utils/reading_style.dart';
 
 class TextPage extends StatefulWidget {
   final String id;
@@ -401,7 +402,9 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
         color: StoreProvider.of<AppState>(context).state.settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<Reading>(
+        // Ширину колонки читатель выбирает сам; без выбора обёртка не делает
+        // ничего.
+        child: ReadingColumn(child: FutureBuilder<Reading>(
           future: reading,
           builder: (context, future) {
             if (future.hasData) {
@@ -499,7 +502,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
               ),
             );
           },
-        ),
+        )),
       ),
     );
   }

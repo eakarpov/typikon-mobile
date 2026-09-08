@@ -34,6 +34,7 @@ List<InlineSpan> buildFootlinks(
           style: TextStyle(
             fontFamily: fontFamily,
             fontSize: size,
+            height: readingLineHeight(context),
             color: readingTextColor(context),
           ),
           children: buildPlaces(
@@ -75,6 +76,7 @@ List<InlineSpan> buildFootlinks(
           style: TextStyle(
             fontFamily: fontFamily,
             fontSize: size,
+            height: readingLineHeight(context),
             color: Colors.blue,
           ),
           // children: [
@@ -95,6 +97,7 @@ List<InlineSpan> buildFootlinks(
         style: TextStyle(
           fontFamily: fontFamily,
           fontSize: size,
+          height: readingLineHeight(context),
           color: readingTextColor(context),
         ),
         children: buildPlaces(

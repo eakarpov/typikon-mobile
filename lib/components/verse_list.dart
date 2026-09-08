@@ -32,6 +32,7 @@ class VerseListView extends StatelessWidget {
     final baseStyle = TextStyle(
       fontFamily: fontFamily,
       fontSize: fontSize,
+      height: readingLineHeight(context),
       color: readingTextColor(context),
     );
     final numberStyle = TextStyle(
@@ -42,7 +43,7 @@ class VerseListView extends StatelessWidget {
       fontWeight: FontWeight.bold,
     );
     return RichText(
-      textAlign: TextAlign.justify,
+      textAlign: readingTextAlign(context),
       text: TextSpan(
         style: baseStyle,
         children: verses.expand((v) {

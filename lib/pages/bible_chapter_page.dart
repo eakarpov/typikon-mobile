@@ -17,6 +17,7 @@ import '../store/models/models.dart';
 import '../utils/bible_editions.dart';
 import '../utils/bible_route.dart';
 import '../utils/bible_style.dart';
+import 'package:typikon/utils/reading_style.dart';
 
 /// Глава Библии.
 ///
@@ -219,7 +220,9 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
       ),
       body: Container(
         color: settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-        child: FutureBuilder<BibleChapter>(
+        // Ширину колонки читатель выбирает сам; без выбора обёртка не делает
+        // ничего — на телефоне ограничивать нечего.
+        child: ReadingColumn(child: FutureBuilder<BibleChapter>(
           future: chapter,
           builder: (context, future) {
             if (future.hasError) return _error(future.error);
@@ -228,7 +231,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
             }
             return _chapter(context, future.data!, settings.fontSize.toDouble());
           },
-        ),
+        )),
       ),
     );
   }

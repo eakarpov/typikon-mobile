@@ -36,6 +36,36 @@ class ChangeCommonDateAction {
   }
 }
 
+/// Междустрочный интервал чтений.
+class ChangeLineHeightAction {
+  final double lineHeight;
+
+  ChangeLineHeightAction(this.lineHeight);
+
+  @override
+  String toString() => 'ChangeLineHeightAction{lineHeight: $lineHeight}';
+}
+
+/// Выключка чтений: justify или left.
+class ChangeReadingAlignAction {
+  final String readingAlign;
+
+  ChangeReadingAlignAction(this.readingAlign);
+
+  @override
+  String toString() => 'ChangeReadingAlignAction{readingAlign: $readingAlign}';
+}
+
+/// Наибольшая ширина колонки чтения; `null` — во всю ширину.
+class ChangeReadingMeasureAction {
+  final double? readingMeasure;
+
+  ChangeReadingMeasureAction(this.readingMeasure);
+
+  @override
+  String toString() => 'ChangeReadingMeasureAction{readingMeasure: $readingMeasure}';
+}
+
 class ChangeFontSizeAction {
   final int fontSize;
 

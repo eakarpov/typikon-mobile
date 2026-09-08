@@ -12,6 +12,7 @@ import 'package:typikon/apiMapper/auth.dart' as auth_api;
 import 'package:typikon/store/pomyannik_cache.dart';
 import 'package:typikon/store/store.dart';
 import 'package:typikon/utils/pomyannik_reminders.dart';
+import 'package:typikon/utils/reading_schemes.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage(context, {super.key});
@@ -164,16 +165,87 @@ class _SettingsPageState extends State<SettingsPage> {
                       max: 40,
                     ),
                   ),
+                  _Choices<double>(
+                    title: "Междустрочный интервал",
+                    hint: "Церковнославянский набор несёт ударения и титла: при "
+                        "тесных строках они сливаются со строкой над собой.",
+                    value: viewModel.lineHeight,
+                    onPicked: viewModel.onChangeLineHeight,
+                    // Не `const`: `double` переопределяет `==`, и константной
+                    // картой такие ключи Dart не берёт.
+                    options: <double, String>{
+                      1.35: "Плотно",
+                      1.5: "Обычно",
+                      1.8: "Просторно",
+                      2.1: "Очень просторно",
+                    },
+                  ),
+                  _Choices<String>(
+                    title: "Выключка",
+                    hint: "Переносов у нас нет, и выключка по ширине местами "
+                        "разгоняет пробелы.",
+                    value: viewModel.readingAlign,
+                    onPicked: viewModel.onChangeReadingAlign,
+                    options: const {
+                      "justify": "По ширине",
+                      "left": "По левому краю",
+                    },
+                  ),
+                  _Choices<double?>(
+                    title: "Ширина колонки",
+                    hint: "На телефоне разницы нет: строка и так узкая. "
+                        "На планшете и в развороте — есть.",
+                    value: viewModel.readingMeasure,
+                    onPicked: viewModel.onChangeReadingMeasure,
+                    options: <double?, String>{
+                      544.0: "Узкая",
+                      736.0: "Средняя",
+                      960.0: "Широкая",
+                      null: "Во всю ширину",
+                    },
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(top: 20, left: 16, right: 16),
+                    child: Text("Цвета чтений", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  // Готовые пары, а не два пикера порознь: цвет фона и цвет
+                  // текста осмысленны только вместе, и выбранные по отдельности
+                  // они легко сходятся в нечитаемое — тёмный текст на тёмном.
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: Wrap(
+                      spacing: 8,
+                      children: readingSchemes.map((scheme) {
+                        final chosen = viewModel.backgroundColor == scheme.background &&
+                            viewModel.fontColor == scheme.foreground;
+                        return ChoiceChip(
+                          selected: chosen,
+                          onSelected: (_) {
+                            viewModel.onChangeBackgroundColor(scheme.background);
+                            viewModel.onChangeFontColor(scheme.foreground);
+                          },
+                          avatar: CircleAvatar(backgroundColor: scheme.background),
+                          label: Text(scheme.label),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                   Container(
                     margin: EdgeInsets.symmetric(horizontal: 16),
                     padding: EdgeInsets.all(12),
                     color: viewModel.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
                     child: Text(
-                      "Пример того, как будет выглядеть текст.",
-                      textAlign: TextAlign.justify,
+                      "Прему́дрость. Про́сти. Услы́шим свята́го Ева́нгелиа. "
+                      "Мир всем. От Матфе́а свята́го Ева́нгелиа чте́ние.",
+                      // Образец показывает и выключку, и интервал: иначе выбор
+                      // делается вслепую и проверяется уходом в чтение.
+                      textAlign: viewModel.readingAlign == "left"
+                          ? TextAlign.left
+                          : TextAlign.justify,
                       style: TextStyle(
                           fontFamily: "OldStandard",
                           fontSize: viewModel.fontSize.toDouble(),
+                          height: viewModel.lineHeight,
                           color: viewModel.fontColor ?? Theme.of(context).textTheme.bodyLarge?.color
                       ),
                     ),
@@ -308,6 +380,15 @@ class SettingsViewModel {
   final ThemeMode themeMode;
   final Function(ThemeMode) onChangeThemeMode;
 
+  final double lineHeight;
+  final Function(double) onChangeLineHeight;
+
+  final String readingAlign;
+  final Function(String) onChangeReadingAlign;
+
+  final double? readingMeasure;
+  final Function(double?) onChangeReadingMeasure;
+
   final VoidCallback onResetReadingColors;
 
   final bool isPreloadEnabled;
@@ -326,6 +407,12 @@ class SettingsViewModel {
     this.onChangeBackgroundColor = SettingsViewModel.stubColor,
     this.themeMode = ThemeMode.system,
     this.onChangeThemeMode = SettingsViewModel.stubThemeMode,
+    this.lineHeight = 1.5,
+    this.onChangeLineHeight = SettingsViewModel.stubDouble,
+    this.readingAlign = "justify",
+    this.onChangeReadingAlign = SettingsViewModel.stubString,
+    this.readingMeasure,
+    this.onChangeReadingMeasure = SettingsViewModel.stubMeasure,
     this.onResetReadingColors = SettingsViewModel.stubVoid,
     this.isPreloadEnabled = false,
     this.onChangePreloadTexts = SettingsViewModel.stubBool,
@@ -343,6 +430,12 @@ class SettingsViewModel {
   static stubVoid () {}
 
   static stubBool (bool value) {}
+
+  static stubDouble (double value) {}
+
+  static stubString (String value) {}
+
+  static stubMeasure (double? value) {}
 
   static SettingsViewModel build(Store<AppState> store) {
     return SettingsViewModel(
@@ -362,6 +455,18 @@ class SettingsViewModel {
       onChangeThemeMode: (newThemeMode) {
         store.dispatch(ChangeThemeModeAction(newThemeMode));
       },
+      lineHeight: store.state.settings.lineHeight,
+      onChangeLineHeight: (value) {
+        store.dispatch(ChangeLineHeightAction(value));
+      },
+      readingAlign: store.state.settings.readingAlign,
+      onChangeReadingAlign: (value) {
+        store.dispatch(ChangeReadingAlignAction(value));
+      },
+      readingMeasure: store.state.settings.readingMeasure,
+      onChangeReadingMeasure: (value) {
+        store.dispatch(ChangeReadingMeasureAction(value));
+      },
       onResetReadingColors: () {
         store.dispatch(ResetReadingColorsAction());
       },
@@ -377,3 +482,54 @@ class SettingsViewModel {
 }
 
 typedef OnChangeFontSize = int;
+
+/// Ряд взаимоисключающих значений одной настройки.
+///
+/// `Wrap` из фишек, а не `SegmentedButton`: у интервала четыре значения с
+/// длинными подписями, и на узком экране сегменты вылезли бы за край.
+class _Choices<T> extends StatelessWidget {
+  const _Choices({
+    required this.title,
+    required this.value,
+    required this.options,
+    required this.onPicked,
+    this.hint,
+  });
+
+  final String title;
+  final String? hint;
+  final T value;
+  final Map<T, String> options;
+  final void Function(T) onPicked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 20, left: 16, right: 16),
+          child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        if (hint != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 2),
+            child: Text(hint!, style: Theme.of(context).textTheme.bodySmall),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Wrap(
+            spacing: 8,
+            children: options.entries
+                .map((option) => ChoiceChip(
+                      selected: option.key == value,
+                      onSelected: (_) => onPicked(option.key),
+                      label: Text(option.value),
+                    ))
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
