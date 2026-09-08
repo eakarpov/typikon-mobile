@@ -28,7 +28,12 @@ import 'package:typikon/utils/bible_route.dart';
 import 'package:typikon/utils/incipit_route.dart';
 import 'package:typikon/utils/route_observer.dart';
 import 'package:typikon/pages/bible_chapter_page.dart';
+import 'package:typikon/pages/chronology_page.dart';
+import 'package:typikon/pages/dictionary_page.dart';
+import 'package:typikon/pages/imeniny_page.dart';
 import 'package:typikon/pages/incipit_page.dart';
+import 'package:typikon/pages/pericope_page.dart';
+import 'package:typikon/pages/pericopes_page.dart';
 import 'package:typikon/pages/bible_page.dart';
 import 'package:typikon/pages/library_page.dart';
 import 'package:typikon/pages/main_page.dart';
@@ -505,6 +510,41 @@ class MyAppState extends State<MyApp> {
                         }
                       }
                       return null;
+                    case '/pericopes':
+                      return MaterialPageRoute(
+                        builder: (context) => PericopesPage(context),
+                      );
+                    case '/pericope':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => PericopePage(context, id: arguments),
+                        );
+                      }
+                      return null;
+                    // Как у '/library' и '/bible': без аргумента список, с ним —
+                    // отдельная запись.
+                    case '/imeniny':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => NamePage(context, name: arguments),
+                        );
+                      }
+                      return MaterialPageRoute(
+                        builder: (context) => ImeninyPage(context),
+                      );
+                    case '/dictionary':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => LexemePage(context, id: arguments),
+                        );
+                      }
+                      return MaterialPageRoute(
+                        builder: (context) => DictionaryPage(context),
+                      );
+                    case '/chronology':
+                      return MaterialPageRoute(
+                        builder: (context) => ChronologyPage(context),
+                      );
                     case '/library':
                       if (arguments is String) {
                         return MaterialPageRoute(

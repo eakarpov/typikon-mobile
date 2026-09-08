@@ -731,6 +731,13 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   },
                 ),
                 ListTile(
+                  title: const Text('Зачала', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/pericopes",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/pericopes");
+                  },
+                ),
+                ListTile(
                   title: const Text('Библиотека', style: TextStyle(fontSize: 14.0),),
                   selected: ModalRoute.of(context)?.settings.name == "/library",
                   onTap: () {
@@ -777,6 +784,27 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   selected: ModalRoute.of(context)?.settings.name == "/dneslov/memories",
                   onTap: () {
                     Navigator.pushNamed(context, "/dneslov/memories");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Именины', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/imeniny",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/imeniny");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Словарь', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/dictionary",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/dictionary");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Хронология', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/chronology",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/chronology");
                   },
                 ),
                 ListTile(
