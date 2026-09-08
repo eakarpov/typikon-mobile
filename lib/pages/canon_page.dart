@@ -265,15 +265,25 @@ class _Line extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 2.0),
               child: Text(about, style: small?.copyWith(fontStyle: FontStyle.italic)),
             ),
-          // Косая черта — перевод строки: так книга размечает строки песнопения.
-          ...chantLines(line.text).map((row) => Text(
-                row,
-                style: TextStyle(
-                  fontFamily: font,
-                  fontSize: fontSize,
-                  color: readingTextColor(context),
-                ),
-              )),
+          // Ссылка есть, песнопения по ней нет: греческий слой ссылается на
+          // Ирмологий, которого в корпусе нет. Напечатать опознаватель уставным
+          // кеглем значило бы выдать машинную строку за ирмос.
+          if (line.isUnresolved) ...[
+            Text("Текста в корпусе нет: ирмос напечатан ссылкой.", style: small),
+            Text(
+              line.reference!,
+              style: small?.copyWith(fontFamily: "monospace"),
+            ),
+          ] else
+            // Косая черта — перевод строки: так книга размечает строки песнопения.
+            ...chantLines(line.text).map((row) => Text(
+                  row,
+                  style: TextStyle(
+                    fontFamily: font,
+                    fontSize: fontSize,
+                    color: readingTextColor(context),
+                  ),
+                )),
         ],
       ),
     );

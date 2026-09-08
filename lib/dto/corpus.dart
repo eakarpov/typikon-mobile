@@ -172,6 +172,12 @@ class CanonLine {
   /// неподписанным значило бы выдать отсылку за песнопение.
   final bool borrowed;
 
+  /// Ссылка, которую разрешить не удалось: греческий слой ссылается на
+  /// Ирмологий, которого в корпусе нет. Текста при ней не бывает, и печатать
+  /// опознаватель `he.h.m2.heHE.DefteLaoi` уставным кеглем нельзя — читатель
+  /// прочтёт машинную строку как ирмос.
+  final String? reference;
+
   final String? marker;
 
   /// «Ирмо́с по два́жды» — указание книги, а не украшение.
@@ -181,14 +187,19 @@ class CanonLine {
     required this.text,
     this.unit,
     this.borrowed = false,
+    this.reference,
     this.marker,
     this.repeat = 1,
   });
+
+  /// Есть ссылка, а песнопения по ней нет.
+  bool get isUnresolved => (reference ?? "").isNotEmpty;
 
   factory CanonLine.fromJson(Map<String, dynamic> json) => CanonLine(
         text: json["text"] ?? "",
         unit: json["unit"],
         borrowed: json["borrowed"] == true,
+        reference: json["reference"],
         marker: json["marker"],
         repeat: json["repeat"] is int ? json["repeat"] : 1,
       );

@@ -41,6 +41,28 @@ void main() {
       expect(canon.odes.map((o) => o.ode).toList(), [1, 3]);
     });
 
+    test("неразрешённая ссылка — не текст песнопения", () {
+      // Греческий слой ссылается на Ирмологий, которого в корпусе нет: 2697
+      // строк из 2718 неразрешённых оттуда. Напечатанный уставным кеглем,
+      // опознаватель прочтётся читателем как ирмос.
+      final line = CanonLine.fromJson(jsonDecode(
+          '{"unit": "irmos", "text": "", "borrowed": false, '
+          '"reference": "he.h.m2.heHE.DefteLaoi", "repeat": 1}'));
+
+      expect(line.isUnresolved, isTrue);
+      expect(line.text, isEmpty);
+      expect(line.reference, "he.h.m2.heHE.DefteLaoi");
+    });
+
+    test("разрешённая ссылка неразрешённой не считается", () {
+      final line = CanonLine.fromJson(jsonDecode(
+          '{"unit": "irmos", "text": "Гряди́те, лю́дие", "borrowed": true, '
+          '"reference": null, "repeat": 1}'));
+
+      expect(line.isUnresolved, isFalse);
+      expect(line.borrowed, isTrue);
+    });
+
     test("подставленный текст назван подставленным", () {
       // Книга печатает ирмос зачином, полный лежит в Ирмологии. Неподписанный,
       // он выдавался бы за напечатанный здесь.
