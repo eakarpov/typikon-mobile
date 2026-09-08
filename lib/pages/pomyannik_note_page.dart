@@ -112,8 +112,11 @@ class _PomyannikNotePageState extends State<PomyannikNotePage> {
         actions: [
           if (_sheet != null)
             IconButton(
+              // Значок показывает СОСТОЯНИЕ, а не действие: крест на листе стоит
+              // или не стоит. Прежде здесь было наоборот — «плюс», когда крест
+              // уже надписан, — и читалось как «добавить ещё».
               tooltip: _cross ? "Печатать без креста" : "Надписать крестом",
-              icon: Icon(_cross ? Icons.add : Icons.remove),
+              icon: Icon(_cross ? Icons.check_box_outlined : Icons.check_box_outline_blank),
               onPressed: () => setState(() => _cross = !_cross),
             ),
         ],

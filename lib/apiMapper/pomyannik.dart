@@ -41,6 +41,20 @@ Future<List<MemorialDay>> getMemorialDays(int year) async {
   throwV2Error(response, "Не удалось загрузить поминальные дни");
 }
 
+/// Что мы знаем об имени.
+///
+/// Отказ наружу не бросаем: сверка — подспорье при записи, а не условие её.
+/// Не ответил сервер — запишем как ввели, без подсказки.
+Future<NameCheck?> getNameCheck(String query) async {
+  try {
+    final response = await withSession(() => api.fetchNameCheck(query));
+    if (response.statusCode != 200) return null;
+    return NameCheck.fromJson(jsonDecode(response.body));
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<Paged<Person>> getPersons({String? kind, int offset = 0}) async {
   final response = await withSession(() => api.fetchPersons(kind: kind, offset: offset));
   if (response.statusCode == 200) {

@@ -48,6 +48,10 @@ Future<http.Response> fetchMemorialDays(int year) {
   );
 }
 
+/// Сверка имени до записи. Не кэшируем: спрашивают её один раз на имя.
+Future<http.Response> fetchNameCheck(String query) =>
+    v2Send("GET", v2Uri("/pomyannik/name", {"q": query}));
+
 // --- Лица ---------------------------------------------------------------------
 
 Future<http.Response> fetchPersons({String? kind, int offset = 0}) {

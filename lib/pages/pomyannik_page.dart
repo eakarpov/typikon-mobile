@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../apiMapper/pomyannik.dart';
+import '../utils/pomyannik_labels.dart' show capitalize;
 import '../apiMapper/session.dart';
 import '../components/paged_list.dart';
 import '../components/sign_in_needed.dart';
@@ -67,16 +68,22 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
       });
 
   Future<void> _add(String kind) async {
-    final name = await showDialog<String>(
+    final typed = await showDialog<String>(
       context: context,
       builder: (context) => const _AskName(),
     );
-    if (name == null || name.trim().isEmpty) return;
+    if (typed == null || typed.trim().isEmpty) return;
 
     setState(() => _adding = true);
+    final name = await _checked(typed.trim());
+    if (name == null) {
+      if (mounted) setState(() => _adding = false);
+      return;
+    }
+
     try {
       await addPersons([
-        {"name": name.trim(), "kind": kind},
+        {"name": name, "kind": kind},
       ]);
       if (!mounted) return;
       _reload();
@@ -92,6 +99,26 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
     } finally {
       if (mounted) setState(() => _adding = false);
     }
+  }
+
+  /// Имя, каким его записать.
+  ///
+  /// Подсказка НЕ ПРИМЕНЯЕТСЯ САМА. «Анны» — почти наверняка родительный от
+  /// «Анна», но «Иоанна» — и родительный от «Иоанна», и самостоятельное женское
+  /// имя; а имя наречения вообще дело крещения, а не словаря. Поэтому решает
+  /// человек, и решает по доводу, который сервер к подсказке и приложил.
+  ///
+  /// Сверка не обязательна: не ответила — пишем как ввели. Записывать имя она
+  /// помогает, а не разрешает.
+  Future<String?> _checked(String typed) async {
+    final check = await getNameCheck(typed);
+    if (check == null || !check.hasHint) return typed;
+    if (!mounted) return typed;
+
+    return showDialog<String>(
+      context: context,
+      builder: (context) => _AskSuggestion(typed: typed, check: check),
+    );
   }
 
   @override
@@ -229,6 +256,61 @@ class _AskNameState extends State<_AskName> {
           onPressed: () => Navigator.pop(context, _name.text),
           child: const Text("Вписать"),
         ),
+      ],
+    );
+  }
+}
+
+/// Подсказка к имени — выбором, а не подменой.
+///
+/// Помянник хранит словарную форму: от неё зависят память в святцах, сверка
+/// наречения и склонение для записки. Но записать «как есть» человек вправе
+/// всегда: указатель святцев выведен нами и неполон, а имя наречения — дело
+/// крещения.
+class _AskSuggestion extends StatelessWidget {
+  const _AskSuggestion({required this.typed, required this.check});
+
+  final String typed;
+  final NameCheck check;
+
+  @override
+  Widget build(BuildContext context) {
+    final small = Theme.of(context).textTheme.bodySmall;
+
+    return AlertDialog(
+      title: const Text("Как записать", style: TextStyle(fontFamily: "OldStandard")),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            "В помяннике имя хранится так, как оно стоит в святцах: от этого зависят "
+            "именины и то, как имя склонится в записке.",
+            style: small,
+          ),
+          const SizedBox(height: 12.0),
+          ...check.suggestions.map((hint) => Padding(
+                padding: const EdgeInsets.only(bottom: 4.0),
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, hint.name),
+                  child: Column(
+                    children: [
+                      Text(capitalize(hint.name),
+                          style: const TextStyle(fontFamily: "OldStandard")),
+                      Text(hint.why, style: small),
+                    ],
+                  ),
+                ),
+              )),
+          const SizedBox(height: 4.0),
+          TextButton(
+            onPressed: () => Navigator.pop(context, typed),
+            child: Text("Записать как есть: $typed"),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text("Отмена")),
       ],
     );
   }

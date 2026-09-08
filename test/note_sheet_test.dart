@@ -57,7 +57,11 @@ void main() {
       ]),
     );
 
-    expect(find.textContaining("падеж у них остался прежним"), findsOneWidget);
+    // Падеж НЕ называем: помянник пишут родительным, и «именительный» было бы
+    // сказано о слове, которое уже стоит в родительном. Знаем мы ровно одно —
+    // что не склоняли сами.
+    expect(find.textContaining("мы его не склоняли"), findsOneWidget);
+    expect(find.textContaining("именительн"), findsNothing);
     expect(find.textContaining("Свiтлана"), findsWidgets);
   });
 

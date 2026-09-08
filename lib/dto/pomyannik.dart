@@ -664,3 +664,47 @@ class Prinyatye {
         commemorator: Commemorator.fromJson(json["commemorator"] ?? const {}),
       );
 }
+
+// --- Сверка имени -------------------------------------------------------------
+
+class NameSuggestion {
+  final String name;
+
+  /// Довод, по которому решает человек: «похоже на родительный падеж», «имя
+  /// наречения», «похоже на описку». Показывать обязательно — верное
+  /// исправление с неверным доводом человек примет или отвергнет наугад.
+  final String why;
+
+  const NameSuggestion({required this.name, required this.why});
+
+  factory NameSuggestion.fromJson(Map<String, dynamic> json) =>
+      NameSuggestion(name: json["name"] ?? "", why: json["why"] ?? "");
+}
+
+/// Что мы знаем об этом имени — до того, как оно легло в помянник.
+///
+/// Помянник хранит СЛОВАРНУЮ форму: от неё зависят память в святцах, сверка
+/// наречения и склонение для записки. Написанное косвенным падежом — «о здравии
+/// Анны», как помянник и читают вслух, — молча отказывает во всех трёх.
+class NameCheck {
+  final String name;
+
+  /// `known` — имя есть в святцах; `civil` — есть подсказка; `unknown` — не
+  /// нашлось. **Незнакомое принимается**: указатель выведен нами и неполон, и
+  /// отвергать по нему имя человека нельзя.
+  final String status;
+
+  final List<NameSuggestion> suggestions;
+
+  const NameCheck({required this.name, required this.status, this.suggestions = const []});
+
+  bool get hasHint => suggestions.isNotEmpty;
+
+  factory NameCheck.fromJson(Map<String, dynamic> json) => NameCheck(
+        name: json["name"] ?? "",
+        status: json["status"] ?? "unknown",
+        suggestions: json["suggestions"] is List
+            ? (json["suggestions"] as List).map((e) => NameSuggestion.fromJson(e)).toList()
+            : const [],
+      );
+}
