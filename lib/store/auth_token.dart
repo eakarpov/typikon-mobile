@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 const String _sessionCookieKey = "session_cookie";
@@ -8,9 +9,20 @@ Future<void> saveSessionCookie(String cookieValue) {
   return _storage.write(key: _sessionCookieKey, value: cookieValue);
 }
 
-Future<String?> getSessionCookie() {
-  return _storage.read(key: _sessionCookieKey);
+/// Откуда берётся кука. Подменяется тестами: защищённое хранилище — плагин
+/// платформы, и в `flutter test` его нет вовсе. Тот же приём, что у
+/// `readRawApiKey` в `lib/api/v2/api_key.dart`.
+@visibleForTesting
+Future<String?> Function() readSessionCookie = _fromSecureStorage;
+
+Future<String?> _fromSecureStorage() => _storage.read(key: _sessionCookieKey);
+
+@visibleForTesting
+void resetSessionCookieSource() {
+  readSessionCookie = _fromSecureStorage;
 }
+
+Future<String?> getSessionCookie() => readSessionCookie();
 
 Future<void> clearSessionCookie() {
   return _storage.delete(key: _sessionCookieKey);

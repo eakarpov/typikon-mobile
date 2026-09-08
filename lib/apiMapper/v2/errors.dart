@@ -1,8 +1,12 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
 import '../../api/v2/api_key.dart';
+import '../../api/v2/error_body.dart';
+
+// Разбор конверта ошибки лежит в слое запросов: его читает и сам этот слой,
+// решая, объявлять ли ключ негодным. Отсюда — только вывеска наружу, чтобы
+// мапперы не знали про два адреса вместо одного.
+export '../../api/v2/error_body.dart' show v2ErrorCode, v2ErrorMessage;
 
 /// Разбор отказов второй версии API.
 ///
@@ -17,31 +21,6 @@ import '../../api/v2/api_key.dart';
 /// Отдельно от всего этого стоит обрыв связи: он остаётся зоной `isNetworkError`
 /// и `ApiErrorView`. Путать нельзя — «нет соединения» на честный `404` однажды
 /// уже сбило бы отладку.
-
-/// Код ошибки из тела ответа; `null` — тело не разобралось.
-String? v2ErrorCode(http.Response response) {
-  final error = _errorObject(response);
-  final code = error?['code'];
-  return code is String && code.isNotEmpty ? code : null;
-}
-
-/// Сообщение сервера, если оно есть; иначе [fallback].
-String v2ErrorMessage(http.Response response, String fallback) {
-  final error = _errorObject(response);
-  final message = error?['message'];
-  return message is String && message.trim().isNotEmpty ? message.trim() : fallback;
-}
-
-Map<String, dynamic>? _errorObject(http.Response response) {
-  try {
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map) return null;
-    final error = decoded['error'];
-    return error is Map ? Map<String, dynamic>.from(error) : null;
-  } catch (_) {
-    return null;
-  }
-}
 
 /// Сколько ждать до повтора — из заголовка `Retry-After`.
 ///
