@@ -160,5 +160,10 @@ Future<void> signOut(Store<AppState> store) async {
   }
   await GoogleSignIn.instance.signOut();
   await clearSessionCookie();
+  // Помянник стирается с устройства и здесь, а не только в forgetSession: тот —
+  // путь протухшей сессии, а это осознанный выход, и после него имена родни на
+  // диске остаться не должны тем более. Обнаружено на устройстве: очистка стояла
+  // на одном из двух путей, и по коду это не читалось.
+  await clearPomyannikCache();
   store.dispatch(SignOutAction());
 }
