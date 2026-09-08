@@ -74,6 +74,8 @@ class _DictionaryPageState extends State<DictionaryPage> {
                           style: const TextStyle(fontFamily: "Monomakh", fontSize: 18.0)),
                       subtitle: Text([
                         partOfSpeechLabel(item.pos),
+                        // В строке списка помета одна и кодом: место узкое, а
+                        // разбор целиком показывается в самой статье.
                         if (item.properties.isNotEmpty) item.properties,
                       ].where((part) => part.isNotEmpty).join(" · ")),
                       trailing: const Icon(Icons.chevron_right),
@@ -151,7 +153,7 @@ class _LexemePageState extends State<LexemePage> {
       padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 32.0),
       children: [
         Text(
-          [partOfSpeechLabel(data.pos), ...data.properties]
+          [partOfSpeechLabel(data.pos), ...propertyLabels(data.pos, data.properties)]
               .where((part) => part.isNotEmpty)
               .join(" · "),
           style: Theme.of(context).textTheme.bodySmall,
@@ -166,18 +168,25 @@ class _LexemePageState extends State<LexemePage> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+        // Пояснение к точке стоит ПЕРЕД таблицами, а не после них. Стояло после
+        // — и на устройстве стало видно, чего не видно в коде: склонение
+        // существительного это два десятка строк, и читатель встречал точку
+        // задолго до того, как узнавал, что она значит.
+        if (data.paradigms.isNotEmpty || data.extra.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              // Разница между фактом и выводом должна быть видна, а не подразумеваться.
+              "Точкой отмечено выписанное в самом словаре; прочее порождено по "
+              "таблице склонения.",
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
         ...data.paradigms.map((paradigm) => _paradigm(context, paradigm, fontSize)),
         if (data.extra.isNotEmpty) ...[
           _heading(context, "Прочие формы"),
           ...data.extra.map((form) => _form(context, form, fontSize)),
         ],
-        const SizedBox(height: 16.0),
-        Text(
-          // Разница между фактом и выводом должна быть видна, а не подразумеваться.
-          "Формы без пометы порождены по таблице склонения; выписанные в словаре "
-          "отмечены точкой.",
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
       ],
     );
   }
