@@ -162,8 +162,18 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
             : TabBarView(
                 controller: _tabs,
                 children: [
-                  _Column(kind: living, token: _token, vocabulary: _vocabulary),
-                  _Column(kind: departed, token: _token, vocabulary: _vocabulary),
+                  _Column(
+                    kind: living,
+                    token: _token,
+                    vocabulary: _vocabulary,
+                    onChanged: _reload,
+                  ),
+                  _Column(
+                    kind: departed,
+                    token: _token,
+                    vocabulary: _vocabulary,
+                    onChanged: _reload,
+                  ),
                 ],
               ),
       ),
@@ -172,11 +182,21 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
 }
 
 class _Column extends StatelessWidget {
-  const _Column({required this.kind, required this.token, required this.vocabulary});
+  const _Column({
+    required this.kind,
+    required this.token,
+    required this.vocabulary,
+    required this.onChanged,
+  });
 
   final String kind;
   final int token;
   final Vocabulary vocabulary;
+
+  /// Карточка умеет править и убирать имя. Не перечитав список после её
+  /// закрытия, мы показывали бы убранное имя до следующего входа в раздел — и
+  /// хозяин решил бы, что имя не убралось.
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -187,16 +207,18 @@ class _Column extends StatelessWidget {
           ? "О здравии пока никто не вписан."
           : "О упокоении пока никто не вписан.",
       errorMessage: "Не удалось открыть помянник.",
-      itemBuilder: (context, person) => _Row(person: person, vocabulary: vocabulary),
+      itemBuilder: (context, person) =>
+          _Row(person: person, vocabulary: vocabulary, onChanged: onChanged),
     );
   }
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.person, required this.vocabulary});
+  const _Row({required this.person, required this.vocabulary, required this.onChanged});
 
   final Person person;
   final Vocabulary vocabulary;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -213,7 +235,10 @@ class _Row extends StatelessWidget {
       subtitle: about.isEmpty
           ? null
           : Text(about.join(", "), style: Theme.of(context).textTheme.bodySmall),
-      onTap: () => Navigator.pushNamed(context, "/pomyannik", arguments: person.id),
+      onTap: () async {
+        final changed = await Navigator.pushNamed(context, "/pomyannik", arguments: person.id);
+        if (changed == true) onChanged();
+      },
     );
   }
 }

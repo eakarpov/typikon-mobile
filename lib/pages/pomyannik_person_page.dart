@@ -33,6 +33,9 @@ class PomyannikPersonPage extends StatefulWidget {
 class _PomyannikPersonPageState extends State<PomyannikPersonPage> with WidgetsBindingObserver {
   late Future<PersonCard> card;
   PersonCard? _loaded;
+
+  /// Правили или убирали — списку позади надо перечитаться.
+  bool _changed = false;
   Vocabulary _vocabulary = const Vocabulary();
 
   @override
@@ -79,7 +82,12 @@ class _PomyannikPersonPageState extends State<PomyannikPersonPage> with WidgetsB
         builder: (context) => _EditPerson(person: person, vocabulary: _vocabulary),
       ),
     );
-    if (saved == true && mounted) setState(_load);
+    if (saved == true && mounted) {
+      setState(_load);
+      // Список позади тоже показывает имя и чин: вернувшись в него, хозяин
+      // должен увидеть правку, а не прежнее.
+      _changed = true;
+    }
   }
 
   Future<void> _remove(Person person) async {
@@ -109,6 +117,7 @@ class _PomyannikPersonPageState extends State<PomyannikPersonPage> with WidgetsB
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: BackButton(onPressed: () => Navigator.pop(context, _changed)),
         // Имени в заголовке нет нарочно: список недавних экранов — не то место,
         // где имени из чужого помянника стоит показываться через плечо.
         title: const Text("Помянник", style: TextStyle(fontFamily: "OldStandard")),
@@ -230,11 +239,30 @@ class _Card extends StatelessWidget {
           if ((person.sorokoust?.where ?? "").isNotEmpty)
             _Line("Где", person.sorokoust!.where!),
         ],
-        const _Section("Даты"),
-        if ((person.born ?? "").isNotEmpty) _Line("Рождение", humanDate(person.born)),
-        if ((person.baptized ?? "").isNotEmpty) _Line("Крещение", humanDate(person.baptized)),
-        if ((person.died ?? "").isNotEmpty) _Line("Преставление", humanDate(person.died)),
-        if (person.nameDay != null) _NameDay(nameDay: person.nameDay!),
+        // Раздел показывается, только если в нём есть чему быть. Заголовок над
+        // пустотой обещает то, чего под ним нет.
+        if ((person.born ?? "").isNotEmpty ||
+            (person.baptized ?? "").isNotEmpty ||
+            (person.died ?? "").isNotEmpty ||
+            person.nameDay != null) ...[
+          const _Section("Даты"),
+          if ((person.born ?? "").isNotEmpty) _Line("Рождение", humanDate(person.born)),
+          if ((person.baptized ?? "").isNotEmpty) _Line("Крещение", humanDate(person.baptized)),
+          if ((person.died ?? "").isNotEmpty) _Line("Преставление", humanDate(person.died)),
+          if (person.nameDay != null) _NameDay(nameDay: person.nameDay!),
+        ],
+        // Именины считаются от дня рождения: ближайшая память после него. Без
+        // дня рождения их не посчитать, и молчать об этом нельзя — пустота
+        // читается как «памяти нет», а её просто не от чего отсчитать.
+        if (person.nameDay == null && (person.born ?? "").isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 0.0),
+            child: Text(
+              "Именины считаются по дню рождения — ближайшая память после него. "
+              "Укажите день рождения, и они появятся сами.",
+              style: small,
+            ),
+          ),
         const SizedBox(height: 24.0),
       ],
     );
