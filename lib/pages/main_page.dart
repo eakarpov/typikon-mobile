@@ -50,6 +50,11 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   late Future<MainPageData> data;
   late Future<Version> version;
 
+  /// Что ответил сервер. Нужен ящику: пункт «Обновить приложение» показывается
+  /// тому, кто предложение пропустил, — а адрес выпуска называет сервер, и до
+  /// ответа его взять неоткуда.
+  Version? _remote;
+
   // Предложение включить предзагрузку показываем один раз за жизнь страницы, а
   // снимаем в dispose: MaterialBanner живёт в ScaffoldMessenger выше
   // MaterialApp и иначе уехал бы на следующий экран вместе с пользователем.
@@ -65,11 +70,18 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     version = getVersion();
-    version.then((value) => {
+    // Отказ проглатываем нарочно, и без него было бы хуже: результат этого
+    // будущего никто, кроме здешнего `then`, не ждёт, а необработанная ошибка
+    // асинхронного будущего уходит в обработчик верхнего уровня и попадает в
+    // отчёт о падениях. Не узнать версию — обычное дело: сети нет, сервер занят,
+    // ручка ещё не выложена. Молчать тут правильно: экран главной от версии не
+    // зависит, и говорить читателю нечего.
+    version.then((value) {
+      if (mounted) setState(() => _remote = value);
       if (isUpdateAvailable(value) && !widget.hasSkippedUpdate) {
-        showAlert(context, value)
+        showAlert(context, value);
       }
-    });
+    }).catchError((_) {});
   }
 
   @override
@@ -233,9 +245,9 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     }
   }
 
-  void onLoadUpdate(BuildContext context) async {
+  void onLoadUpdate(BuildContext context, Version remote) async {
     Navigator.of(context).pop();
-    final Uri url = Uri.parse('$apiBaseUrl/app/app.apk');
+    final Uri url = Uri.parse(updateUrl(remote));
     if (await canLaunchUrl(url)) {
       await launchUrl(
           url,
@@ -253,20 +265,18 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   }
 
   void showAlert(BuildContext context, Version value) {
-    var major = value.major;
-    var minor = value.minor;
     showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Обновление'),
-          content: Text('Появилось новое обновление: Версия $major.$minor'),
+          content: Text('Появилось новое обновление: Версия $value'),
           actions: <Widget>[
             TextButton(
               onPressed: () => onSkipUpdate(context),
               child: const Text('Пропустить'),
             ),
             TextButton(
-              onPressed: () => onLoadUpdate(context),
+              onPressed: () => onLoadUpdate(context, value),
               child: const Text('Загрузить'),
             ),
           ],
@@ -903,7 +913,9 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                 ),
                 if (widget.hasSkippedUpdate) ListTile(
                   title: const Text("Обновить приложение", style: TextStyle(fontSize: 14.0),),
-                  onTap: () => onLoadUpdate(context),
+                  // До ответа сервера адрес выпуска берётся прежний, свой:
+                  // ждать ответа, чтобы дать нажать кнопку, незачем.
+                  onTap: () => onLoadUpdate(context, _remote ?? const Version(major: 0, minor: 0)),
                 ),
               ],
              ),

@@ -208,7 +208,10 @@ Future _checkVersionAndNotify(String type) async {
       await flutterLocalNotificationsPlugin.show(id++,
           'Уставные чтения',
           'Появилось новое обновление. Нажмите для загрузки.',
-          platformChannelSpecifics, payload: wantToGetUpdate,
+          // Адрес выпуска едет вместе с уведомлением: нажать на него могут
+          // через час после проверки, и второй раз спрашивать сервер ради
+          // одного адреса незачем.
+          platformChannelSpecifics, payload: "$wantToGetUpdate ${updateUrl(version)}",
       );
     }
   } catch (error) {
@@ -450,8 +453,12 @@ class MyAppState extends State<MyApp> {
 
   void _configureSelectNotificationSubject() {
     selectNotificationStream.stream.listen((String? payload) async {
-      if (payload == wantToGetUpdate) {
-        final Uri url = Uri.parse('$apiBaseUrl/app/app.apk');
+      if (payload != null && payload.startsWith(wantToGetUpdate)) {
+        // Уведомления, показанные прежней версией приложения, адреса не несут —
+        // им остаётся прежний, свой.
+        final String named = payload.substring(wantToGetUpdate.length).trim();
+        final Uri url = Uri.parse(
+            named.isEmpty ? '$apiBaseUrl/app/app.apk' : named);
         if (await canLaunchUrl(url)) {
           await launchUrl(
             url,

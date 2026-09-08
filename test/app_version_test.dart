@@ -1,71 +1,98 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:typikon/api/constants.dart';
 import 'package:typikon/dto/version.dart';
 import 'package:typikon/utils/app_version.dart';
 import 'package:typikon/version.dart';
 
+// Версия. Ошибка здесь не видна никому: копия, считающая себя новее выложенного,
+// просто никогда не предложит обновиться, и узнаем мы об этом от пользователя,
+// который полгода сидит на старом.
+
 void main() {
-  group("сравнение версий", () {
-    test("больший минор при том же мажоре — обновление есть", () {
-      expect(
-        isUpdateAvailable(Version(major: majorVersion, minor: minorVersion + 1)),
-        isTrue,
-      );
+  test("номер в коде сходится с номером сборки", () {
+    // Одно и то же число записано дважды: в pubspec его читают Android и iOS,
+    // в version.dart — сверка с сервером. Разъехавшись, они не сломают ничего
+    // заметного: копия будет предлагать обновиться сама на себя или молчать о
+    // настоящем обновлении.
+    final pubspec = File("pubspec.yaml").readAsStringSync();
+    final line = RegExp(r"^version:\s*(\d+)\.(\d+)\.(\d+)", multiLine: true)
+        .firstMatch(pubspec);
+
+    expect(line, isNotNull, reason: "в pubspec.yaml нет строки version");
+    expect(int.parse(line!.group(1)!), majorVersion);
+    expect(int.parse(line.group(2)!), minorVersion);
+    expect(int.parse(line.group(3)!), patchVersion);
+  });
+
+  group("есть ли обновление", () {
+    Version remote(int major, int minor, [int patch = 0]) =>
+        Version(major: major, minor: minor, patch: patch);
+
+    test("старший номер решает, а не набор чисел", () {
+      // 1.9 против установленной 2.0: минор девять больше нуля, и сравнение
+      // чисел порознь объявило бы обновлением откат назад.
+      expect(isUpdateAvailable(remote(majorVersion - 1, minorVersion + 9)), isFalse);
+      expect(isUpdateAvailable(remote(majorVersion + 1, 0)), isTrue);
     });
 
-    test("та же версия — обновления нет", () {
-      expect(
-        isUpdateAvailable(Version(major: majorVersion, minor: minorVersion)),
-        isFalse,
-      );
+    test("своя же версия обновлением не считается", () {
+      expect(isUpdateAvailable(remote(majorVersion, minorVersion, patchVersion)), isFalse);
     });
 
-    test("больший мажор — обновление есть даже при меньшем миноре", () {
-      expect(
-        isUpdateAvailable(Version(major: majorVersion + 1, minor: 0)),
-        isTrue,
-      );
+    test("патч замечается, когда старшие равны", () {
+      // Патчей мы пока не выпускаем, но ручка их отдаёт: заметить 2.0.1 копия
+      // должна с первого же такого выпуска, а не после правки сравнения.
+      expect(isUpdateAvailable(remote(majorVersion, minorVersion, patchVersion + 1)), isTrue);
     });
 
-    test("меньший мажор с большим минором обновлением не считается", () {
-      // Ровно та ошибка, из-за которой сравнение и переписано: при
-      // установленной 2.0 сервер с 1.9 предлагал "обновиться" назад.
-      expect(
-        isUpdateAvailable(Version(major: majorVersion - 1, minor: minorVersion + 9)),
-        isFalse,
-      );
+    test("молчание сервера о патче не считается откатом", () {
+      // Первая версия API отдаёт только major и minor, и патч приходит нулём.
+      expect(isUpdateAvailable(remote(majorVersion, minorVersion)), isFalse);
     });
   });
 
-  test("appVersion не разъехался с pubspec.yaml", () {
-    // Третья копия версии на клиенте: её приложение шлёт заголовком
-    // X-Typikon-App и прикладывает к отчётам о падениях. Разъедется —
-    // и статистика по версиям, и отчёты начнут врать.
-    final pubspec = File("pubspec.yaml").readAsStringSync();
-    final match = RegExp(r"^version:\s*(\S+)", multiLine: true).firstMatch(pubspec);
+  group("откуда брать выпуск", () {
+    test("адрес называет сервер", () {
+      // Переезд домена: старая копия узнает новый адрес выпуска от сервера, а
+      // не склеит его из собственной константы.
+      expect(
+        updateUrl(const Version(major: 3, minor: 0, download: "https://typikon.info/app/app.apk")),
+        "https://typikon.info/app/app.apk",
+      );
+    });
 
-    expect(match, isNotNull);
-    expect(appVersion, match!.group(1));
+    test("не назвал — остаётся свой прежний", () {
+      // Так отвечает первая версия API старым копиям.
+      expect(updateUrl(const Version(major: 3, minor: 0)), endsWith("/app/app.apk"));
+    });
   });
 
-  test("version.dart не разъехался с pubspec.yaml", () {
-    final pubspec = File("pubspec.yaml").readAsStringSync();
-    final match = RegExp(r"^version:\s*(\d+)\.(\d+)\.", multiLine: true).firstMatch(pubspec);
+  group("разбор ответа", () {
+    test("тройка и адрес читаются", () {
+      final version = Version.fromJson({
+        "version": "2.1.3", "major": 2, "minor": 1, "patch": 3,
+        "download": "https://www.typikon.su/app/app.apk",
+      });
 
-    expect(match, isNotNull, reason: "в pubspec.yaml не нашлась строка version:");
+      expect(version.toString(), "2.1.3");
+      expect(version.download, "https://www.typikon.su/app/app.apk");
+    });
 
-    final pubspecMajor = int.parse(match!.group(1)!);
-    final pubspecMinor = int.parse(match.group(2)!);
+    test("ответ первой версии API читается тем же разбором", () {
+      final version = Version.fromJson({"major": 2, "minor": 0});
 
-    expect(
-      [majorVersion, minorVersion],
-      [pubspecMajor, pubspecMinor],
-      reason: "lib/version.dart и pubspec.yaml задают версию по отдельности; "
-          "после подъёма версии нужно менять оба, иначе приложение начнёт "
-          "предлагать обновиться само на себя",
-    );
+      expect(version.patch, 0);
+      expect(version.download, isEmpty);
+    });
+
+    test("мусор в ответе не роняет проверку", () {
+      // Проверка версий идёт фоновой задачей; исключение здесь не покажется
+      // никому и просто отключит уведомления об обновлении.
+      final version = Version.fromJson({"major": "два", "minor": null});
+
+      expect(version.major, 0);
+      expect(version.minor, 0);
+    });
   });
 }
