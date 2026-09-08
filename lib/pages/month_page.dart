@@ -60,7 +60,8 @@ class _MonthPageState extends State<MonthPage> {
                     child: ListTile(
                       title: Text(item.name??""),
                       onTap: () => {
-                        Navigator.pushNamed(context, "/days", arguments: item.id)
+                        // Псевдонимом: вторая версия API спрашивает день по нему.
+                        Navigator.pushNamed(context, "/days", arguments: item.alias ?? item.id)
                       },
                     ),
                   );

@@ -15,7 +15,9 @@ class Month {
 
   factory Month.fromJson(Map<String, dynamic> json) {
     return Month(
-      id: json["_id"],
+      // Вторая версия API зовёт его `id`; `_id` остаётся понятным на случай
+      // ответа из старого кэша на диске — он живёт неделю.
+      id: json["id"] ?? json["_id"],
       value: json["value"],
       alias: json["alias"],
       order: json["order"],
@@ -46,7 +48,7 @@ class MonthWithDays {
             .toList()
     );
     return MonthWithDays(
-      id: json["_id"],
+      id: json["id"] ?? json["_id"],
       value: json["value"],
       alias: json["alias"],
       order: json["order"],
@@ -62,8 +64,12 @@ class MonthList {
     required this.list,
   });
 
-  factory MonthList.fromJson(List<dynamic> json) {
-    var list = json;
+  /// Вторая версия API отдаёт перечни конвертом `{items, total, limit, offset}`,
+  /// а первая отдавала голым списком. Принимаем и то и другое: на диске может
+  /// лежать ответ, записанный прежней версией приложения, и кэш месяцев живёт
+  /// неделю.
+  factory MonthList.fromJson(dynamic json) {
+    final list = json is Map ? (json["items"] as List? ?? const []) : json as List;
     List<Month> items = List<Month>.from(
         list
             .map((item) => Month.fromJson(item))

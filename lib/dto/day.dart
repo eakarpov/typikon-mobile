@@ -36,8 +36,10 @@ class DayText {
 
   factory DayText.fromJson(Map<String, dynamic> json) {
     return DayText(
-      id: json["_id"] ?? "",
+      id: json["id"] ?? json["_id"] ?? "",
       name: json["name"] ?? "",
+      // Тело приходит только по просьбе (`expand=content`). Пустое означает,
+      // что его не просили, — не то, что текст пуст.
       content: json["content"] ?? "",
       book: json["book"] == null ? null : DayTextBook.fromJson(json["book"]),
       csSource: json["csSource"] ?? false,
@@ -67,8 +69,11 @@ class DayTextsPart {
 
   factory DayTextsPart.fromJson(Map<String, dynamic> json) {
     final rawText = json["text"];
-    // У зачал место текста занято заглушкой {"_id": null} — это не текст.
-    final hasText = rawText is Map<String, dynamic> && rawText["_id"] != null;
+    // Вторая версия API на месте отсутствующего текста присылает `null`; первая
+    // клала заглушку `{"_id": null}`. Различаем по наличию опознавателя, а не по
+    // наличию поля — так верно для обеих.
+    final hasText = rawText is Map<String, dynamic> &&
+        (rawText["id"] != null || rawText["_id"] != null);
     var statiaVal = json["statia"] == null ? null : json["statia"];
     return DayTextsPart(
       text: hasText ? DayText.fromJson(rawText) : null,
@@ -101,98 +106,63 @@ class DayTextsParts {
   }
 }
 
+/// Место службы: заголовок и то, что в нём читается.
+///
+/// **Заголовок приходит с сервера, а не составляется здесь.** Прежде этот
+/// список — двадцать мест с русскими подписями — был зашит в экран дня, и вторым
+/// таким же списком жил сервер. Два списка, писанные руками и не знающие друг о
+/// друге, разошлись: у сервера недоставало двух мест, и Великий пяток показывал
+/// семь чтений из девяти. Теперь список один, и он там, где данные.
+class DaySection {
+  /// Имя поля в базе: `song6`, `gospelLiturgy`. Наружу не показывается, но по
+  /// нему удобно отличать места службы в отладке.
+  final String slot;
+
+  final String title;
+  final List<DayTextsPart> items;
+
+  const DaySection({required this.slot, required this.title, this.items = const []});
+
+  factory DaySection.fromJson(Map<String, dynamic> json) => DaySection(
+        slot: json["slot"] ?? "",
+        title: json["title"] ?? "",
+        items: json["items"] is List
+            ? (json["items"] as List)
+                .whereType<Map>()
+                .map((item) => DayTextsPart.fromJson(Map<String, dynamic>.from(item)))
+                .toList()
+            : const <DayTextsPart>[],
+      );
+}
+
 class DayTexts {
   final String? id;
+  final String? alias;
   final String? name;
-  final DayTextsParts? vespersProkimenon;
-  final DayTextsParts? vigil;
-  final DayTextsParts? kathisma1;
-  final DayTextsParts? kathisma2;
-  final DayTextsParts? kathisma3;
-  final DayTextsParts? before50;
-  final DayTextsParts? ipakoi;
-  final DayTextsParts? polyeleos;
-  final DayTextsParts? gospelMatins;
-  final DayTextsParts? song3;
-  final DayTextsParts? song6;
-  final DayTextsParts? apolutikaTroparia;
-  final DayTextsParts? before1h;
-  final DayTextsParts? h1;
-  final DayTextsParts? h3;
-  final DayTextsParts? h6;
-  final DayTextsParts? h9;
-  final DayTextsParts? apostleLiturgy;
-  final DayTextsParts? gospelLiturgy;
-  final DayTextsParts? panagia;
+
+  /// Места службы по порядку, и только непустые: сервер пустых не присылает.
+  final List<DaySection> readings;
 
   const DayTexts({
     required this.id,
     required this.name,
-    this.vespersProkimenon,
-    this.vigil,
-    required this.kathisma1,
-    required this.kathisma2,
-    required this.kathisma3,
-    required this.before50,
-    required this.ipakoi,
-    required this.polyeleos,
-    this.gospelMatins,
-    required this.song3,
-    required this.song6,
-    required this.apolutikaTroparia,
-    required this.before1h,
-    this.h1,
-    required this.h3,
-    required this.h6,
-    required this.h9,
-    this.apostleLiturgy,
-    this.gospelLiturgy,
-    this.panagia,
+    this.alias,
+    this.readings = const [],
   });
 
-  factory DayTexts.fromJson(Map<String, dynamic> json) {
-    DayTextsParts? part(String key) =>
-        json[key] == null ? null : DayTextsParts.fromJson(json[key]);
-    var kathisma1 = json["kathisma1"] == null ? null : DayTextsParts.fromJson(json["kathisma1"]);
-    var kathisma2 = json["kathisma2"] == null ? null : DayTextsParts.fromJson(json["kathisma2"]);
-    var kathisma3 = json["kathisma3"] == null ? null : DayTextsParts.fromJson(json["kathisma3"]);
-    var before50 = json["before50"] == null ? null
-        : json["before50"]["items"] == null ? null : DayTextsParts.fromJson(json["before50"]); // Why is it so?
-    var ipakoi = json["ipakoi"] == null ? null : DayTextsParts.fromJson(json["ipakoi"]);
-    var polyeleos = json["polyeleos"] == null ? null : DayTextsParts.fromJson(json["polyeleos"]);
-    var song3 = json["song3"] == null ? null : DayTextsParts.fromJson(json["song3"]);
-    var song6 = json["song6"] == null ? null : DayTextsParts.fromJson(json["song6"]);
-    var apolutikaTroparia = json["apolutikaTroparia"] == null ? null : DayTextsParts.fromJson(json["apolutikaTroparia"]);
-    var before1h = json["before1h"] == null ? null : DayTextsParts.fromJson(json["before1h"]);
-    var h3 = json["h3"] == null ? null : DayTextsParts.fromJson(json["h3"]);
-    var h6 = json["h6"] == null ? null : DayTextsParts.fromJson(json["h6"]);
-    var h9 = json["h9"] == null ? null : DayTextsParts.fromJson(json["h9"]);
-    return DayTexts(
-      id: json["id"],
-      name: json["name"],
-      vespersProkimenon: part("vespersProkimenon"),
-      vigil: part("vigil"),
-      kathisma1: kathisma1,
-      kathisma2: kathisma2,
-      kathisma3: kathisma3,
-      before50: before50,
-      ipakoi: ipakoi,
-      polyeleos: polyeleos,
-      gospelMatins: part("gospelMatins"),
-      song3: song3,
-      song6: song6,
-      apolutikaTroparia: apolutikaTroparia,
-      before1h: before1h,
-      h1: part("h1"),
-      h3: h3,
-      h6: h6,
-      h9: h9,
-      apostleLiturgy: part("apostleLiturgy"),
-      gospelLiturgy: part("gospelLiturgy"),
-      panagia: part("panagia"),
-    );
-  }
+  factory DayTexts.fromJson(Map<String, dynamic> json) => DayTexts(
+        id: json["id"],
+        alias: json["alias"],
+        name: json["name"],
+        readings: json["readings"] is List
+            ? (json["readings"] as List)
+                .whereType<Map>()
+                .map((item) => DaySection.fromJson(Map<String, dynamic>.from(item)))
+                .toList()
+            : const <DaySection>[],
+      );
 }
+
 
 class DayResult {
   final DayTexts? data;

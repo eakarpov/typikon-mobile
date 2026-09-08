@@ -27,10 +27,8 @@ class _Section {
   /// текста и без зачала, и рисовать их пустым заголовком незачем.
   final List<DayTextsPart> items;
 
-  _Section(this.title, DayTextsParts? part)
-      : items = (part?.items ?? const <DayTextsPart>[])
-            .where((item) => item.isPericope || item.text != null)
-            .toList();
+  _Section(this.title, List<DayTextsPart> parts)
+      : items = parts.where((item) => item.isPericope || item.text != null).toList();
 
   bool get isEmpty => items.isEmpty;
 }
@@ -50,34 +48,15 @@ class _DaysPageState extends State<DaysPage> {
   GlobalKey _sectionKey(String title) => _sectionKeys.putIfAbsent(title, () => GlobalKey());
   GlobalKey _itemKey(String id) => _itemKeys.putIfAbsent(id, () => GlobalKey());
 
-  /// Места службы в том же порядке и составе, что и на странице чтений дня
-  /// наряду. Раньше здесь не было ни Евангелия, ни Апостола, ни паремий, и
-  /// седмичные дни (например, недели по Пятидесятнице) выглядели пустыми,
-  /// хотя чтения на них у сервера есть.
-  List<_Section> _sections(DayTexts data) {
-    return [
-      _Section("На паремиях вечерни по прокимне", data.vespersProkimenon),
-      _Section("На всенощном бдении перед шестопсалмием", data.vigil),
-      _Section("По седальнах первой кафизмы", data.kathisma1),
-      _Section("По седальнах второй кафизмы", data.kathisma2),
-      _Section("По седальнах третьей кафизмы", data.kathisma3),
-      _Section("После Евангелия перед 50-м псалмом", data.before50),
-      _Section("По ипакои", data.ipakoi),
-      _Section("По седальнах полиелея", data.polyeleos),
-      _Section("Евангелие на утрени", data.gospelMatins),
-      _Section("По седальнах третьей песни", data.song3),
-      _Section("По кондаке и икосе шестой песни", data.song6),
-      _Section("По отпустительным тропарям", data.apolutikaTroparia),
-      _Section("Перед первым часом", data.before1h),
-      _Section("На первом часе", data.h1),
-      _Section("На 3-м часе", data.h3),
-      _Section("На 6-м часе", data.h6),
-      _Section("На 9-м часе", data.h9),
-      _Section("Апостол на Литургии", data.apostleLiturgy),
-      _Section("Евангелие на Литургии", data.gospelLiturgy),
-      _Section("На панагии", data.panagia),
-    ].where((s) => !s.isEmpty).toList();
-  }
+  /// Места службы приходят с сервера — и порядком, и подписями.
+  ///
+  /// Прежде этот список был зашит здесь: двадцать мест с русскими подписями,
+  /// а вторым таким же списком жил сервер. Два списка, писанные руками и не
+  /// знающие друг о друге, разошлись — у сервера недоставало двух мест, и
+  /// Великий пяток показывал семь чтений из девяти. Держать вторую копию, чтобы
+  /// однажды снова разойтись, незачем: список там, где данные.
+  List<_Section> _sections(DayTexts data) =>
+      data.readings.map((r) => _Section(r.title, r.items)).where((s) => !s.isEmpty).toList();
 
   /// Как называется пункт: у зачала своего имени нет, есть ссылка ("Мк. 13").
   String _itemTitle(DayTextsPart item) =>
