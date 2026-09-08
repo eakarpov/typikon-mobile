@@ -4,6 +4,7 @@ import '../apiMapper/pomyannik.dart';
 import '../utils/pomyannik_labels.dart' show capitalize;
 import '../apiMapper/session.dart';
 import '../components/paged_list.dart';
+import '../components/api_error_view.dart' show failureMessage;
 import '../components/sign_in_needed.dart';
 import '../dto/pomyannik.dart';
 import '../utils/pomyannik_labels.dart';
@@ -94,7 +95,7 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
       // Имя не записано — так и говорим. Всплывающее «сохранено» над несохранённым
       // было бы худшим из возможного: о нём не узнают до пропущенного дня.
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Имя не записано: $e")),
+        SnackBar(content: Text(failureMessage(e, "имя не записано"))),
       );
     } finally {
       if (mounted) setState(() => _adding = false);

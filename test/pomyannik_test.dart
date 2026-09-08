@@ -1,6 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:io';
+
+import 'package:typikon/components/api_error_view.dart';
 import 'package:typikon/dto/pomyannik.dart';
 import 'package:typikon/utils/pomyannik_labels.dart';
 
@@ -314,6 +317,43 @@ void main() {
       expect(eventLabel("fortieth"), "сороковой день");
       expect(eventLabel("sorokoust-end"), "оканчивается сорокоуст");
       expect(eventLabel("nechto-novoe"), "nechto-novoe");
+    });
+  });
+
+  group("что говорим о неудавшейся записи", () {
+    // Показывать текст исключения нельзя: «ClientException with SocketException:
+    // Failed host lookup 'www.typikon.su' (OS Error: No address associated with
+    // hostname, errno = 7)» выглядит поломкой приложения, хотя это пропавшая
+    // сеть, и сделать с этой строкой читателю нечего. Найдено на устройстве в
+    // режиме полёта.
+    test("пропавшая сеть называется сетью, а не исключением", () {
+      final said = failureMessage(
+        const SocketException("Failed host lookup: 'www.typikon.su'"),
+        "имя не записано",
+      );
+
+      expect(said, "Нет связи: имя не записано");
+      expect(said, isNot(contains("SocketException")));
+    });
+
+    test("сообщение сервера доходит своими словами", () {
+      // Отказы v2 написаны по-русски и для человека: «в помяннике не больше
+      // пятисот имён» сказано лучше, чем мы сказали бы за сервер.
+      expect(
+        failureMessage(Exception("В помяннике не больше 500 имён"), "имя не записано"),
+        "В помяннике не больше 500 имён",
+      );
+    });
+
+    test("отладочная приставка срезается", () {
+      expect(failureMessage(Exception("Не удалось"), "имя не записано"), "Не удалось");
+    });
+
+    test("непомерно длинное объяснение заменяется своим", () {
+      expect(
+        failureMessage(Exception("x" * 300), "имя не записано"),
+        "имя не записано",
+      );
     });
   });
 }

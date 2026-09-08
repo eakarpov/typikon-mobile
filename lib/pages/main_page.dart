@@ -13,6 +13,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../components/api_error_view.dart' show isNetworkError;
 import "../dto/text.dart";
 import "../apiMapper/common.dart";
 import "../dto/common.dart";
@@ -649,9 +650,25 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       children: [
                         Padding(
                           padding: EdgeInsets.all(16.0),
-                          child: Text(
-                            '${future.error}',
-                            textAlign: TextAlign.center,
+                          child: Column(
+                            children: [
+                              // Не текст исключения: «ClientException with
+                              // SocketException: Failed host lookup» на главном
+                              // экране выглядит поломкой приложения, хотя это
+                              // пропавшая сеть. Найдено на устройстве в режиме
+                              // полёта — в коде это место читалось безобидно.
+                              Icon(
+                                isNetworkError(future.error) ? Icons.wifi_off : Icons.error_outline,
+                                size: 48.0,
+                              ),
+                              const SizedBox(height: 16.0),
+                              Text(
+                                isNetworkError(future.error)
+                                    ? "Нет соединения с интернетом."
+                                    : "Не удалось загрузить чтения дня.",
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
                         ),
                         TextButton(

@@ -98,7 +98,7 @@ class _PomyannikNotePageState extends State<PomyannikNotePage> {
       // Отказ проверки — это ответ сервера словами: «панихида — заупокойное
       // поминовение, живых в него не вписывают: Николай». Его и показываем, а не
       // своё «не удалось».
-      if (mounted) setState(() => _refusal = e.toString());
+      if (mounted) setState(() => _refusal = failureMessage(e, "записку собрать не вышло"));
     } finally {
       if (mounted) setState(() => _building = false);
     }
@@ -233,8 +233,9 @@ class _PomyannikNotePageState extends State<PomyannikNotePage> {
       // «Приём не найден», «этого поминовения он не принимает», «слишком часто» —
       // всё это ответы сервера словами, и подменять их своими незачем.
       if (!mounted) return;
-      setState(() => _refusal = e.toString());
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$e")));
+      final said = failureMessage(e, "записка не подана");
+      setState(() => _refusal = said);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(said)));
     } finally {
       if (mounted) setState(() => _sending = false);
     }

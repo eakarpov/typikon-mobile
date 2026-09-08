@@ -109,7 +109,8 @@ class _PomyannikPersonPageState extends State<PomyannikPersonPage> with WidgetsB
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Не убрано: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failureMessage(e, "имя не убрано"))));
     }
   }
 
@@ -445,7 +446,8 @@ class _EditPersonState extends State<_EditPerson> {
     } catch (e) {
       if (!mounted) return;
       // Правка не записана — и сказано об этом, а не показано «сохранено».
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Не записано: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failureMessage(e, "правка не записана"))));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

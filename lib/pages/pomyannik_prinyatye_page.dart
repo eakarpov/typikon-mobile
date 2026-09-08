@@ -60,7 +60,8 @@ class _PomyannikPrinyatyePageState extends State<PomyannikPrinyatyePage> {
       if (mounted) setState(_load);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failureMessage(e, "отметка не поставлена"))));
     } finally {
       if (mounted) setState(() => _busy.remove(note.id));
     }
@@ -86,7 +87,9 @@ class _PomyannikPrinyatyePageState extends State<PomyannikPrinyatyePage> {
             // Приём не открыт. Это не поломка и не пустота, а ответ, и сказан он
             // словами сервера.
             if (future.error is ApiUnauthorizedException) {
-              return _NoAcceptance(message: "${future.error}");
+              return _NoAcceptance(
+                message: failureMessage(future.error, "приём записок вам пока не открыт"),
+              );
             }
 
             if (future.hasError) {
