@@ -27,8 +27,11 @@ class _TypikonClient extends http.BaseClient {
     return _inner.send(request);
   }
 
+  // Сверяемся со списком, а не с одним доменом: во время переезда наши обе
+  // формы. Проверка цепляется за границу имени, иначе typikon.su.example.com
+  // сошёл бы за свой.
   bool _isOwnHost(String host) =>
-      host == 'typikon.su' || host.endsWith('.typikon.su');
+      ownHosts.any((own) => host == own || host.endsWith('.$own'));
 
   @override
   void close() {

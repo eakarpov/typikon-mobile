@@ -9,6 +9,7 @@ import '../api/auth.dart';
 import '../api/constants.dart';
 import '../store/actions/actions.dart';
 import '../store/auth_token.dart';
+import '../store/pomyannik_cache.dart';
 import '../store/models/models.dart';
 import '../store/store.dart';
 
@@ -104,6 +105,11 @@ Future<void> forgetSession() async {
   try {
     await clearSessionCookie();
   } catch (_) {}
+  // Выход СТИРАЕТ помянник с устройства, а не прячет его: в зеркале ближайших
+  // дней лежат чужие даты смерти, и держать их после выхода не за что.
+  try {
+    await clearPomyannikCache();
+  } catch (_) {}
   try {
     await _ensureGoogleSignInInitialized();
     await GoogleSignIn.instance.signOut();
@@ -154,5 +160,10 @@ Future<void> signOut(Store<AppState> store) async {
   }
   await GoogleSignIn.instance.signOut();
   await clearSessionCookie();
+  // Помянник стирается с устройства и здесь, а не только в forgetSession: тот —
+  // путь протухшей сессии, а это осознанный выход, и после него имена родни на
+  // диске остаться не должны тем более. Обнаружено на устройстве: очистка стояла
+  // на одном из двух путей, и по коду это не читалось.
+  await clearPomyannikCache();
   store.dispatch(SignOutAction());
 }

@@ -6,7 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:typikon/apiMapper/days.dart';
 import 'package:typikon/dto/day.dart';
 import 'package:typikon/store/models/models.dart';
-import 'package:typikon/utils/pericope_route.dart';
+import 'package:typikon/utils/bible_route.dart';
 import 'package:typikon/utils/text.dart';
 import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/components/verse_list.dart';
@@ -195,14 +195,21 @@ class _DaysPageState extends State<DaysPage> {
                   "Текст для этого языка Библии ещё не размечен.",
                   style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize, fontStyle: FontStyle.italic),
                 ),
-              if (item.pericope!.textId != null) Align(
+              // Кнопка показывается только когда есть куда вести: без книги
+              // или без границ она уводила бы в ошибку, а дневные ответы лежат
+              // в кэше сутками — то есть поломка пережила бы выпуск.
+              if (item.pericope!.bookSlug != null && item.pericope!.ranges.isNotEmpty) Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton(
                   style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
                   onPressed: () => Navigator.pushNamed(
                     context,
-                    "/reading",
-                    arguments: readingRouteArgument(item.pericope!.textId!, ranges: item.pericope!.ranges),
+                    "/bible",
+                    arguments: bibleRouteArgument(
+                      item.pericope!.bookSlug!,
+                      chapter: item.pericope!.ranges.first.chapterFrom,
+                      ranges: item.pericope!.ranges,
+                    ),
                   ),
                   child: const Text("Читать целиком →"),
                 ),

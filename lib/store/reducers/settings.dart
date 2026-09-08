@@ -9,6 +9,7 @@ final settingsReducer = combineReducers<Settings>([
   TypedReducer<Settings, ChangeFontColorAction>(_changeFontColor),
   TypedReducer<Settings, ChangeThemeModeAction>(_changeThemeMode),
   TypedReducer<Settings, ChangePreloadTextsAction>(_changePreloadTexts),
+  TypedReducer<Settings, ChangeBibleEditionsAction>(_changeBibleEditions),
   TypedReducer<Settings, ResetReadingColorsAction>(_resetReadingColors),
 ]);
 
@@ -32,6 +33,10 @@ Settings _changePreloadTexts(Settings state, ChangePreloadTextsAction action) {
   return state.copyWith(preloadTexts: action.preloadTexts);
 }
 
+Settings _changeBibleEditions(Settings state, ChangeBibleEditionsAction action) {
+  return state.copyWith(bibleEditions: action.bibleEditions);
+}
+
 Settings _resetReadingColors(Settings state, ResetReadingColorsAction action) {
   return Settings(
     fontSize: state.fontSize,
@@ -39,5 +44,8 @@ Settings _resetReadingColors(Settings state, ResetReadingColorsAction action) {
     backgroundColor: null,
     fontColor: null,
     preloadTexts: state.preloadTexts,
+    // Сброс цветов чтения не должен трогать выбор изданий: конструктор здесь
+    // полный, и пропущенное поле молча вернулось бы к умолчанию.
+    bibleEditions: state.bibleEditions,
   );
 }

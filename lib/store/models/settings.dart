@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:meta/meta.dart';
 import 'package:flutter/material.dart';
 
@@ -19,12 +20,25 @@ class Settings {
   /// `null` — это ещё и признак, что главной странице нужно предложить.
   final bool? preloadTexts;
 
+  /// Издания Библии, выбранные читателем, в порядке выбора.
+  ///
+  /// Пустой список — «по умолчанию», а не «ни одного»: код издания по умолчанию
+  /// не зашивается, он разрешается в рантайме по признаку эталона. Зашей мы
+  /// `cs-eliz` — и получили бы шестую копию списка изданий, которая разошлась бы
+  /// молча (см. `resolveEditionCodes`).
+  ///
+  /// Здесь, а не в адресе страницы: выбор изданий — настройка читателя, а не
+  /// свойство места, и протаскивать его через каждый вход в главу пришлось бы
+  /// шесть раз.
+  final List<String> bibleEditions;
+
   const Settings({
     this.fontSize = 16,
     this.themeMode = ThemeMode.system,
     this.backgroundColor,
     this.fontColor,
     this.preloadTexts,
+    this.bibleEditions = const [],
   });
 
   /// Качаем только по явному согласию.
@@ -41,6 +55,7 @@ class Settings {
     Color? backgroundColor,
     Color? fontColor,
     bool? preloadTexts,
+    List<String>? bibleEditions,
   }) {
     return Settings(
       fontSize: fontSize ?? this.fontSize,
@@ -48,12 +63,18 @@ class Settings {
       backgroundColor: backgroundColor ?? this.backgroundColor,
       fontColor: fontColor ?? this.fontColor,
       preloadTexts: preloadTexts ?? this.preloadTexts,
+      bibleEditions: bibleEditions ?? this.bibleEditions,
     );
   }
 
   @override
   int get hashCode =>
-      fontSize.hashCode ^ themeMode.hashCode ^ backgroundColor.hashCode ^ fontColor.hashCode ^ preloadTexts.hashCode;
+      fontSize.hashCode ^
+      themeMode.hashCode ^
+      backgroundColor.hashCode ^
+      fontColor.hashCode ^
+      preloadTexts.hashCode ^
+      Object.hashAll(bibleEditions);
 
   @override
   bool operator ==(Object other) =>
@@ -63,11 +84,12 @@ class Settings {
               themeMode == other.themeMode &&
               backgroundColor == other.backgroundColor &&
               fontColor == other.fontColor &&
-              preloadTexts == other.preloadTexts;
+              preloadTexts == other.preloadTexts &&
+              listEquals(bibleEditions, other.bibleEditions);
 
   @override
   String toString() {
-    return 'Settings{fonSize: $fontSize, themeMode: $themeMode, backgroundColor: ${backgroundColor == null ? 'null' : HexColor.toHex(backgroundColor!)}, fontColor: ${fontColor == null ? 'null' : HexColor.toHex(fontColor!)}, preloadTexts: $preloadTexts}';
+    return 'Settings{fonSize: $fontSize, themeMode: $themeMode, backgroundColor: ${backgroundColor == null ? 'null' : HexColor.toHex(backgroundColor!)}, fontColor: ${fontColor == null ? 'null' : HexColor.toHex(fontColor!)}, preloadTexts: $preloadTexts, bibleEditions: $bibleEditions}';
   }
 
   Map<String, dynamic> toJson() {
@@ -77,6 +99,7 @@ class Settings {
       'backgroundColor': backgroundColor == null ? null : HexColor.toHex(backgroundColor!),
       'fontColor': fontColor == null ? null : HexColor.toHex(fontColor!),
       'preloadTexts': preloadTexts,
+      'bibleEditions': bibleEditions,
     };
   }
 
@@ -103,6 +126,12 @@ class Settings {
       // Отсутствие ключа — это ровно "не спрашивали": у тех, кто обновился
       // с прежней версии, предзагрузка не включится сама, им предложат.
       preloadTexts: json["preloadTexts"] is bool ? json["preloadTexts"] as bool : null,
+      // Ключа нет — значит настройки сохранены прежней версией: пустой список
+      // означает «по умолчанию», и старое состояние переживает обновление без
+      // отдельной миграции.
+      bibleEditions: json["bibleEditions"] is List
+          ? List<String>.from((json["bibleEditions"] as List).whereType<String>())
+          : const <String>[],
     );
   }
 }

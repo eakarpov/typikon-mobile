@@ -1,12 +1,4 @@
-import "package:flutter_markdown_plus/flutter_markdown_plus.dart";
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:intl/intl.dart';
-
-import 'package:typikon/apiMapper/saints.dart';
-import "package:typikon/dto/saint.dart";
-import "package:typikon/dto/text.dart";
 import 'package:url_launcher/url_launcher_string.dart';
 
 class ResourcesPage extends StatefulWidget {
@@ -18,13 +10,6 @@ class ResourcesPage extends StatefulWidget {
 }
 
 class _ResourcesPageState extends State<ResourcesPage> {
-  late Future<Saint> saint;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(

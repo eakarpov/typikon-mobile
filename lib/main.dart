@@ -24,6 +24,17 @@ import "utils/crash_reporter.dart";
 import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
 import 'package:typikon/pages/book_page.dart';
+import 'package:typikon/utils/bible_route.dart';
+import 'package:typikon/utils/incipit_route.dart';
+import 'package:typikon/utils/route_observer.dart';
+import 'package:typikon/pages/bible_chapter_page.dart';
+import 'package:typikon/pages/chronology_page.dart';
+import 'package:typikon/pages/dictionary_page.dart';
+import 'package:typikon/pages/imeniny_page.dart';
+import 'package:typikon/pages/incipit_page.dart';
+import 'package:typikon/pages/pericope_page.dart';
+import 'package:typikon/pages/pericopes_page.dart';
+import 'package:typikon/pages/bible_page.dart';
 import 'package:typikon/pages/library_page.dart';
 import 'package:typikon/pages/main_page.dart';
 import 'package:typikon/pages/text_page.dart';
@@ -40,6 +51,11 @@ import 'package:typikon/pages/saint_page.dart';
 import 'package:typikon/pages/place_page.dart';
 import 'package:typikon/pages/favourite_page.dart';
 import 'package:typikon/pages/notes_page.dart';
+import 'package:typikon/pages/pomyannik_page.dart';
+import 'package:typikon/pages/pomyannik_person_page.dart';
+import 'package:typikon/pages/pomyannik_upcoming_page.dart';
+import 'package:typikon/pages/pomyannik_note_page.dart';
+import 'package:typikon/pages/pomyannik_prinyatye_page.dart';
 import 'package:typikon/pages/contact_page.dart';
 import 'package:typikon/pages/resources_page.dart';
 
@@ -47,6 +63,8 @@ import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
 import "package:typikon/store/actions/actions.dart";
 import "package:typikon/store/store.dart";
+import "package:typikon/store/pomyannik_cache.dart";
+import "package:typikon/utils/pomyannik_reminders.dart";
 
 int id = 0;
 
@@ -55,6 +73,7 @@ const String navigationActionId = 'id_3';
 const String wantToGetUpdate = "wantToGetUpdate";
 
 const String newTextPayloadPrefix = "newText:";
+const String pomyannikPayloadPrefix = "pomyannik:";
 const String _lastSeenTextIdKey = "last_seen_text_id";
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -62,6 +81,7 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterL
 // Нужен, чтобы открыть текст по тапу на уведомление о новом тексте —
 // колбэк стрима вне дерева виджетов, без своего BuildContext.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 
 /// Streams are created so that app can respond to notification-related events
 /// since the plugin is initialised in the `main` function
@@ -133,6 +153,7 @@ void backgroundFetchHeadlessTask(HeadlessTask task) async {
   String taskId = task.taskId;
   await _checkVersionAndNotify("");
   await _checkNewTextsAndNotify();
+  await _checkPomyannikAndNotify();
   BackgroundFetch.finish(taskId);
 }
 
@@ -187,6 +208,39 @@ Future _checkVersionAndNotify(String type) async {
   } catch (error) {
     print("Не получена версия");
   }
+}
+
+/// Напоминание о поминальном дне.
+///
+/// Едет тем же колбэком, что и проверка новых текстов, — третьей периодической
+/// задачи ради этого не заводим. Само решение, говорить ли, живёт в
+/// `utils/pomyannik_reminders.dart`: тут только показ.
+///
+/// Канал свой и негромкий: обычная важность вместо `max` и без звука на iOS.
+/// Напоминание о сороковом дне в восемь утра — не то, ради чего телефон должен
+/// вздрагивать; отдельным каналом его вдобавок можно приглушить, не глуша
+/// уведомлений об обновлении.
+Future<void> _checkPomyannikAndNotify() async {
+  await checkPomyannikAndNotify(show: (body, payload) async {
+    await flutterLocalNotificationsPlugin.show(
+      // Постоянный номер, а не id++: второй показ за день заменяет прежнее
+      // уведомление, а не копит их стопкой.
+      900,
+      "Помянник",
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'pomyannikChannelId',
+          'pomyannikChannel',
+          channelDescription: 'Напоминания о поминальных днях',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: false),
+      ),
+      payload: payload,
+    );
+  });
 }
 
 // Едет на том же background_fetch-колбэке, что и _checkVersionAndNotify —
@@ -326,6 +380,12 @@ class MyAppState extends State<MyApp> {
       // This is the fetch-event callback.
       await _checkVersionAndNotify("");
       await _checkNewTextsAndNotify();
+      // Зеркало обновляется отсюда, а не из фоновой задачи: там сессию продлить
+      // нечем — окна входа показать некому.
+      if (await remindersEnabled()) {
+        await refreshPomyannikMirror(appStore?.state.auth.userId);
+      }
+      await _checkPomyannikAndNotify();
       // IMPORTANT:  You must signal completion of your task or the OS can punish your app
       // for taking too long in the background.
       BackgroundFetch.finish(taskId);
@@ -421,6 +481,14 @@ class MyAppState extends State<MyApp> {
         final textId = payload.substring(newTextPayloadPrefix.length);
         navigatorKey.currentState?.pushNamed("/reading", arguments: textId);
       }
+      if (payload != null && payload.startsWith(pomyannikPayloadPrefix)) {
+        final what = payload.substring(pomyannikPayloadPrefix.length);
+        // «upcoming» — весь список ближайшего; иначе это лицо, о котором речь.
+        navigatorKey.currentState?.pushNamed(
+          what == "upcoming" ? "/pomyannik/upcoming" : "/pomyannik",
+          arguments: what == "upcoming" ? null : what,
+        );
+      }
     });
   }
 
@@ -440,6 +508,7 @@ class MyAppState extends State<MyApp> {
             builder: (context, store) {
               return MaterialApp(
                 navigatorKey: navigatorKey,
+                navigatorObservers: [routeObserver],
                 title: 'Typikon',
                 localizationsDelegates: [
                   GlobalMaterialLocalizations.delegate,
@@ -454,6 +523,84 @@ class MyAppState extends State<MyApp> {
                 onGenerateRoute: (RouteSettings settings) {
                   final arguments = settings.arguments;
                   switch (settings.name) {
+                    // Аргумент необязателен, как у '/library': без него —
+                    // оглавление, с ним — глава. Разбор аргумента живёт в
+                    // utils/bible_route.dart, потому что собирают его из
+                    // нескольких мест сразу.
+                    case '/bible':
+                      if (arguments is String) {
+                        final target = parseBibleArgument(arguments);
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return BibleChapterPage(
+                              context,
+                              canonId: target.canonId,
+                              chapter: target.chapter,
+                              highlight: target.ranges,
+                            );
+                          },
+                        );
+                      } else {
+                        return MaterialPageRoute(
+                          builder: (context) {
+                            return BiblePage(context);
+                          },
+                        );
+                      }
+                    // У зачина нет своего идентификатора: ключ и есть
+                    // идентификатор. Поэтому аргумент несёт язык и ключ разом,
+                    // разбор — в utils/incipit_route.dart.
+                    case '/incipit':
+                      if (arguments is String) {
+                        final target = parseIncipitArgument(arguments);
+                        if (target.isValid) {
+                          return MaterialPageRoute(
+                            builder: (context) {
+                              return IncipitPage(
+                                context,
+                                language: target.language,
+                                incipit: target.incipit,
+                              );
+                            },
+                          );
+                        }
+                      }
+                      return null;
+                    case '/pericopes':
+                      return MaterialPageRoute(
+                        builder: (context) => PericopesPage(context),
+                      );
+                    case '/pericope':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => PericopePage(context, id: arguments),
+                        );
+                      }
+                      return null;
+                    // Как у '/library' и '/bible': без аргумента список, с ним —
+                    // отдельная запись.
+                    case '/imeniny':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => NamePage(context, name: arguments),
+                        );
+                      }
+                      return MaterialPageRoute(
+                        builder: (context) => ImeninyPage(context),
+                      );
+                    case '/dictionary':
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => LexemePage(context, id: arguments),
+                        );
+                      }
+                      return MaterialPageRoute(
+                        builder: (context) => DictionaryPage(context),
+                      );
+                    case '/chronology':
+                      return MaterialPageRoute(
+                        builder: (context) => ChronologyPage(context),
+                      );
                     case '/library':
                       if (arguments is String) {
                         return MaterialPageRoute(
@@ -580,6 +727,29 @@ class MyAppState extends State<MyApp> {
                             context,
                           );
                         },
+                      );
+                    // Как у '/library' и '/imeniny': без аргумента разворот
+                    // помянника, с ним — карточка лица.
+                    case "/pomyannik":
+                      if (arguments is String) {
+                        return MaterialPageRoute(
+                          builder: (context) => PomyannikPersonPage(context, id: arguments),
+                        );
+                      }
+                      return MaterialPageRoute(
+                        builder: (context) => PomyannikPage(context),
+                      );
+                    case "/pomyannik/upcoming":
+                      return MaterialPageRoute(
+                        builder: (context) => PomyannikUpcomingPage(context),
+                      );
+                    case "/pomyannik/zapiska":
+                      return MaterialPageRoute(
+                        builder: (context) => PomyannikNotePage(context),
+                      );
+                    case "/pomyannik/prinyatye":
+                      return MaterialPageRoute(
+                        builder: (context) => PomyannikPrinyatyePage(context),
                       );
                     case "/notes":
                       return MaterialPageRoute(

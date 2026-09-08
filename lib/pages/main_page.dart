@@ -13,6 +13,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../components/api_error_view.dart' show isNetworkError;
 import "../dto/text.dart";
 import "../apiMapper/common.dart";
 import "../dto/common.dart";
@@ -25,7 +26,9 @@ import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
 import '../utils/day_preloader.dart';
-import '../utils/pericope_route.dart';
+import '../components/trapeza_line.dart';
+import '../utils/bible_route.dart';
+import '../utils/route_observer.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
 
@@ -43,7 +46,7 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin {
+class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin, RouteAware {
   late Future<MainPageData> data;
   late Future<Version> version;
 
@@ -53,6 +56,10 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   ScaffoldMessengerState? _messenger;
   bool _preloadBannerShown = false;
   bool _preloadBannerVisible = false;
+
+  /// Тексты дня, о которых спрашивали. Держим, чтобы вернуть предложение, если
+  /// читатель ушёл на другой экран, не ответив.
+  List<String>? _preloadTextIds;
 
   @override
   void initState() {
@@ -67,14 +74,36 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     if (_preloadBannerVisible) _messenger?.hideCurrentMaterialBanner();
     super.dispose();
+  }
+
+  /// Поверх главной положили другой экран.
+  ///
+  /// Баннер снимаем: он живёт в `ScaffoldMessenger` выше `MaterialApp` и иначе
+  /// поедет с читателем в Библию, в калькулятор и куда угодно ещё.
+  @override
+  void didPushNext() => _hidePreloadBanner();
+
+  /// Вернулись на главную. Если так и не ответили — спрашиваем снова: вопрос
+  /// один и тот же, и молча забыть его значило бы никогда не включить
+  /// предзагрузку тому, кто в тот раз просто пролистал мимо.
+  @override
+  void didPopNext() {
+    if (!mounted) return;
+    final ids = _preloadTextIds;
+    if (ids == null) return;
+    if (!StoreProvider.of<AppState>(context).state.settings.shouldAskAboutPreload) return;
+    _showPreloadBanner(ids);
   }
 
   @override
   void didChangeDependencies() async {
     super.didChangeDependencies();
     _messenger = ScaffoldMessenger.of(context);
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) routeObserver.subscribe(this, route);
     var val = StoreProvider.of<AppState>(context).state.common.date != null
         ? StoreProvider.of<AppState>(context).state.common.date
         : DateTime.now().subtract(const Duration(days: 13));
@@ -105,6 +134,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       }
       // Спрашиваем не на пустом экране, а когда день уже показан: так понятно,
       // о каких именно чтениях речь.
+      _preloadTextIds = day.textIds;
       if (settings.shouldAskAboutPreload && !_preloadBannerShown) {
         _preloadBannerShown = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -122,6 +152,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   }
 
   void _answerPreload(bool enabled, List<String> textIds) {
+    _preloadTextIds = null;
     _hidePreloadBanner();
     StoreProvider.of<AppState>(context).dispatch(ChangePreloadTextsAction(enabled));
     if (enabled) unawaited(preloadTexts(textIds));
@@ -250,6 +281,31 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     Navigator.pushNamed(context, "/calculator");
   }
 
+  /// Куда ведёт строка дневного чтения.
+  ///
+  /// `null` — вести некуда, и тогда строка не нажимается вовсе. Это не редкость:
+  /// зачало без книги канона приезжает из дневных ответов, что лежат в кэше
+  /// сутками, а вести его в текст нельзя — идентификатор зачала указывает на
+  /// книгу Библии, которой в коллекции текстов больше нет.
+  VoidCallback? _openItem(BuildContext context, CalendarDayPartItem item) {
+    if (item.isPericope) {
+      if (item.bookSlug == null || item.ranges.isEmpty) return null;
+      return () => Navigator.pushNamed(
+            context,
+            "/bible",
+            arguments: bibleRouteArgument(
+              item.bookSlug!,
+              chapter: item.ranges.first.chapterFrom,
+              ranges: item.ranges,
+            ),
+          );
+    }
+
+    final id = item.id;
+    if (id == null) return null;
+    return () => Navigator.pushNamed(context, "/reading", arguments: id);
+  }
+
   Widget renderItem(BuildContext context, CalendarDayPart? part, String title) {
     List<CalendarDayPartItem> list = [];
     if (part?.items != null) {
@@ -281,13 +337,11 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                         item.name ?? "Без названия",
                         style: TextStyle(fontFamily: "OldStandard", color: Colors.red),
                       ),
-                      onTap: item.id == null ? null : () => {
-                        Navigator.pushNamed(
-                          context,
-                          "/reading",
-                          arguments: readingRouteArgument(item.id!, ranges: item.ranges),
-                        )
-                      },
+                      // Зачало ведёт в раздел Библии, обычное чтение — в текст.
+                      // Прежде и то и другое шло в "/reading", и для зачал это
+                      // был путь в пустой ответ: их идентификатор указывает на
+                      // книгу Библии, которой в коллекции текстов больше нет.
+                      onTap: _openItem(context, item),
                     ),
                   );
                 },
@@ -415,6 +469,15 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       child: Text(
                         "Чтения на выбранную дату: ${calendarDay?.name}",
                         style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    // Строка о трапезе идёт своим запросом и никогда не
+                    // задерживает чтения: за ней стоит служба устава, отвечающая
+                    // до восьми секунд. Пока её нет — на её месте ничего нет.
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                      child: TrapezaLine(
+                        date: StoreProvider.of<AppState>(context).state.common.date,
                       ),
                     ),
                     if (calendarDay != null) Padding(
@@ -587,9 +650,25 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       children: [
                         Padding(
                           padding: EdgeInsets.all(16.0),
-                          child: Text(
-                            '${future.error}',
-                            textAlign: TextAlign.center,
+                          child: Column(
+                            children: [
+                              // Не текст исключения: «ClientException with
+                              // SocketException: Failed host lookup» на главном
+                              // экране выглядит поломкой приложения, хотя это
+                              // пропавшая сеть. Найдено на устройстве в режиме
+                              // полёта — в коде это место читалось безобидно.
+                              Icon(
+                                isNetworkError(future.error) ? Icons.wifi_off : Icons.error_outline,
+                                size: 48.0,
+                              ),
+                              const SizedBox(height: 16.0),
+                              Text(
+                                isNetworkError(future.error)
+                                    ? "Нет соединения с интернетом."
+                                    : "Не удалось загрузить чтения дня.",
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
                         ),
                         TextButton(
@@ -671,6 +750,37 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                     Navigator.pushNamed(context, "/notes");
                   },
                 ),
+                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
+                  title: const Text('Помянник', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/pomyannik",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/pomyannik");
+                  },
+                ),
+                // Приём записок открыт не всякому, и проверяет это сервер.
+                // Прятать пункт по своему флагу нельзя: флаг протухнет молча, а
+                // экран сам скажет «приём вам пока не открыт» словами сервера.
+                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
+                  title: const Text('Поданные записки', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/pomyannik/prinyatye",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/pomyannik/prinyatye");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Библия', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/bible",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/bible");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Зачала', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/pericopes",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/pericopes");
+                  },
+                ),
                 ListTile(
                   title: const Text('Библиотека', style: TextStyle(fontSize: 14.0),),
                   selected: ModalRoute.of(context)?.settings.name == "/library",
@@ -718,6 +828,27 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   selected: ModalRoute.of(context)?.settings.name == "/dneslov/memories",
                   onTap: () {
                     Navigator.pushNamed(context, "/dneslov/memories");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Именины', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/imeniny",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/imeniny");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Словарь', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/dictionary",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/dictionary");
+                  },
+                ),
+                ListTile(
+                  title: const Text('Хронология', style: TextStyle(fontSize: 14.0),),
+                  selected: ModalRoute.of(context)?.settings.name == "/chronology",
+                  onTap: () {
+                    Navigator.pushNamed(context, "/chronology");
                   },
                 ),
                 ListTile(

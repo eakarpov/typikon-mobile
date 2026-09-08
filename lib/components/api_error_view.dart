@@ -18,6 +18,29 @@ bool isNetworkError(Object? error) {
       message.contains('Failed host lookup');
 }
 
+/// Причина неудачи одной строкой — для всплывающих сообщений о неудавшейся
+/// записи.
+///
+/// То же правило, что у [ApiErrorView], только для случая, когда места под
+/// целый экран нет. Показывать текст исключения нельзя ни там, ни здесь:
+/// «ClientException with SocketException: Failed host lookup 'www.typikon.su'
+/// (OS Error: No address associated with hostname, errno = 7)» выглядит
+/// поломкой приложения, хотя это пропавшая сеть, и сделать с этой строкой
+/// читателю нечего.
+///
+/// [what] — что именно не вышло, в прошедшем времени: «имя не записано».
+String failureMessage(Object? error, String what) {
+  if (isNetworkError(error)) return "Нет связи: $what";
+
+  // Отказы второй версии API несут собственное сообщение сервера, написанное
+  // по-русски и для человека, — его и показываем. А приставку «Exception:»,
+  // какую печатает голый Exception, срезаем: это слово из отладки.
+  final message = error.toString().replaceFirst(RegExp(r"^Exception:\s*"), "").trim();
+  if (message.isEmpty || message.length > 200) return what;
+
+  return message;
+}
+
 /// Дружелюбная замена сырому `Text('${future.error}')` в ветках `hasError`.
 ///
 /// Показывать пользователю текст исключения бессмысленно: он ничего не может

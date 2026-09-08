@@ -91,6 +91,17 @@ class ChangePreloadTextsAction {
   }
 }
 
+class ChangeBibleEditionsAction {
+  final List<String> bibleEditions;
+
+  ChangeBibleEditionsAction(this.bibleEditions);
+
+  @override
+  String toString() {
+    return 'ChangeBibleEditionsAction{bibleEditions: $bibleEditions}';
+  }
+}
+
 class ToggleFavouriteAction {
   final String textId;
   final DateTime at;

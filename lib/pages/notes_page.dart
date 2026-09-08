@@ -51,10 +51,10 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   void _onOpen(UserNote note) {
-    final arguments = note.selection.type == 'verse' && note.selection.chapter != null
-        ? "${note.textId}#${note.selection.chapter}"
-        : note.textId;
-    Navigator.pushNamed(context, "/reading", arguments: arguments);
+    // Прежде для заметки на стих сюда добавлялась глава — «textId#3», — и
+    // страница текста по ней прокручивалась. Стихи ушли в раздел Библии вместе с
+    // прежней моделью, и хвост перестал что-либо значить.
+    Navigator.pushNamed(context, "/reading", arguments: note.textId);
   }
 
   @override

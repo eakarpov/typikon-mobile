@@ -3,14 +3,12 @@ class BookText {
   final String id;
   final String dneslovId;
   final String? textType; // don't know why this is needed
-  final String contentType; // "paragraphs" | "verses"
 
   const BookText({
     required this.name,
     required this.id,
     required this.dneslovId,
     required this.textType,
-    required this.contentType,
   });
 
   factory BookText.fromJson(Map<String, dynamic> json) {
@@ -19,11 +17,9 @@ class BookText {
       id: json["_id"] == null ? json["id"] : json["_id"],
       dneslovId: json["dneslovId"] == null ? "" : json["dneslovId"],
       textType: json["type"] == null ? "" : json["type"],
-      contentType: json["contentType"] ?? "paragraphs",
     );
   }
 
-  bool get isVerses => contentType == "verses";
 }
 
 class BookWithTexts {
@@ -52,7 +48,6 @@ class BookWithTexts {
       author: author,
     );
   }
-
 
   factory BookWithTexts.fromJsonToList(List<dynamic> json) {
     var list = json;

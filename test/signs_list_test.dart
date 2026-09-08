@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:typikon/dto/pericope.dart';
 import 'package:typikon/dto/signs.dart';
-import 'package:typikon/utils/pericope_route.dart';
+import 'package:typikon/components/pericope_block.dart';
 
 void main() {
   group('SignsList', () {
@@ -47,30 +47,34 @@ void main() {
     ];
 
     test('без границ отдаёт всё одним куском', () {
-      final runs = splitVerseRuns(chapter(6, 1, 5), const ReadingTarget(textId: "a"));
+      final runs = splitVerseRuns(chapter(6, 1, 5), const []);
       expect(runs.length, 1);
       expect(runs.single.inPericope, isFalse);
     });
 
     test('вырезает зачало из середины главы', () {
-      final target = parseReadingArgument("a#6:3-6:4");
-      final runs = splitVerseRuns(chapter(6, 1, 6), target);
+      final runs = splitVerseRuns(chapter(6, 1, 6), const [
+        PericopeRange(chapterFrom: 6, verseFrom: 3, chapterTo: 6, verseTo: 4),
+      ]);
 
       expect(runs.map((r) => r.inPericope).toList(), [false, true, false]);
       expect(runs[1].verses.map((v) => v.verse).toList(), [3, 4]);
     });
 
     test('зачало с начала главы не даёт пустого куска перед собой', () {
-      final target = parseReadingArgument("a#6:1-6:2");
-      final runs = splitVerseRuns(chapter(6, 1, 4), target);
+      final runs = splitVerseRuns(chapter(6, 1, 4), const [
+        PericopeRange(chapterFrom: 6, verseFrom: 1, chapterTo: 6, verseTo: 2),
+      ]);
 
       expect(runs.map((r) => r.inPericope).toList(), [true, false]);
       expect(runs.first.verses.map((v) => v.verse).toList(), [1, 2]);
     });
 
     test('разорванное зачало даёт два выделенных куска', () {
-      final target = parseReadingArgument("a#6:2-6:3,6:5-6:6");
-      final runs = splitVerseRuns(chapter(6, 1, 7), target);
+      final runs = splitVerseRuns(chapter(6, 1, 7), const [
+        PericopeRange(chapterFrom: 6, verseFrom: 2, chapterTo: 6, verseTo: 3),
+        PericopeRange(chapterFrom: 6, verseFrom: 5, chapterTo: 6, verseTo: 6),
+      ]);
 
       expect(runs.map((r) => r.inPericope).toList(), [false, true, false, true, false]);
       expect(runs.where((r) => r.inPericope).length, 2);
