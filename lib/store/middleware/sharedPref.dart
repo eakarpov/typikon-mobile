@@ -23,6 +23,14 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
       action is ChangeThemeModeAction ||
       action is ChangePreloadTextsAction ||
       action is ChangeBibleEditionsAction ||
+      // Настройки читаемости и показа. Их тут не было: они писались на диск
+      // случайно, за компанию с каким-нибудь другим сохраняемым действием, —
+      // а выбранные последними и не писались вовсе.
+      action is ChangeLineHeightAction ||
+      action is ChangeReadingAlignAction ||
+      action is ChangeReadingMeasureAction ||
+      action is ChangeReminderSourceAction ||
+      action is ChangeShowAccentsAction ||
       action is ToggleFavouriteAction ||
       action is FavouritesLoadedAction ||
       action is FavouritesQueueConfirmedAction ||
@@ -100,6 +108,7 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     store.dispatch(ChangeThemeModeAction(state.settings.themeMode));
     store.dispatch(ChangeLineHeightAction(state.settings.lineHeight));
     store.dispatch(ChangeReminderSourceAction(state.settings.reminderSource));
+    store.dispatch(ChangeShowAccentsAction(state.settings.showAccents));
     store.dispatch(ChangeReadingAlignAction(state.settings.readingAlign));
     // Отправляем и `null`: «во всю ширину» — такой же выбор, как прочие.
     store.dispatch(ChangeReadingMeasureAction(state.settings.readingMeasure));

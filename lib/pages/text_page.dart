@@ -42,6 +42,8 @@ import '../apiMapper/reading.dart';
 import '../apiMapper/user_notes.dart';
 import "../apiMapper/dneslov/images.dart";
 import 'package:typikon/utils/reading_style.dart';
+import 'package:typikon/apiMapper/reading.dart';
+import 'package:typikon/store/store.dart';
 
 class TextPage extends StatefulWidget {
   final String id;
@@ -54,6 +56,57 @@ class TextPage extends StatefulWidget {
 
 class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   late Future<Reading> reading;
+
+  /// Размеченный вид, если его просили. `null` — не просили либо не вышло.
+  AccentedText? _accented;
+
+  /// Идёт ли запрос: пока идёт, переключатель заперт — два нажатия подряд завели
+  /// бы два запроса и показали бы ответ того, который вернулся вторым.
+  bool _accentsLoading = false;
+
+  /// Показывать ли ударения СЕЙЧАС, на этом экране.
+  ///
+  /// Начальное значение берётся из настроек, дальше живёт здесь: `StoreProvider`
+  /// сравнивает магазины, а не состояния, и сам по себе перерисовки не даёт —
+  /// та же причина, по которой подборщик изданий Библии зовёт `setState`.
+  bool _showAccents = false;
+
+  Future<void> _toggleAccents(Reading data) async {
+    final wanted = !_showAccents;
+    appStore?.dispatch(ChangeShowAccentsAction(wanted));
+
+    if (!wanted) {
+      setState(() => _showAccents = false);
+      return;
+    }
+    if (_accented != null) {
+      setState(() => _showAccents = true);
+      return;
+    }
+
+    setState(() => _accentsLoading = true);
+    try {
+      final view = await getTextAccents(_realId);
+      if (!mounted) return;
+      setState(() {
+        _accented = view;
+        _showAccents = true;
+        _accentsLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      // Возвращаем переключатель в книжный вид и говорим, что не вышло: молча
+      // показать книгу значило бы, что человек нажал и ничего не заметил.
+      setState(() {
+        _showAccents = false;
+        _accentsLoading = false;
+      });
+      appStore?.dispatch(ChangeShowAccentsAction(false));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(failureMessage(error, "Не удалось расставить ударения"))),
+      );
+    }
+  }
   late Future<DneslovImageListD> dneslovImages;
 
   // "Читать целиком" со страницы зачала кодирует его границы суффиксом в id
@@ -83,6 +136,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _showAccents = appStore?.state.settings.showAccents ?? false;
     _realId = readingTextId(widget.id);
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
@@ -381,6 +435,32 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                   : const Icon(Icons.favorite_outline),
             ),
           ),
+          // Ударения предлагаются только там, где корпус размечен не полностью:
+          // у прочих текстов знаки уже стоят в самой книге, и переключатель,
+          // ничего не меняющий, только сбивал бы.
+          FutureBuilder<Reading>(
+            future: reading,
+            builder: (context, future) {
+              if (!future.hasData || future.data!.accents == null) {
+                return const SizedBox.shrink();
+              }
+              if (_accentsLoading) {
+                return const Padding(
+                  padding: EdgeInsets.all(14.0),
+                  child: SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  ),
+                );
+              }
+
+              return IconButton(
+                icon: Icon(_showAccents ? Icons.text_fields : Icons.text_fields_outlined),
+                tooltip: _showAccents ? "Как в книге" : "Расставить ударения",
+                onPressed: () => _toggleAccents(future.data!),
+              );
+            },
+          ),
           FutureBuilder<Reading>(
             future: reading,
             builder: (context, future) {
@@ -408,7 +488,14 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           future: reading,
           builder: (context, future) {
             if (future.hasData) {
-              String content = future.data!.content;
+              // Показываем размеченный вид, если он спрошен и получен. Подменяем
+              // ИМЕННО эту переменную: из неё питаются и `containers:` для
+              // выделения, и рисуемые абзацы, — одной подменой оба остаются
+              // согласованными. Сам `Reading` не трогается, и потому выгрузка в
+              // fb2 (`_exportFb2`) уносит книгу, а не машинные знаки.
+              String content = _showAccents && _accented != null
+                  ? _accented!.content
+                  : future.data!.content;
               String name = future.data!.name;
               return SingleChildScrollView(
                 controller: _scrollController,
@@ -455,6 +542,19 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                               ),
                             )
                         ),
+                      // Оговорка теми же словами, что на сайте. Она обязательна:
+                      // без неё машинная догадка выдаётся за книгу, а решение
+                      // писать эти знаки в самый корпус остаётся за хозяином.
+                      if (_showAccents && _accented != null) Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: Text(
+                          "Ударения расставлены машинно по словарю собрания: "
+                          "${_accented!.marked} из ${_accented!.expected} слов, которым "
+                          "знак положен. Спорные места оставлены без знака. В самом "
+                          "тексте ударений нет — это подсказка для чтения вслух, а не книга.",
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
                       if (future.data!.dneslovId != null) FutureBuilder<DneslovImageListD>(
                           future: dneslovImages,
                           builder: (context, future) {

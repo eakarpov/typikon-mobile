@@ -19,6 +19,10 @@ class Reading {
   final bool csSource;
   final bool newUi;
 
+  /// Сколько слов ждут ударения. `null` — текст размечен, показ с ударениями
+  /// предлагать нечего.
+  final AccentCoverage? accents;
+
   const Reading({
     required this.id,
     required this.name,
@@ -35,6 +39,7 @@ class Reading {
     required this.dayId,
     required this.csSource,
     required this.newUi,
+    this.accents,
   });
 
   factory Reading.fromJson(Map<String, dynamic> json, Map<String, dynamic>? jsonDay) {
@@ -76,6 +81,7 @@ class Reading {
       dayId: dayId,
       csSource: csSource,
       newUi: newUi,
+      accents: AccentCoverage.fromJson(json["accents"]),
     );
   }
 }
@@ -98,5 +104,61 @@ class ReadingList {
     return ReadingList(
       list: items,
     );
+  }
+}
+
+/// Текст со знаками, поставленными машиной.
+///
+/// **Это вид, а не книга.** Корпус остаётся вычитанным; здесь копия, размеченная
+/// по словарю собрания, и показывать её надо с прямой пометой об этом. Спорные
+/// места разметчик оставляет без знака — потому [marked] и меньше [expected].
+class AccentedText {
+  final String content;
+
+  /// Сколько знаков поставлено и сколько слов их ждали.
+  final int marked;
+  final int expected;
+
+  /// По какому собранию считали: `reading` или `chant`. «спасе́» — аорист
+  /// чтений, «спа́се» — звательный песнопений, и это не оттенок, а разное слово.
+  final String genre;
+
+  const AccentedText({
+    required this.content,
+    this.marked = 0,
+    this.expected = 0,
+    this.genre = "reading",
+  });
+
+  factory AccentedText.fromJson(Map<String, dynamic> json) => AccentedText(
+        content: json["content"] ?? "",
+        marked: json["marked"] is int ? json["marked"] : 0,
+        expected: json["expected"] is int ? json["expected"] : 0,
+        genre: json["genre"] == "chant" ? "chant" : "reading",
+      );
+}
+
+/// Сколько слов текста ждут ударения и сколько уже несут его в корпусе.
+///
+/// Приходит с карточкой текста, чтобы экран знал ЗАРАНЕЕ, предлагать ли показ с
+/// ударениями. `null` — текст размечен, и переключателя быть не должно вовсе.
+class AccentCoverage {
+  final int need;
+  final int has;
+
+  const AccentCoverage({required this.need, required this.has});
+
+  /// Сколько слов остались без знака в самой книге.
+  int get missing => need - has;
+
+  static AccentCoverage? fromJson(dynamic json) {
+    if (json is! Map) return null;
+    final need = json["need"];
+    final has = json["has"];
+    if (need is! int || has is! int) return null;
+    // Ждущих знака меньше десятка — предлагать нечего: переключатель, меняющий
+    // три слова из тысячи, только сбивает.
+    if (need - has <= 0) return null;
+    return AccentCoverage(need: need, has: has);
   }
 }

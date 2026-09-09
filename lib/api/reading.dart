@@ -37,3 +37,18 @@ Future<http.Response> fetchLastTexts() {
     ttl: const Duration(hours: 6),
   );
 }
+
+/// Текст с расставленными ударениями.
+///
+/// **Отдельный ключ кэша, а не общий с книжным текстом.** Иначе размеченный вид
+/// лёг бы поверх книги, и «как в книге» показывало бы машинные знаки.
+///
+/// Сутки, как и у самого текста: разметка меняется, только когда правят текст
+/// или словарь.
+Future<http.Response> fetchTextAccents(String id) {
+  return cachedFetch(
+    'text-accents:$id',
+    () => v2Get(v2Uri('/texts/$id/accents')),
+    ttl: const Duration(hours: 24),
+  );
+}

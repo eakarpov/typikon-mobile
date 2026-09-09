@@ -7,6 +7,7 @@ final settingsReducer = combineReducers<Settings>([
   TypedReducer<Settings, ChangeFontSizeAction>(_changeFontSize),
   TypedReducer<Settings, ChangeLineHeightAction>(_changeLineHeight),
   TypedReducer<Settings, ChangeReminderSourceAction>(_changeReminderSource),
+  TypedReducer<Settings, ChangeShowAccentsAction>(_changeShowAccents),
   TypedReducer<Settings, ChangeReadingAlignAction>(_changeReadingAlign),
   TypedReducer<Settings, ChangeReadingMeasureAction>(_changeReadingMeasure),
   TypedReducer<Settings, ChangeBackgroundColorAction>(_changeBackgroundColor),
@@ -19,6 +20,10 @@ final settingsReducer = combineReducers<Settings>([
 
 Settings _changeFontSize(Settings state, ChangeFontSizeAction action) {
   return state.copyWith(fontSize: action.fontSize);
+}
+
+Settings _changeShowAccents(Settings state, ChangeShowAccentsAction action) {
+  return state.copyWith(showAccents: action.showAccents);
 }
 
 Settings _changeReminderSource(Settings state, ChangeReminderSourceAction action) {
@@ -76,6 +81,7 @@ Settings _resetReadingColors(Settings state, ResetReadingColorsAction action) {
     readingAlign: state.readingAlign,
     readingMeasure: state.readingMeasure,
     reminderSource: state.reminderSource,
+    showAccents: state.showAccents,
     bibleEditions: state.bibleEditions,
   );
 }

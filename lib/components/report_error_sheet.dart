@@ -7,7 +7,17 @@ import '../apiMapper/report.dart';
 import '../apiMapper/session.dart';
 import '../apiMapper/user_notes.dart';
 import '../dto/user_note.dart';
+import 'package:typikon/utils/accents.dart';
 
+/// Что уходит на сервер вместе с заметкой или сообщением об ошибке.
+///
+/// **Знаки ударения снимаются.** Чтение показывается в двух видах — как в книге
+/// и с машинными ударениями, — и выделение приходит из того, который сейчас на
+/// экране. Отправив написание со знаками, мы записали бы в заметку не книгу, а
+/// машинную догадку; а сообщение об ошибке набора и вовсе указывало бы на
+/// ударение, которого в тексте нет.
+///
+/// Подсветке это не мешает: она ищет без оглядки на знаки (см. `utils/accents`).
 Map<String, dynamic> _buildSelectionPayload({
   required String phrase,
   int? paragraphIndex,
@@ -16,21 +26,23 @@ Map<String, dynamic> _buildSelectionPayload({
   int? verse,
   String? verseText,
 }) {
+  final bookPhrase = stripAccents(phrase);
+
   if (chapter != null && verse != null) {
     return {
       'type': 'verse',
       'chapter': chapter,
       'verse': verse,
-      'verseText': verseText,
-      'phrase': phrase,
+      'verseText': verseText == null ? null : stripAccents(verseText),
+      'phrase': bookPhrase,
       'wordIndex': 0,
     };
   }
   return {
     'type': 'paragraph',
     'paragraphIndex': paragraphIndex,
-    'paragraph': paragraph,
-    'phrase': phrase,
+    'paragraph': paragraph == null ? null : stripAccents(paragraph),
+    'phrase': bookPhrase,
     'wordIndex': 0,
   };
 }

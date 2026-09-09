@@ -41,6 +41,17 @@ class Settings {
   /// в развороте строка во всю ширину заставляет глаз искать начало следующей.
   final double? readingMeasure;
 
+  /// Показывать ли машинные ударения там, где корпус размечен не полностью.
+  ///
+  /// **Настройка читателя, а не свойство места.** У сайта она живёт в адресе
+  /// страницы — там её причина в том, что чтение дают почитать по ссылке, и в
+  /// ссылке должно быть видно, в каком виде текст показан. В приложении ссылки
+  /// нет, зато есть тот же довод, что у выбора изданий Библии: кто читает вслух,
+  /// хочет ударений везде, а не заново на каждом тексте.
+  ///
+  /// По умолчанию выключено: книга показывается такой, какая она есть.
+  final bool showAccents;
+
   /// Кто шлёт напоминания помянника: `device` или `server`.
   ///
   /// **Различие честное, и в настройках оно названо словами.** Приложение
@@ -76,6 +87,7 @@ class Settings {
     this.readingAlign = "justify",
     this.readingMeasure,
     this.reminderSource = "device",
+    this.showAccents = false,
     this.bibleEditions = const [],
   });
 
@@ -103,6 +115,7 @@ class Settings {
     bool clearMeasure = false,
     double? readingMeasure,
     String? reminderSource,
+    bool? showAccents,
     List<String>? bibleEditions,
   }) {
     return Settings(
@@ -115,6 +128,7 @@ class Settings {
       readingAlign: readingAlign ?? this.readingAlign,
       readingMeasure: clearMeasure ? null : (readingMeasure ?? this.readingMeasure),
       reminderSource: reminderSource ?? this.reminderSource,
+      showAccents: showAccents ?? this.showAccents,
       bibleEditions: bibleEditions ?? this.bibleEditions,
     );
   }
@@ -130,6 +144,7 @@ class Settings {
       readingAlign.hashCode ^
       readingMeasure.hashCode ^
       reminderSource.hashCode ^
+      showAccents.hashCode ^
       Object.hashAll(bibleEditions);
 
   @override
@@ -145,6 +160,7 @@ class Settings {
               readingAlign == other.readingAlign &&
               readingMeasure == other.readingMeasure &&
               reminderSource == other.reminderSource &&
+              showAccents == other.showAccents &&
               listEquals(bibleEditions, other.bibleEditions);
 
   @override
@@ -163,6 +179,7 @@ class Settings {
       'readingAlign': readingAlign,
       'readingMeasure': readingMeasure,
       'reminderSource': reminderSource,
+      'showAccents': showAccents,
       'bibleEditions': bibleEditions,
     };
   }
@@ -199,6 +216,8 @@ class Settings {
       // Умолчание — приложение: толчки требуют и сети, и живого ключа доставки,
       // и включаться сами, без спроса, не должны.
       reminderSource: json["reminderSource"] == "server" ? "server" : "device",
+      // Ключа нет — состояние прежней версии: книга показывается как есть.
+      showAccents: json["showAccents"] == true,
       // Ключа нет — значит настройки сохранены прежней версией: пустой список
       // означает «по умолчанию», и старое состояние переживает обновление без
       // отдельной миграции.

@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:typikon/dto/user_note.dart';
+import 'package:typikon/utils/accents.dart';
 
 /// Разбивает [text] на TextSpan'ы, подсвечивая вхождения phrase каждой
 /// заметки из [notes] (мягкий жёлтый фон — не меняет цвет/шрифт самого
@@ -29,34 +30,45 @@ List<InlineSpan> buildHighlightedSpans(
   final spans = <InlineSpan>[];
   int cursor = 0;
 
+  // Ищем БЕЗ ОГЛЯДКИ НА УДАРЕНИЯ, а красим по исходной строке.
+  //
+  // Текст чтения показывается в двух видах: как в книге и с машинными
+  // ударениями. Заметка хранит то написание, при котором её завели, и точное
+  // совпадение связывало бы её ровно с одним из двух видов: переключил — и
+  // подсветка исчезла, без ошибки и без следа.
   while (cursor < text.length) {
-    int bestIndex = -1;
+    int bestStart = -1;
+    int bestEnd = -1;
     UserNote? bestNote;
+
     for (final note in notes) {
-      final phrase = note.selection.phrase;
-      if (phrase.isEmpty) continue;
-      final idx = text.indexOf(phrase, cursor);
-      if (idx == -1) continue;
-      if (bestIndex == -1 || idx < bestIndex) {
-        bestIndex = idx;
+      final found = findIgnoringAccents(text, note.selection.phrase, cursor);
+      if (found == null) continue;
+      if (bestStart == -1 || found.$1 < bestStart) {
+        bestStart = found.$1;
+        bestEnd = found.$2;
         bestNote = note;
       }
     }
-    if (bestIndex == -1 || bestNote == null) {
+
+    if (bestNote == null) {
       spans.add(TextSpan(text: text.substring(cursor), style: style));
       break;
     }
-    if (bestIndex > cursor) {
-      spans.add(TextSpan(text: text.substring(cursor, bestIndex), style: style));
+    if (bestStart > cursor) {
+      spans.add(TextSpan(text: text.substring(cursor, bestStart), style: style));
     }
-    final phrase = bestNote.selection.phrase;
+
     final note = bestNote;
     spans.add(TextSpan(
-      text: phrase,
+      // Показываем то, что стоит в тексте, а не то, что записано в заметке:
+      // виды различаются знаками, и подставив написание заметки, мы нарисовали
+      // бы посреди книги слово из другого вида.
+      text: text.substring(bestStart, bestEnd),
       style: highlightStyle,
       recognizer: TapGestureRecognizer()..onTap = () => onTapNote(note),
     ));
-    cursor = bestIndex + phrase.length;
+    cursor = bestEnd;
   }
 
   return spans;

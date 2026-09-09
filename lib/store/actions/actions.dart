@@ -36,6 +36,16 @@ class ChangeCommonDateAction {
   }
 }
 
+/// Показывать ли машинные ударения в чтениях.
+class ChangeShowAccentsAction {
+  final bool showAccents;
+
+  ChangeShowAccentsAction(this.showAccents);
+
+  @override
+  String toString() => 'ChangeShowAccentsAction{showAccents: $showAccents}';
+}
+
 /// Кто шлёт напоминания помянника: `device` или `server`.
 class ChangeReminderSourceAction {
   final String reminderSource;
