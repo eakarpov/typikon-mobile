@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api/constants.dart';
+import '../store/calendar_feed.dart';
 
 /// Подписка на календарь чтений.
 ///
@@ -19,6 +20,10 @@ import '../api/constants.dart';
 /// обычно), отдаём тот же адрес по https: календарь предложит импортировать
 /// файл, что хуже (разовый снимок вместо подписки), но лучше, чем ничего.
 Future<void> openCalendarSubscription() async {
+  // Запоминаем ДО перехода, а не после: обратно в приложение человек может и не
+  // вернуться, а подписка уже случится.
+  await rememberCalendarSubscription();
+
   final webcal = Uri.parse('webcal://$calendarFeedHost$calendarFeedPath');
   if (await canLaunchUrl(webcal)) {
     await launchUrl(webcal, mode: LaunchMode.externalApplication);
@@ -27,12 +32,20 @@ Future<void> openCalendarSubscription() async {
   await launchUrl(Uri.parse(calendarFeedUrl), mode: LaunchMode.externalApplication);
 }
 
+/// Копирование считается подпиской тоже.
+///
+/// Ссылку копируют не из любопытства, а чтобы вставить её в календарь руками —
+/// на Android так выходит чаще, чем через `webcal://`. Не засчитав этот путь, мы
+/// не сказали бы о переезде как раз тем, кто подписывался труднее прочих.
 Future<void> copyCalendarLink() async {
+  await rememberCalendarSubscription();
   await Clipboard.setData(const ClipboardData(text: calendarFeedUrl));
 }
 
-void showCalendarSubscriptionSheet(BuildContext context) {
-  showModalBottomSheet(
+/// Возвращает будущее, чтобы вызывающий мог обновиться по закрытии: подписка
+/// могла только что случиться, и полосу о переезде надо снять.
+Future<void> showCalendarSubscriptionSheet(BuildContext context) {
+  return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(

@@ -14,6 +14,7 @@ import 'package:typikon/store/store.dart';
 import 'package:typikon/utils/pomyannik_reminders.dart';
 import 'package:typikon/utils/reading_schemes.dart';
 import 'package:typikon/utils/push.dart';
+import 'package:typikon/store/calendar_feed.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage(context, {super.key});
@@ -29,6 +30,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _loadReminderSettings();
+    _loadSubscription();
   }
 
   void onPress() {
@@ -53,6 +55,15 @@ class _SettingsPageState extends State<SettingsPage> {
   /// Ключ доставки берётся с задержкой: пока идёт, кнопки заперты, иначе два
   /// нажатия подряд завели бы два разных устройства.
   bool _switchingSource = false;
+
+  /// Подписан ли человек на прежний адрес ленты.
+  bool _staleSubscription = false;
+
+  Future<void> _loadSubscription() async {
+    final stale = subscriptionIsStale(await subscribedCalendarUrl());
+    if (!mounted) return;
+    setState(() => _staleSubscription = stale);
+  }
 
   Future<void> _loadReminderSettings() async {
     final reminders = await remindersEnabled();
@@ -334,11 +345,55 @@ class _SettingsPageState extends State<SettingsPage> {
                     padding: EdgeInsets.only(top: 20, left: 16, right: 16),
                     child: Text("Календарь", style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
+                  // Полоса о переезде — только тому, кто подписан на прежний
+                  // адрес. Календарь забирает ленту сам и в приложение не
+                  // заходит, поэтому иначе человек узнал бы о молчании ленты
+                  // месяцы спустя, и не по ошибке, а по её отсутствию.
+                  if (_staleSubscription) Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Адрес календаря изменился",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Вы подписаны на прежний адрес. Он ещё отвечает, но однажды "
+                            "перестанет — и лента просто замолчит, без всякого "
+                            "предупреждения. Подпишитесь заново, а старую подписку "
+                            "удалите в своём календаре.",
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              child: const Text("Подписаться заново"),
+                              onPressed: () async {
+                                await showCalendarSubscriptionSheet(context);
+                                await _loadSubscription();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: TextButton(
                       child: Text("Подписаться на чтения в календаре"),
-                      onPressed: () => showCalendarSubscriptionSheet(context),
+                      onPressed: () async {
+                        await showCalendarSubscriptionSheet(context);
+                        await _loadSubscription();
+                      },
                     ),
                   ),
                   Padding(
