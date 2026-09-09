@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../apiMapper/pomyannik.dart' as pomyannik;
+import '../store/day_reading_notice.dart';
 
 /// ТОЧНЫЕ НАПОМИНАНИЯ: толчок с сервера.
 ///
@@ -76,7 +77,10 @@ Future<bool> enablePush() async {
   // месту телефона. `DateTime.now().timeZoneName` даёт сокращение вроде «MSK»,
   // а серверу нужен IANA — его знает только сама система.
   final zone = await deviceTimeZone();
-  final ok = await pomyannik.registerDevice(token, zone);
+  // Час чтений отдаём вместе с ключом: сервер шлёт толчок в него, а не в общий
+  // для всех восьмой. Не выбран — сервер о чтениях этому устройству не пишет.
+  final hour = await dayReadingHour();
+  final ok = await pomyannik.registerDevice(token, zone, readingHour: hour);
   if (ok) _token = token;
 
   return ok;
@@ -138,6 +142,7 @@ void watchPushToken({required bool Function() wanted}) {
   FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
     if (!wanted()) return;
     _token = token;
-    await pomyannik.registerDevice(token, await deviceTimeZone());
+    await pomyannik.registerDevice(token, await deviceTimeZone(),
+        readingHour: await dayReadingHour());
   });
 }

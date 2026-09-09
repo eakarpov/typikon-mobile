@@ -21,6 +21,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import "version.dart";
 import "api/constants.dart";
 import "utils/app_version.dart";
+import "utils/day_reading_reminders.dart";
 import "utils/push.dart";
 import "utils/crash_reporter.dart";
 
@@ -181,6 +182,7 @@ void backgroundFetchHeadlessTask(HeadlessTask task) async {
   await _checkVersionAndNotify("");
   await _checkNewTextsAndNotify();
   await _checkPomyannikAndNotify();
+  await _checkReadingAndNotify();
   BackgroundFetch.finish(taskId);
 }
 
@@ -197,7 +199,8 @@ void backgroundFetchHeadlessTask(HeadlessTask task) async {
 /// вовремя.
 @pragma('vm:entry-point')
 Future<void> pushHandler(RemoteMessage message) async {
-  if (message.data["kind"] != "pomyannik") return;
+  final kind = message.data["kind"];
+  if (kind != "pomyannik" && kind != "reading") return;
 
   // Фоновый обработчик поднимается в своей изоляции: ни магазина состояния, ни
   // подключённых плагинов в ней нет, и уведомления надо поднять заново.
@@ -209,7 +212,11 @@ Future<void> pushHandler(RemoteMessage message) async {
     ),
   );
 
-  await _checkPomyannikAndNotify();
+  if (kind == "pomyannik") {
+    await _checkPomyannikAndNotify();
+  } else {
+    await _checkReadingAndNotify();
+  }
 }
 
 @pragma('vm:entry-point')
@@ -266,6 +273,34 @@ Future _checkVersionAndNotify(String type) async {
   } catch (error) {
     print("Не получена версия");
   }
+}
+
+/// Чтения дня в назначенный человеком час.
+///
+/// Свой канал, негромкий, как и у помянника: чтения дня — не то, ради чего
+/// телефон должен вздрагивать, а отдельным каналом его можно приглушить, не
+/// глуша уведомлений об обновлении.
+Future<void> _checkReadingAndNotify() async {
+  await checkReadingAndNotify(show: (body, payload) async {
+    await flutterLocalNotificationsPlugin.show(
+      // Постоянный номер: второй показ за день заменяет прежнее уведомление, а
+      // не копит их стопкой.
+      901,
+      "Чтения дня",
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'dayReadingChannelId',
+          'dayReadingChannel',
+          channelDescription: 'Чтения дня утром',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: false),
+      ),
+      payload: payload,
+    );
+  });
 }
 
 /// Напоминание о поминальном дне.
@@ -502,6 +537,14 @@ class MyAppState extends State<MyApp> {
 
   void _configureSelectNotificationSubject() {
     selectNotificationStream.stream.listen((String? payload) async {
+      // Уведомление о чтениях ведёт в службу дня.
+      if (payload != null && payload.startsWith("reading:")) {
+        final alias = payload.substring("reading:".length);
+        if (alias.isNotEmpty) {
+          navigatorKey.currentState?.pushNamed("/days", arguments: alias);
+        }
+        return;
+      }
       if (payload != null && payload.startsWith(wantToGetUpdate)) {
         // Уведомления, показанные прежней версией приложения, адреса не несут —
         // им остаётся прежний, свой.

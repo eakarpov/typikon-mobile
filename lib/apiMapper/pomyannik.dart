@@ -173,9 +173,10 @@ Future<void> markNote(String id, String mark) async {
 /// Возвращает `false` вместо броска: привязка устройства — не то, ради чего
 /// стоит показывать окно с ошибкой. Не вышло — напоминания просто останутся за
 /// приложением, а следующий запуск попробует снова.
-Future<bool> registerDevice(String token, String timeZone) async {
+Future<bool> registerDevice(String token, String timeZone, {int? readingHour}) async {
   try {
-    final response = await withSession(() => api.registerDevice(token, timeZone));
+    final response = await withSession(
+        () => api.registerDevice(token, timeZone, readingHour: readingHour));
     return response.statusCode == 200;
   } catch (_) {
     return false;

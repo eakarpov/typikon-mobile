@@ -152,6 +152,9 @@ class DayMemories {
 class CalendarDay {
   final String name;
 
+  /// Постоянный адрес дня: по нему открывается экран службы.
+  final String? alias;
+
   // На вечерне/утрене
   final CalendarDayPart? vespersProkimenon;
   final CalendarDayPart? vigil;
@@ -189,6 +192,7 @@ class CalendarDay {
 
   const CalendarDay({
     required this.name,
+    this.alias,
     this.readings = const [],
     required this.vespersProkimenon,
     required this.vigil,
@@ -257,6 +261,7 @@ class CalendarDay {
         day == null || day[key] == null ? null : CalendarDayPart.fromJson(day[key]);
     return CalendarDay(
       name: day == null ? "" : (day['name'] ?? ""),
+      alias: day is Map ? day["alias"] : null,
       vespersProkimenon: part("vespersProkimenon"),
       vigil: part("vigil"),
       kathisma1: part("kathisma1"),

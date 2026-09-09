@@ -126,9 +126,15 @@ Future<http.Response> markNote(String id, String mark) =>
 /// Часовой пояс обязателен: сервер считает утро по месту телефона, а не по
 /// своему. Восемь утра в Петропавловске и восемь утра в Калининграде —
 /// одиннадцать часов разницы.
-Future<http.Response> registerDevice(String token, String timeZone) =>
-    v2Send("POST", v2Uri("/pomyannik/devices"),
-        body: {"token": token, "timeZone": timeZone, "platform": "android"});
+Future<http.Response> registerDevice(String token, String timeZone, {int? readingHour}) =>
+    v2Send("POST", v2Uri("/pomyannik/devices"), body: {
+      "token": token,
+      "timeZone": timeZone,
+      "platform": "android",
+      // Час чтений дня. Не выбран — поле уходит `null`, и сервер о чтениях
+      // этому устройству не пишет: молчание тут и есть выбор.
+      "readingHour": readingHour,
+    });
 
 Future<http.Response> forgetDevice(String token) =>
     v2Send("DELETE", v2Uri("/pomyannik/devices", {"token": token}));

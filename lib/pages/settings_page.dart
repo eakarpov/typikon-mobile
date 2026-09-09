@@ -15,6 +15,7 @@ import 'package:typikon/utils/pomyannik_reminders.dart';
 import 'package:typikon/utils/reading_schemes.dart';
 import 'package:typikon/utils/push.dart';
 import 'package:typikon/store/calendar_feed.dart';
+import 'package:typikon/store/day_reading_notice.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage(context, {super.key});
@@ -31,6 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadReminderSettings();
     _loadSubscription();
+    _loadReadingHour();
   }
 
   void onPress() {
@@ -58,6 +60,25 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// Подписан ли человек на прежний адрес ленты.
   bool _staleSubscription = false;
+
+  /// Час, в который человек просил говорить о чтениях; `null` — не просил.
+  int? _readingHour;
+
+  Future<void> _loadReadingHour() async {
+    final hour = await dayReadingHour();
+    if (!mounted) return;
+    setState(() => _readingHour = hour);
+  }
+
+  Future<void> _onReadingHour(int? hour) async {
+    setState(() => _readingHour = hour);
+    await setDayReadingHour(hour);
+    // Час знает и сервер — он шлёт толчок именно в него. Перепривязка отдаёт
+    // ему новый; без неё точные уведомления приходили бы в прежний час до
+    // следующего запуска приложения.
+    await refreshPushRegistration(
+        wanted: appStore?.state.settings.remindsFromServer ?? false);
+  }
 
   Future<void> _loadSubscription() async {
     final stale = subscriptionIsStale(await subscribedCalendarUrl());
@@ -394,6 +415,37 @@ class _SettingsPageState extends State<SettingsPage> {
                         await showCalendarSubscriptionSheet(context);
                         await _loadSubscription();
                       },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20, left: 16, right: 16),
+                    child: Text("Чтения дня", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 16, top: 2),
+                    child: Text(
+                      "Память и чтения дня одной строкой. Час выбираете вы: кто-то "
+                      "читает до работы, кто-то накануне вечером, чтобы успеть на "
+                      "вечерню.",
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        ChoiceChip(
+                          selected: _readingHour == null,
+                          onSelected: (_) => _onReadingHour(null),
+                          label: const Text("Не говорить"),
+                        ),
+                        ...const [6, 7, 8, 9, 12, 18, 20].map((hour) => ChoiceChip(
+                              selected: _readingHour == hour,
+                              onSelected: (_) => _onReadingHour(hour),
+                              label: Text("$hour:00"),
+                            )),
+                      ],
                     ),
                   ),
                   Padding(
