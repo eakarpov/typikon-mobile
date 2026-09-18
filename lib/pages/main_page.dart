@@ -29,8 +29,22 @@ import '../utils/day_preloader.dart';
 import '../components/trapeza_line.dart';
 import '../utils/bible_route.dart';
 import '../utils/route_observer.dart';
+import 'menu_entries.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
+
+/// Пункты раздела, видимые сейчас.
+///
+/// Личные разделы без учётной записи не прячутся из вежливости: заметок,
+/// помянника и поданных записок у невошедшего нет вовсе, и открытый пустой
+/// экран читался бы как поломка.
+List<MenuEntry> _visibleEntries(BuildContext context, MenuSection section) {
+  final signedIn = StoreProvider.of<AppState>(context).state.auth.isSignedIn;
+  return section.entries
+      .where((entry) =>
+          entry.visibility == MenuVisibility.always || signedIn)
+      .toList();
+}
 
 class MainPage extends StatefulWidget {
   const MainPage(context, {
@@ -642,170 +656,33 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                     ],
                   ),
                 ),
-                ListTile(
-                  title: const Text('Главная страница', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Избранное', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/favourites",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/favourites");
-                  },
-                ),
-                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
-                  title: const Text('Мои заметки', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/notes",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/notes");
-                  },
-                ),
-                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
-                  title: const Text('Помянник', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/pomyannik",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/pomyannik");
-                  },
-                ),
-                // Приём записок открыт не всякому, и проверяет это сервер.
-                // Прятать пункт по своему флагу нельзя: флаг протухнет молча, а
-                // экран сам скажет «приём вам пока не открыт» словами сервера.
-                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
-                  title: const Text('Поданные записки', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/pomyannik/prinyatye",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/pomyannik/prinyatye");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Библия', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/bible",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/bible");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Зачала', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/pericopes",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/pericopes");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Каноны', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/canons",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/canons");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Акафисты', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/akathists",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/akathists");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Молитвы', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/prayers",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/prayers");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Библиотека', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/library",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/library");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Пятидесятница', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/penticostarion",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/penticostarion");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Триодион', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/triodion",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/triodion");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Вне триодного цикла', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/outside",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/outside");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Чтения на календарный день', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/months",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/months");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Калькулятор чтений на день', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/calculator",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/calculator");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Памяти на день', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/dneslov/memories",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/dneslov/memories");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Именины', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/imeniny",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/imeniny");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Словарь', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/dictionary",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/dictionary");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Хронология', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/chronology",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/chronology");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Полезные ресурсы', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/resources",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/resources");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Обратная связь', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/contact",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/contact");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Настройки', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/settings",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/settings");
-                  },
-                ),
+                // Меню строится из описи lib/pages/menu_entries.dart: двадцать
+                // пять одинаковых ListTile подряд разъезжались с маршрутами и
+                // росли с каждым разделом. Одиннадцать пунктов ушли под
+                // «Собрание» и «Пособия».
+                for (final section in drawerSections) ...[
+                  if (_visibleEntries(context, section).isNotEmpty) ...[
+                    if (section.title != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 4.0),
+                        child: Text(
+                          section.title!,
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                        ),
+                      ),
+                    for (final entry in _visibleEntries(context, section))
+                      ListTile(
+                        title: Text(entry.title, style: const TextStyle(fontSize: 14.0)),
+                        selected: ModalRoute.of(context)?.settings.name == entry.route,
+                        onTap: () {
+                          Navigator.pushNamed(context, entry.route);
+                        },
+                      ),
+                    const Divider(height: 1),
+                  ],
+                ],
                 ListTile(
                   title: const Text('Помочь проекту', style: TextStyle(fontSize: 14.0),),
                   onTap: () {
