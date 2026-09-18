@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/bible.dart';
+import '../apiMapper/places.dart';
 import '../apiMapper/v2/errors.dart';
 import '../components/api_error_view.dart';
 import '../components/bible_edition_picker.dart';
@@ -11,6 +12,7 @@ import '../components/pericope_block.dart';
 import '../components/verse_list.dart';
 import '../dto/bible.dart';
 import '../dto/pericope.dart';
+import '../dto/place.dart';
 import '../store/actions/actions.dart';
 import '../store/bible_bookmark.dart';
 import '../store/models/models.dart';
@@ -60,6 +62,10 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
   /// Якорь на начало зачала: к нему прокручиваем после первого кадра, иначе
   /// читатель, пришедший за чтением дня, оказался бы в начале главы и искал
   /// зачало глазами — ровно то, от чего эта работа и затевалась.
+  /// Места, названные в стихах главы. Пусто — либо их нет, либо запрос не
+  /// удался: это прибавка к чтению, и ошибку поверх главы показывать незачем.
+  List<ChapterPlace> _places = const [];
+
   final GlobalKey _pericopeKey = GlobalKey();
   final ScrollController _scrollController = ScrollController();
   bool _scrolledToPericope = false;
@@ -69,6 +75,16 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
     super.initState();
     _load();
     _loadChapterCount();
+    _loadPlaces();
+  }
+
+  Future<void> _loadPlaces() async {
+    try {
+      final found = await getChapterPlaces(widget.canonId, widget.chapter);
+      if (mounted) setState(() => _places = found);
+    } catch (_) {
+      // Молчим нарочно: см. _places.
+    }
   }
 
   void _load() {
@@ -281,6 +297,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
           else
             _single(context, data, fontSize),
           ..._numberingNotes(context, data),
+          _placesBlock(context),
           _navigation(context),
         ],
       ),
@@ -313,6 +330,37 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
         fontFamily: fontFamily,
         rangesLabel: _rangesLabel,
         firstKey: _pericopeKey,
+      ),
+    );
+  }
+
+  /// Места главы — свёрнутым списком, как на сайте.
+  ///
+  /// Свёрнутым и под текстом, а не значками у стихов: значок у стиха мешает
+  /// читать, а ради того, чтобы узнать, где это было, читатель и так сюда
+  /// заглянет.
+  Widget _placesBlock(BuildContext context) {
+    if (_places.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: ExpansionTile(
+        title: Text("Места главы (${_places.length})",
+            style: const TextStyle(fontFamily: "OldStandard")),
+        children: [
+          for (final place in _places)
+            ListTile(
+              dense: true,
+              title: Text(place.name, style: const TextStyle(fontFamily: "OldStandard")),
+              subtitle: Text("стихи: ${place.verses.join(", ")}"),
+              trailing: place.hasPage ? const Icon(Icons.chevron_right) : null,
+              // Место со скрытой страницей показываем именем: вести к ответу
+              // «такого места нет» хуже, чем не вести никуда.
+              onTap: place.hasPage
+                  ? () => Navigator.pushNamed(context, "/places", arguments: place.slug)
+                  : null,
+            ),
+        ],
       ),
     );
   }

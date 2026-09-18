@@ -83,6 +83,8 @@ const List<MenuEntry> corpusEntries = <MenuEntry>[
 
 /// «Пособия» — вспомогательное при чтении.
 const List<MenuEntry> handbookEntries = <MenuEntry>[
+  MenuEntry("Места", "/places",
+      hint: "Где было названное в Писании и чтениях"),
   // Знаки Типикона жили седьмой строкой в списке чужих сайтов — единственная
   // внутренняя ссылка среди внешних, и найти её там было нельзя.
   MenuEntry("Знаки Типикона", "/signs",

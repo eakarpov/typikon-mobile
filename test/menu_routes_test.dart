@@ -28,7 +28,6 @@ const Set<String> unlistedRoutes = <String>{
   "/pericope", // зачало из указателя
   "/incipit", // зачин из поиска
   "/saints", // досье из памяти
-  "/places", // место из текста
   "/pomyannik/upcoming", // из помянника
   "/pomyannik/zapiska", // из помянника
 };

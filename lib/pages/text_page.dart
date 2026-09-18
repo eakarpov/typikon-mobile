@@ -35,9 +35,11 @@ import 'package:typikon/store/reading_progress.dart';
 import 'package:typikon/dto/book.dart';
 import 'package:typikon/dto/pericope.dart';
 import 'package:typikon/utils/pericope_route.dart';
+import 'package:typikon/dto/place.dart';
 import 'package:typikon/dto/text.dart';
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/dto/dneslov/images.dart';
+import '../apiMapper/places.dart';
 import '../apiMapper/reading.dart';
 import '../apiMapper/user_notes.dart';
 import "../apiMapper/dneslov/images.dart";
@@ -107,6 +109,12 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
       );
     }
   }
+  /// Места, названные в этом тексте: разметкой и разбором, принятым на сверке.
+  ///
+  /// Молча пусто при отказе — это прибавка к чтению, а не само чтение, и ради
+  /// неё показывать ошибку поверх текста незачем.
+  List<TextPlaceRef> _places = const [];
+
   late Future<DneslovImageListD> dneslovImages;
 
   // "Читать целиком" со страницы зачала кодирует его границы суффиксом в id
@@ -142,7 +150,17 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     _scrollController.addListener(_onScroll);
     _loadReading();
     _loadUserNotes();
+    _loadPlaces();
 
+  }
+
+  Future<void> _loadPlaces() async {
+    try {
+      final found = await getTextPlaces(_realId);
+      if (mounted) setState(() => _places = found);
+    } catch (_) {
+      // Молчим нарочно: см. _places.
+    }
   }
 
   @override
@@ -553,6 +571,38 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                           "знак положен. Спорные места оставлены без знака. В самом "
                           "тексте ударений нет — это подсказка для чтения вслух, а не книга.",
                           style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      if (_places.isNotEmpty) Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              // Статья энциклопедии — о самом месте; прочие
+                              // тексты место лишь называют, и смешивать это
+                              // значило бы обещать статью там, где упоминание.
+                              _places.any((place) => place.subject)
+                                  ? "Место:"
+                                  : "Места:",
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                            const SizedBox(height: 6.0),
+                            Wrap(
+                              spacing: 8.0,
+                              runSpacing: 4.0,
+                              children: _places
+                                  .map((place) => ActionChip(
+                                        label: Text(place.name),
+                                        avatar: place.subject
+                                            ? const Icon(Icons.article_outlined, size: 16.0)
+                                            : const Icon(Icons.place_outlined, size: 16.0),
+                                        onPressed: () => Navigator.pushNamed(
+                                          context, "/places", arguments: place.address),
+                                      ))
+                                  .toList(),
+                            ),
+                          ],
                         ),
                       ),
                       if (future.data!.dneslovId != null) FutureBuilder<DneslovImageListD>(
