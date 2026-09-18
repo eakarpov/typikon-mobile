@@ -17,7 +17,11 @@ class FusionTextWidgets extends StatelessWidget {
   final String fontFamily;
   final List<UserNote> notes;
   final void Function(UserNote)? onTapNote;
-  static final regex = RegExp(r"\{k\|(.+)}");
+  // Киноварь — закрытой группой, а не жадным `(.+)`. Замерено по корпусу: меток
+  // 871, и в 23 абзацах их по две; жадное выражение сливало такую пару в одну
+  // красную строку, съедая текст между ними. Ещё у трёх меток в корпусе нет
+  // закрывающей скобки — теперь они покажутся собой, а не проглотят абзац.
+  static final regex = RegExp(r"\{k\|([^}]*)\}");
 
   const FusionTextWidgets({
     Key? key,

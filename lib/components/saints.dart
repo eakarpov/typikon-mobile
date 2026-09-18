@@ -16,7 +16,9 @@ List<InlineSpan> buildSaints(
   List<UserNote>? notes,
   void Function(UserNote)? onTapNote,
 ]) {
-  final regex = RegExp(r"\{st\|(.+)}");
+  // Опознаватель и подпись — двумя закрытыми группами; почему не жадное `(.+)`,
+  // сказано в `places.dart`: метка здесь той же формы и ломалась так же.
+  final regex = RegExp(r"\{st\|([^|}]+)(?:\|([^}]*))?\}");
 
   final matches = regex.allMatches(text);
 
@@ -41,13 +43,14 @@ List<InlineSpan> buildSaints(
       );
     }
 
-    if (match.group(1) != null) {
-      List<String> matchStrings = (match.group(1) as String).split("|");
+    final id = match.group(1);
+    if (id != null) {
+      final label = (match.group(2) ?? "").isEmpty ? id : match.group(2)!;
       widgets.add(
         TextSpan(
-          text: matchStrings[1],
+          text: label,
           recognizer: TapGestureRecognizer()..onTap = () {
-            Navigator.pushNamed(context, "/saints", arguments: matchStrings[0]);
+            Navigator.pushNamed(context, "/saints", arguments: id);
           },
           style: TextStyle(
             fontFamily: fontFamily,

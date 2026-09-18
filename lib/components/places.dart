@@ -16,7 +16,12 @@ List<InlineSpan> buildPlaces(
   List<UserNote>? notes,
   void Function(UserNote)? onTapNote,
 ]) {
-  final regex = RegExp(r"\{pl\|(.+)}");
+  // Ключ и подпись — двумя группами, и обе закрыты по построению. Прежде здесь
+  // стояло жадное `(.+)`: два места в одном абзаце давали ОДНУ ссылку, чья
+  // подпись тянулась от первой метки до последней, а второе место исчезало
+  // вместе с текстом между ними. Метка без подписи — `{pl|foo}` — роняла абзац
+  // `RangeError`-ом на обращении к несуществующей второй части.
+  final regex = RegExp(r"\{pl\|([^|}]+)(?:\|([^}]*))?\}");
 
   final matches = regex.allMatches(text);
 
@@ -47,13 +52,16 @@ List<InlineSpan> buildPlaces(
       );
     }
 
-    if (match.group(1) != null) {
-      List<String> matchStrings = (match.group(1) as String).split("|");
+    final key = match.group(1);
+    if (key != null) {
+      // Пустая подпись показывает сам ключ: место названо неудачно, но абзац
+      // цел и переход работает.
+      final label = (match.group(2) ?? "").isEmpty ? key : match.group(2)!;
       widgets.add(
         TextSpan(
-          text: matchStrings[1],
+          text: label,
           recognizer: TapGestureRecognizer()..onTap = () {
-            Navigator.pushNamed(context, "/places", arguments: matchStrings[0]);
+            Navigator.pushNamed(context, "/places", arguments: key);
           },
           style: TextStyle(
             fontFamily: fontFamily,
