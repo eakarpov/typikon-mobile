@@ -6,15 +6,16 @@
 //
 // siteHost — как домен пишется в тексте, без протокола и www.
 // siteHostFull — имя хоста, на который приложение ходит.
-const String siteHost = 'typikon.su';
+const String siteHost = 'typikon.info';
 const String siteHostFull = 'www.$siteHost';
 
 // Домены, которые приложение считает своими и которым представляется заголовком
-// appHeaderName. Список, а не один siteHost, из-за переезда на typikon.info:
-// пока старый домен отвечает, обе формы наши — выпущенные копии продолжают
-// ходить на старую, а обновлённые уже на новую. Старую убирать не раньше, чем
-// она перестанет отвечать.
-const List<String> ownHosts = <String>['typikon.su', 'typikon.info'];
+// appHeaderName. Список, а не один siteHost, из-за переезда: typikon.su остаётся
+// нашим, пока отвечает (до середины января 2027), — по нему ходят выпущенные
+// копии, и заголовок от них должен уходить, иначе сервер прочтёт их молчание как
+// «старых клиентов не осталось» и закроет первую версию API. Убирать старый
+// домен отсюда — только когда он перестанет отвечать.
+const List<String> ownHosts = <String>['typikon.info', 'typikon.su'];
 
 const String apiBaseUrl = 'https://$siteHostFull';
 const String dneslovBaseUrl = 'http://dneslov.org';
@@ -27,7 +28,7 @@ const Duration apiTimeout = Duration(seconds: 15);
 //
 // Версию держим здесь строкой и поднимаем вместе с version в pubspec.yaml.
 const String appHeaderName = 'X-Typikon-App';
-const String appVersion = '2.0.0+7';
+const String appVersion = '2.1.0+8';
 
 // Подписной календарь чтений на сайте. Хост и путь отдельно — из них же
 // собирается webcal://-ссылка, которую календари понимают как подписку.

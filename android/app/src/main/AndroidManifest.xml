@@ -47,6 +47,35 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Ссылки сайта. android:autoVerify означает, что система сама
+                 сверит их с /.well-known/assetlinks.json на этих хостах; без
+                 сверки Android с двенадцатой версии не отдаёт http-ссылки
+                 приложению вовсе — даже выбором из списка.
+
+                 Хосты ровно те, что сайт ставит в ссылки, и ровно с www:
+                 отпечаток на голом typikon.info отдаётся редиректом на www, а
+                 проверка редиректов не допускает. До Android 11 включительно
+                 одна незаверенная строка роняет проверку всех, поэтому голых
+                 форм тут нет — они остаются в фильтре ниже.
+
+                 Оба домена, пока старый жив: ссылки с typikon.su розданы и
+                 ходят по рукам. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="www.typikon.info" />
+                <data android:host="www.typikon.su" />
+            </intent-filter>
+            <!-- То же без сверки: голые формы домена. Заверить их нельзя, пока
+                 сервер отвечает на них редиректом, но отдать приложению их
+                 всё же стоит — там, где система спрашивает пользователя.
+
+                 Здесь же остаётся схема app: в заверяемый фильтр её класть
+                 нельзя (сверке подлежат только http и https), а ссылок такого
+                 вида ни сайт, ни приложение сейчас не делают вовсе. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -54,10 +83,8 @@
                 <data android:scheme="http" />
                 <data android:scheme="https" />
                 <data android:scheme="app" />
-                <!-- Оба домена: пока старый жив, ссылки с него ходят по рукам
-                     и должны открываться в приложении так же, как с нового. -->
-                <data android:host="typikon.su" />
                 <data android:host="typikon.info" />
+                <data android:host="typikon.su" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
