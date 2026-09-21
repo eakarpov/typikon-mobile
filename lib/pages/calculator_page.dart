@@ -22,9 +22,9 @@ class CalculatorPage extends StatefulWidget {
 
 class _Section {
   final String title;
-  final CalendarDayPart? part;
+  final List<CalendarDayPartItem> items;
 
-  _Section(this.title, this.part);
+  _Section(this.title, this.items);
 }
 
 class _CalculatorPageState extends State<CalculatorPage>
@@ -48,30 +48,22 @@ class _CalculatorPageState extends State<CalculatorPage>
   GlobalKey _sectionKey(String title) => _sectionKeys.putIfAbsent(title, () => GlobalKey());
   GlobalKey _itemKey(String id) => _itemKeys.putIfAbsent(id, () => GlobalKey());
 
-  List<_Section> _sections(CalendarDay data) {
-    return [
-      _Section("На паремиях вечерни по прокимне", data.vespersProkimenon),
-      _Section("На всенощном бдении перед шестопсалмием", data.vigil),
-      _Section("По седальнах первой кафизмы", data.kathisma1),
-      _Section("По седальнах второй кафизмы", data.kathisma2),
-      _Section("По седальнах третьей кафизмы", data.kathisma3),
-      _Section("Перед 50-м псалмом после Евангелия", data.before50),
-      _Section("По ипакои", data.ipakoi),
-      _Section("По седальнах полиелея", data.polyeleos),
-      _Section("Евангелие на утрени", data.gospelMatins),
-      _Section("По седальнах третьей песни", data.song3),
-      _Section("По кондаке и икосе по шестой песни", data.song6),
-      _Section("По  отпустительным тропарям", data.apolutikaTroparia),
-      _Section("Перед первым часом", data.before1h),
-      _Section("На первом часе", data.h1),
-      _Section("На 3-м часе", data.h3),
-      _Section("На 6-м часе", data.h6),
-      _Section("На 9-м часе", data.h9),
-      _Section("Апостол на Литургии", data.apostleLiturgy),
-      _Section("Евангелие на Литургии", data.gospelLiturgy),
-      _Section("На панагии", data.panagia),
-    ].where((s) => s.part?.items?.isNotEmpty == true).toList();
-  }
+  /// Места службы — из того перечня, что прислал сервер.
+  ///
+  /// Здесь был свой список из двадцати мест, разобранный по отдельным полям
+  /// ответа (`data.vigil`, `data.kathisma1` и так далее). Вторая версия API
+  /// таких полей не отдаёт вовсе — она присылает `readings`, перечень разделов
+  /// с их же подписями, — и калькулятор показывал пустую страницу на любой
+  /// день. Главная и страница дня переехали на `readings` ещё при переводе на
+  /// v2, а это место тогда пропустили: поля были на месте, пока сервер их
+  /// присылал, и поломка вышла наружу только с выкладкой.
+  ///
+  /// Подписи теперь тоже сервера: держать свои — значит однажды подписать
+  /// раздел не так, как он называется на сайте.
+  List<_Section> _sections(CalendarDay data) => data.readings
+      .map((section) => _Section(section.title, section.items))
+      .where((section) => section.items.isNotEmpty)
+      .toList();
 
   /// Ключ якоря включает место службы: один и тот же текст может стоять сразу
   /// в нескольких местах дня, а два одинаковых GlobalKey в дереве — это
@@ -83,7 +75,7 @@ class _CalculatorPageState extends State<CalculatorPage>
     return sections.map((s) => TocEntry(
       title: s.title,
       anchorKey: _sectionKey(s.title),
-      children: s.part!.items!.map((item) => TocEntry(
+      children: s.items.map((item) => TocEntry(
         title: item.name,
         anchorKey: _itemKey(_itemAnchor(item, s.title)),
       )).toList(),
@@ -91,7 +83,7 @@ class _CalculatorPageState extends State<CalculatorPage>
   }
 
   Widget renderItem(BuildContext context, _Section section) {
-    List<CalendarDayPartItem> list = section.part?.items ?? [];
+    final list = section.items;
     var titleStyle = const TextStyle(
       fontWeight: FontWeight.bold,
       color: Colors.red,
