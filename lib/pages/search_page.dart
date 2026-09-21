@@ -6,6 +6,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 import '../api/search.dart' show minSearchQueryLength;
 import '../apiMapper/search.dart';
 import '../apiMapper/singing.dart';
+import '../components/api_error_view.dart';
 import '../components/paged_list.dart';
 import '../components/snippet_text.dart';
 import '../dto/chant.dart';
@@ -179,7 +180,7 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
           // повтор поможет. Прежде отказ по ключу и превышение частоты
           // выглядели одинаково — «не удалось выполнить поиск» с кнопкой,
           // которая ничего не меняла.
-          return searchErrorView(
+          return errorViewFor(
             context,
             future.error!,
             "Не удалось выполнить поиск.",

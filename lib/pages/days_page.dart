@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:typikon/components/api_error_view.dart';
+import 'package:typikon/components/async_view.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import 'package:typikon/apiMapper/days.dart';
@@ -47,6 +47,11 @@ class _DaysPageState extends State<DaysPage> {
 
   /// Повторная попытка после отказа. Прежде на её месте стоял текст
   /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  Future<void> _refresh() {
+    _retry();
+    return settle(day);
+  }
+
   void _retry() {
     setState(() {
       day = getDay(widget.id);
@@ -244,42 +249,30 @@ class _DaysPageState extends State<DaysPage> {
       ),
       body: Container(
         color: StoreProvider.of<AppState>(context).state.settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<DayTexts>(
+        child: AsyncView<DayTexts>(
           future: day,
-          builder: (context, future) {
-            if (future.hasData) {
-              final sections = _sections(future.data!);
-              List<Widget> children = sections
-                  .map((section) => renderItem(context, section))
-                  .expand((element) => [element, Image.asset("assets/images/divider.png") ]).toList();
-              if (children.isNotEmpty) {
-                children.removeLast();
-              }
-              children.add(Image.asset("assets/images/end-ornament.png"));
+          message: "Не удалось загрузить чтения дня.",
+          onRetry: _retry,
+          onRefresh: _refresh,
+          isEmpty: (data) => _sections(data).isEmpty,
+          emptyMessage: "На этот день чтений нет.",
+          builder: (context, data) {
+            final sections = _sections(data);
+            List<Widget> children = sections
+                .map((section) => renderItem(context, section))
+                .expand((element) => [element, Image.asset("assets/images/divider.png") ]).toList();
+            if (children.isNotEmpty) {
+              children.removeLast();
+            }
+            children.add(Image.asset("assets/images/end-ornament.png"));
 
-              return SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    children: children,
-                  ),
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: children,
                 ),
-              );
-            }
-            if (future.hasError) {
-              return ApiErrorView(
-                error: future.error,
-                message: "Не удалось загрузить чтения дня.",
-                onRetry: _retry,
-              );
-            }
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              child: const Center(child: CircularProgressIndicator()),
+              ),
             );
           },
         ),

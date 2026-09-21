@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:typikon/components/api_error_view.dart';
+import 'package:typikon/components/async_view.dart';
 import 'package:typikon/apiMapper/library.dart';
 import 'package:typikon/dto/book.dart';
 import 'package:typikon/components/dneslov/roundels.dart';
@@ -25,6 +25,11 @@ class _BookPageState extends State<BookPage> {
 
   /// Повторная попытка после отказа. Прежде на её месте стоял текст
   /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  Future<void> _refresh() {
+    _retry();
+    return settle(book);
+  }
+
   void _retry() {
     setState(() {
       book = getBook(widget.id);
@@ -52,38 +57,17 @@ class _BookPageState extends State<BookPage> {
       ),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<BookWithTexts>(
+        child: AsyncView<BookWithTexts>(
           future: book,
-          builder: (context, future) {
-            if (future.hasData) {
-              List<BookText> list = future.data!.texts;
-              return ListView.builder(
-                scrollDirection: Axis.vertical,
-                itemCount: list.length,
-                itemBuilder: (context, index) {
-                  final item = list[index];
-                  return Roundels(
-                    context,
-                    item: item,
-                  );
-                },
-              );
-            } else if (future.hasError) {
-              return ApiErrorView(
-                error: future.error,
-                message: "Не удалось загрузить книгу.",
-                onRetry: _retry,
-              );
-            }
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              width: double.infinity,
-              height: double.infinity,
-              child: const Center(child: CircularProgressIndicator()),
-            );
-          },
+          message: "Не удалось загрузить книгу.",
+          onRetry: _retry,
+          onRefresh: _refresh,
+          isEmpty: (data) => data.texts.isEmpty,
+          emptyMessage: "В этой книге пока нет текстов.",
+          builder: (context, data) => ListView.builder(
+            itemCount: data.texts.length,
+            itemBuilder: (context, index) => Roundels(context, item: data.texts[index]),
+          ),
         ),
       ),
     );

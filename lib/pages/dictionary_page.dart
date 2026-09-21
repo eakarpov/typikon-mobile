@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/reference.dart';
+import '../components/api_error_view.dart';
 import '../components/paged_list.dart';
 import '../dto/reference.dart';
 import '../store/models/models.dart';
@@ -132,7 +133,7 @@ class _LexemePageState extends State<LexemePage> {
         future: lexeme,
         builder: (context, future) {
           if (future.hasError) {
-            return searchErrorView(
+            return errorViewFor(
               context,
               future.error!,
               "Не удалось открыть словарную статью.",

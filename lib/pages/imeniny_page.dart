@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../apiMapper/reference.dart';
+import '../components/api_error_view.dart';
 import '../components/paged_list.dart';
 import '../dto/reference.dart';
 
@@ -125,7 +126,7 @@ class _NamePageState extends State<NamePage> {
         future: entry,
         builder: (context, future) {
           if (future.hasError) {
-            return searchErrorView(
+            return errorViewFor(
               context,
               future.error!,
               "Не удалось найти это имя.",

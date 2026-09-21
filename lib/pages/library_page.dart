@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:typikon/components/api_error_view.dart';
+import 'package:typikon/components/async_view.dart';
 import 'package:typikon/apiMapper/library.dart';
 import 'package:typikon/dto/library.dart';
 
@@ -29,6 +29,13 @@ class _LibraryPageState extends State<LibraryPage> {
     });
   }
 
+  /// То же, что «Повторить», но жестом — и дождавшись ответа, иначе кольцо
+  /// обновления пропадёт раньше, чем придут книги.
+  Future<void> _refresh() {
+    _retry();
+    return settle(bookList);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,44 +44,26 @@ class _LibraryPageState extends State<LibraryPage> {
       ),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<BookList>(
+        child: AsyncView<BookList>(
           future: bookList,
-          builder: (context, future) {
-            if (future.hasData) {
-              List<Book> list = future.data!.list;
-              return ListView.builder(
-                scrollDirection: Axis.vertical,
-                itemCount: list.length,
-                itemBuilder: (context, index) {
-                  final item = list[index];
-                  return Container(
-                    child: ListTile(
-                      title: Text(item.name ?? "Без названия"),
-                      // Автора может не быть вовсе — тогда строки под названием нет.
-                      subtitle: (item.author ?? "").isEmpty ? null : Text(item.author!),
-                      onTap: () => {
-                        Navigator.pushNamed(context, "/library", arguments: item.id)
-                      },
-                    ),
-                  );
-                },
+          message: "Не удалось загрузить библиотеку.",
+          onRetry: _retry,
+          onRefresh: _refresh,
+          isEmpty: (data) => data.list.isEmpty,
+          emptyMessage: "В библиотеке пока нет книг.",
+          builder: (context, data) => ListView.builder(
+            itemCount: data.list.length,
+            itemBuilder: (context, index) {
+              final item = data.list[index];
+              return ListTile(
+                title: Text(item.name ?? "Без названия"),
+                // Автора может не быть вовсе — тогда строки под названием нет.
+                subtitle: (item.author ?? "").isEmpty ? null : Text(item.author!),
+                onTap: () =>
+                    Navigator.pushNamed(context, "/library", arguments: item.id),
               );
-            } else if (future.hasError) {
-              return ApiErrorView(
-                error: future.error,
-                message: "Не удалось загрузить библиотеку.",
-                onRetry: _retry,
-              );
-            }
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              child: const Center(child: CircularProgressIndicator()),
-            );
-          },
+            },
+          ),
         ),
       ),
     );

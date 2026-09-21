@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/pericopes.dart';
-import '../components/paged_list.dart';
+import '../components/async_view.dart';
 import '../components/verse_list.dart';
 import '../dto/pericope.dart';
 import '../store/models/models.dart';
@@ -25,6 +25,12 @@ class _PericopePageState extends State<PericopePage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  /// То же обновление, но жестом. Ждём ответа: иначе кольцо пропадёт раньше.
+  Future<void> _refresh() {
+    setState(_load);
+    return settle(reading);
   }
 
   void _load() {
@@ -59,22 +65,12 @@ class _PericopePageState extends State<PericopePage> {
       ),
       body: Container(
         color: settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-        child: FutureBuilder<PericopeReading>(
+        child: AsyncView<PericopeReading>(
           future: reading,
-          builder: (context, future) {
-            if (future.hasError) {
-              return searchErrorView(
-                context,
-                future.error!,
-                "Не удалось загрузить зачало.",
-                () => setState(_load),
-              );
-            }
-            if (!future.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            return _body(context, future.data!, settings.fontSize.toDouble());
-          },
+          message: "Не удалось загрузить зачало.",
+          onRetry: () => setState(_load),
+          onRefresh: _refresh,
+          builder: (context, data) => _body(context, data, settings.fontSize.toDouble()),
         ),
       ),
     );

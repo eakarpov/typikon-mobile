@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:typikon/components/api_error_view.dart';
+import 'package:typikon/components/async_view.dart';
 import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/months.dart';
 import 'package:typikon/dto/month.dart';
-import "package:typikon/dto/day.dart";
 
 class MonthPage extends StatefulWidget {
   final String id;
@@ -26,6 +25,11 @@ class _MonthPageState extends State<MonthPage> {
 
   /// Повторная попытка после отказа. Прежде на её месте стоял текст
   /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  Future<void> _refresh() {
+    _retry();
+    return settle(month);
+  }
+
   void _retry() {
     setState(() {
       month = getMonth(widget.id);
@@ -58,41 +62,25 @@ class _MonthPageState extends State<MonthPage> {
         color: Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<MonthWithDays>(
+        child: AsyncView<MonthWithDays>(
           future: month,
-          builder: (context, future) {
-            if (future.hasData) {
-              List<DayTexts> list = future.data!.days;
-              return ListView.builder(
-                scrollDirection: Axis.vertical,
-                itemCount: list.length,
-                itemBuilder: (context, index) {
-                  final item = list[index];
-                  return Container(
-                    child: ListTile(
-                      title: Text(item.name??""),
-                      onTap: () => {
-                        // Псевдонимом: вторая версия API спрашивает день по нему.
-                        Navigator.pushNamed(context, "/days", arguments: item.alias ?? item.id)
-                      },
-                    ),
-                  );
-                },
+          message: "Не удалось загрузить месяц.",
+          onRetry: _retry,
+          onRefresh: _refresh,
+          isEmpty: (data) => data.days.isEmpty,
+          emptyMessage: "В этом месяце нет дней с чтениями.",
+          builder: (context, data) => ListView.builder(
+            itemCount: data.days.length,
+            itemBuilder: (context, index) {
+              final item = data.days[index];
+              return ListTile(
+                title: Text(item.name ?? ""),
+                // Псевдонимом: вторая версия API спрашивает день по нему.
+                onTap: () => Navigator.pushNamed(context, "/days",
+                    arguments: item.alias ?? item.id),
               );
-            } else if (future.hasError) {
-              return ApiErrorView(
-                error: future.error,
-                message: "Не удалось загрузить месяц.",
-                onRetry: _retry,
-              );
-            }
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              width: double.infinity,
-              height: double.infinity,
-              child: const Center(child: CircularProgressIndicator()),
-            );
-          },
+            },
+          ),
         ),
       ),
     );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:typikon/components/api_error_view.dart';
+import 'package:typikon/components/async_view.dart';
 import 'package:intl/intl.dart';
 
 import '../apiMapper/months.dart';
@@ -24,6 +24,11 @@ class _MonthsPageState extends State<MonthsPage> {
 
   /// Повторная попытка после отказа. Прежде на её месте стоял текст
   /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  Future<void> _refresh() {
+    _retry();
+    return settle(months);
+  }
+
   void _retry() {
     setState(() {
       months = getMonths();
@@ -38,17 +43,18 @@ class _MonthsPageState extends State<MonthsPage> {
       ),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<MonthList>(
+        child: AsyncView<MonthList>(
           future: months,
-          builder: (context, future) {
-            if (future.hasData) {
-              List<Month> list = future.data!.list;
-              return ListView.builder(
-                scrollDirection: Axis.vertical,
-                itemCount: list.length,
-                itemBuilder: (context, index) {
+          message: "Не удалось загрузить список месяцев.",
+          onRetry: _retry,
+          onRefresh: _refresh,
+          isEmpty: (data) => data.list.isEmpty,
+          emptyMessage: "Список месяцев пуст.",
+          builder: (context, data) {
+            final list = data.list;
+            return ListView.builder(
+              itemCount: list.length,
+              itemBuilder: (context, index) {
                   final item = list[index];
                   String locale = Localizations.localeOf(context).languageCode;
                   DateTime now = DateTime.now();
@@ -65,20 +71,7 @@ class _MonthsPageState extends State<MonthsPage> {
                       },
                     ),
                   );
-                },
-              );
-            } else if (future.hasError) {
-              return ApiErrorView(
-                error: future.error,
-                message: "Не удалось загрузить список месяцев.",
-                onRetry: _retry,
-              );
-            }
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              child: const Center(child: CircularProgressIndicator()),
+              },
             );
           },
         ),
