@@ -21,6 +21,26 @@ bool isNetworkError(Object? error) {
       message.contains('Failed host lookup');
 }
 
+/// Не удалось проверить сертификат сервера.
+///
+/// Отдельно от «нет сети», и это не придирка: при такой поломке связь у
+/// человека есть, менять ему нечего, а «Повторить» не поможет, пока не починят
+/// сервер. Сказать тут «нет соединения с интернетом» — значит отправить его
+/// чинить свой вай-фай.
+///
+/// Так выглядела выкладка на typikon.info: сервер отдавал свой сертификат без
+/// промежуточного. Android, в отличие от curl и браузера, недостающее звено
+/// сам не дозагружает, и в приложении отказывали разом все страницы. Ошибка
+/// при этом шла мимо обёрток `http` (там ловятся только `SocketException` и
+/// `HttpException`), а значит и мимо [isNetworkError], — человек видел общее
+/// «не удалось загрузить», по которому причину не угадать.
+bool isTlsError(Object? error) {
+  if (error is HandshakeException || error is TlsException) return true;
+  final message = error.toString();
+  return message.contains("HandshakeException") ||
+      message.contains("CERTIFICATE_VERIFY_FAILED");
+}
+
 /// Причина неудачи одной строкой — для всплывающих сообщений о неудавшейся
 /// записи.
 ///
@@ -33,6 +53,7 @@ bool isNetworkError(Object? error) {
 ///
 /// [what] — что именно не вышло, в прошедшем времени: «имя не записано».
 String failureMessage(Object? error, String what) {
+  if (isTlsError(error)) return "Сервер не отвечает как надо: $what";
   if (isNetworkError(error)) return "Нет связи: $what";
 
   // Отказы второй версии API несут собственное сообщение сервера, написанное
@@ -76,19 +97,36 @@ class ApiErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final offline = isNetworkError(error);
+    final tls = isTlsError(error);
+    final offline = !tls && isNetworkError(error);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(offline ? Icons.wifi_off : Icons.error_outline, size: 48),
+            Icon(
+              tls
+                  ? Icons.gpp_bad_outlined
+                  : (offline ? Icons.wifi_off : Icons.error_outline),
+              size: 48,
+            ),
             const SizedBox(height: 16),
             Text(
-              offline ? (offlineMessage ?? "Нет соединения с интернетом.") : message,
+              tls
+                  ? "Не удалось установить защищённое соединение с сервером."
+                  : (offline ? (offlineMessage ?? "Нет соединения с интернетом.") : message),
               textAlign: TextAlign.center,
             ),
+            if (tls) ...[
+              const SizedBox(height: 8),
+              Text(
+                "Связь у вас есть — дело на стороне сервера. "
+                "Остаётся подождать и попробовать позже.",
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
             if (hint != null) ...[
               const SizedBox(height: 8),
               Text(
