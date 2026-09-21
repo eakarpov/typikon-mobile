@@ -94,7 +94,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
     setState(() => _readingHour = hour);
     await setDayReadingHour(hour);
-    // Час знает и сервер — он шлёт толчок именно в него. Перепривязка отдаёт
+    // Час знает и сервер — он шлёт пуш именно в него. Перепривязка отдаёт
     // ему новый; без неё точные уведомления приходили бы в прежний час до
     // следующего запуска приложения.
     await refreshPushRegistration(
@@ -151,7 +151,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (!ok) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Не вышло включить толчки: нужны разрешение на "
+          content: Text("Не вышло включить пуши: нужны разрешение на "
               "уведомления и сеть. Напоминания остаются за приложением."),
         ));
         return;
