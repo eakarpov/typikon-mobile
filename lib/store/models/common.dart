@@ -1,8 +1,6 @@
-import 'dart:ui';
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'package:typikon/models/color.dart';
 
 @immutable
 class Common {

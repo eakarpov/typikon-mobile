@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_redux/flutter_redux.dart';
-import 'package:redux/redux.dart';
 
 import 'package:typikon/apiMapper/dneslov/calendar.dart';
 import 'package:typikon/dto/dneslov/calendar.dart';
@@ -28,10 +27,14 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
   /// спрашивал бы прежний день, а didChangeDependencies слал бы второй такой же
   /// запрос следом.
   void _loadFor(DateTime date) {
-    final day = DateFormat('dd.MM.yyyy').format(date.subtract(const Duration(days: 13)));
+    final day = _dneslovDay(date);
     _lastRequestedDay = day;
     currentDay = getCalendarDayD(day);
   }
+
+  /// День по старому стилю, как его спрашивает dneslov.org.
+  static String _dneslovDay(DateTime date) =>
+      DateFormat('dd.MM.yyyy').format(date.subtract(const Duration(days: 13)));
 
   void _retry() {
     final day = _lastRequestedDay;
@@ -40,9 +43,6 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
       currentDay = getCalendarDayD(day);
     });
   }
-
-  @override
-  String? get restorationId => "test";
 
   // final RestorableDateTime _selectedDate = RestorableDateTime(DateTime.now());
   // late final RestorableRouteFuture<DateTime?> _restorableDatePickerRouteFuture =
@@ -69,22 +69,11 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    var val = StoreProvider.of<AppState>(context).state.common.date != null
-        ? StoreProvider.of<AppState>(context).state.common.date!.subtract(const Duration(days: 13))
-        : DateTime.now().subtract(const Duration(days: 13));
-    var valFormat = DateFormat('dd.MM.yyyy').format(val);
+    final date = StoreProvider.of<AppState>(context).state.common.date;
     // Метод зовётся и тогда, когда день прежний (см. main_page): не перегружаем.
+    final valFormat = _dneslovDay(date);
     if (valFormat == _lastRequestedDay) return;
-    _lastRequestedDay = valFormat;
-    currentDay = getCalendarDayD(valFormat);
-    // StoreProvider.of<AppState>(context).dispatch(FetchItemsAction());
-  }
-
-  @override
-  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    // registerForRestoration(_selectedDate, 'selected_date');
-    // registerForRestoration(
-    //     _restorableDatePickerRouteFuture, 'date_picker_route_future');
+    _loadFor(date);
   }
 
   // static Route<DateTime> _datePickerRoute(BuildContext context, Object? arguments) {
@@ -127,7 +116,7 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
       // cancelText: 'Not now',
       // confirmText: 'Book',
     );
-    if (!mounted) return;
+    if (!context.mounted) return;
     if (picked != null && picked != StoreProvider.of<AppState>(context).state.common.date) {
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(picked)
@@ -140,36 +129,18 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
     return buildMaterialDatePicker(context);
   }
 
-  void _selectDate(DateTime? newSelectedDate) {
-    if (newSelectedDate != null) {
-      // setState(() {
-      //   _selectedDate.value = newSelectedDate;
-      // });
-      StoreProvider.of<AppState>(context).dispatch(
-          ChangeCommonDateAction(newSelectedDate)
-      );
-      setState(() => _loadFor(newSelectedDate));
-    }
-  }
-
   void onOpenEventDneslov(CalendarDayDItem item, String calendarString) {
-    if (StoreProvider.of<AppState>(context).state.common.date != null ) {
-      final date = DateFormat('dd.MM.yyyy').format(
-        // _selectedDate.value.subtract(const Duration(days: 13))
-          StoreProvider.of<AppState>(context).state.common.date.subtract(const Duration(days: 13))
-      );
-      Uri myUrl = Uri.parse("https://dneslov.org/${item.slug}/${item.eventId}?c=${calendarString}&d=ю$date");
-      launchUrl(myUrl);
-    }
+    final date = _dneslovDay(StoreProvider.of<AppState>(context).state.common.date);
+    Uri myUrl = Uri.parse("https://dneslov.org/${item.slug}/${item.eventId}?c=$calendarString&d=ю$date");
+    launchUrl(myUrl);
   }
 
   @override
   Widget build(BuildContext context) {
     DateFormat format = DateFormat("dd.MM.yyyy");
     // String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
-    String value = StoreProvider.of<AppState>(context).state.common.date != null
-        ? format.format(StoreProvider.of<AppState>(context).state.common.date)
-        : "Не задано";
+    String value =
+        format.format(StoreProvider.of<AppState>(context).state.common.date);
     return Scaffold(
       appBar: AppBar(
         title: Text(value, style: TextStyle(fontFamily: "OldStandard")),

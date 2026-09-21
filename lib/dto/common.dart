@@ -11,11 +11,11 @@ class MainPageData {
   });
 
   factory MainPageData.fromJson(Map<String, dynamic> json, List<dynamic> json2) {
-    var day = json == null ? null : CalendarDay.fromJson(json);
-    var lastTexts = json2 == null ? null : ReadingList.fromJson(json2);
+    // Проверок на null здесь не было смысла держать: оба разбора получают
+    // непустые ответы по типу, и обе ветви «иначе» были мертвы.
     return MainPageData(
-      day: day,
-      lastTexts: lastTexts,
+      day: CalendarDay.fromJson(json),
+      lastTexts: ReadingList.fromJson(json2),
     );
   }
 }

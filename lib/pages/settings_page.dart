@@ -16,6 +16,7 @@ import 'package:typikon/store/pomyannik_cache.dart';
 import 'package:typikon/store/store.dart';
 import 'package:typikon/utils/pomyannik_reminders.dart';
 import 'package:typikon/utils/reading_schemes.dart';
+import 'package:typikon/utils/notification_permission.dart';
 import 'package:typikon/utils/push.dart';
 import 'package:typikon/store/calendar_feed.dart';
 import 'package:typikon/store/day_reading_notice.dart';
@@ -77,6 +78,17 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _onReadingHour(int? hour) async {
+    // Спрашиваем разрешение здесь, а не при запуске: вот он, тот случай, ради
+    // которого оно нужно, и отказ понятен по месту.
+    if (hour != null && !await ensureNotificationPermission()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Без разрешения на уведомления о чтениях сказать нечем. "
+            "Его можно дать в настройках системы."),
+      ));
+      return;
+    }
+    if (!mounted) return;
     setState(() => _readingHour = hour);
     await setDayReadingHour(hour);
     // Час знает и сервер — он шлёт толчок именно в него. Перепривязка отдаёт
@@ -103,6 +115,15 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _onReminders(bool value) async {
+    if (value && !await ensureNotificationPermission()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Без разрешения на уведомления напомнить нечем. "
+            "Его можно дать в настройках системы."),
+      ));
+      return;
+    }
+    if (!mounted) return;
     setState(() => _reminders = value);
     await setRemindersEnabled(value);
     if (!value) return;

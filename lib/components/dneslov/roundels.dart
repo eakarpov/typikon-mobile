@@ -18,7 +18,7 @@ class _RoundelsState extends State<Roundels> {
   @override
   void initState() {
     super.initState();
-    dneslovImages = fetchDneslovRoundelsD(widget.item!.dneslovId);
+    dneslovImages = fetchDneslovRoundelsD(widget.item.dneslovId);
   }
 
   @override
@@ -27,8 +27,8 @@ class _RoundelsState extends State<Roundels> {
         future: dneslovImages,
         builder: (context, future) {
           if (future.hasData) {
-            DneslovRoundelsDItem first = future.data!.list!.first;
-            String imageUrl = first != null ? first.url??"" : "";
+            DneslovRoundelsDItem first = future.data!.list.first;
+            String imageUrl = first.url ?? "";
             String rightImageUrl = imageUrl.contains("://") ? imageUrl : "https://cdn.dneslov.org$imageUrl";
             return Container(
               child: ListTile(

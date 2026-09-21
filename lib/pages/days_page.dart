@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:typikon/components/api_error_view.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_redux/flutter_redux.dart';
-import 'package:flutter/gestures.dart';
 
 import 'package:typikon/apiMapper/days.dart';
 import 'package:typikon/dto/day.dart';

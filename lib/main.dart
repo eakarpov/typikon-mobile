@@ -1,9 +1,7 @@
 import "dart:ui";
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/services.dart';
-import "package:google_fonts/google_fonts.dart";
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +16,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import "routes.dart";
 import "pages/not_found_page.dart";
-import "version.dart";
 import "api/constants.dart";
 import "utils/app_version.dart";
 import "utils/day_reading_reminders.dart";
@@ -29,7 +26,6 @@ import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
 import 'package:typikon/utils/route_observer.dart';
 
-import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
 import "package:typikon/store/store.dart";
 import "package:typikon/store/pomyannik_cache.dart";
@@ -427,7 +423,6 @@ class MyApp extends StatefulWidget {
 
 class MyAppState extends State<MyApp> {
   bool _hasSkippedUpdate = false;
-  bool _notificationsEnabled = false;
 
   void _handleTapboxChanged(bool val) {
     setState(() {
@@ -474,8 +469,10 @@ class MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     initPlatformState();
-    _isAndroidPermissionGranted();
-    _requestPermissions();
+    // Разрешения на уведомления тут нет нарочно: его спрашивают там, где
+    // человек включает напоминание (см. utils/notification_permission.dart).
+    // Системное окно на первом запуске, поверх пустого экрана и без объяснения,
+    // получало «нет» — а на Android второй отказ окончателен.
     _configureDidReceiveLocalNotificationSubject();
     _configureSelectNotificationSubject();
     // store = Store<AppState>(
@@ -487,7 +484,7 @@ class MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
     // Configure BackgroundFetch.
-    int status = await BackgroundFetch.configure(BackgroundFetchConfig(
+    await BackgroundFetch.configure(BackgroundFetchConfig(
         minimumFetchInterval: 60,
         stopOnTerminate: false,
         enableHeadless: true,
@@ -521,46 +518,6 @@ class MyAppState extends State<MyApp> {
     // message was in flight, we want to discard the reply rather than calling
     // setState to update our non-existent appearance.
     if (!mounted) return;
-  }
-
-  Future<void> _isAndroidPermissionGranted() async {
-    if (Platform.isAndroid) {
-      final bool granted = await flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.areNotificationsEnabled() ??
-          false;
-
-      setState(() {
-        _notificationsEnabled = granted;
-      });
-    }
-  }
-
-  Future<void> _requestPermissions() async {
-    if (Platform.isIOS || Platform.isMacOS) {
-      await flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      await flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-    } else if (Platform.isAndroid) {
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation = flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-
-      final bool? grantedNotificationPermission = await androidImplementation?.requestNotificationsPermission();
-      setState(() {
-        _notificationsEnabled = grantedNotificationPermission ?? false;
-      });
-    }
   }
 
   void _configureDidReceiveLocalNotificationSubject() {

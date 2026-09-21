@@ -1,7 +1,3 @@
-import 'dart:convert';
-import 'package:built_value/iso_8601_date_time_serializer.dart';
-import 'package:built_value/serializer.dart';
-
 class Reading {
   final String id;
   final String name;
@@ -43,9 +39,6 @@ class Reading {
   });
 
   factory Reading.fromJson(Map<String, dynamic> json, Map<String, dynamic>? jsonDay) {
-    var serializers = (Serializers().toBuilder()..add(Iso8601DateTimeSerializer())).build();
-    var specifiedType = const FullType(DateTime);
-
     var id = json["id"];
     var name = json["name"];
     var author = json["author"];

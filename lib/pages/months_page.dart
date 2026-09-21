@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:typikon/components/api_error_view.dart';
 import 'package:intl/intl.dart';
-import 'package:typikon/apiMapper/library.dart';
-import 'package:typikon/dto/library.dart';
 
 import '../apiMapper/months.dart';
 import '../dto/month.dart';
