@@ -13,7 +13,8 @@ class DayTextBook {
 
   factory DayTextBook.fromJson(Map<String, dynamic> json) {
     return DayTextBook(
-      id: json["_id"] ?? "",
+      // То же переименование, что и в calendar.dart: сперва `id`.
+      id: json["id"] ?? json["_id"] ?? "",
       name: json["name"] ?? "",
     );
   }

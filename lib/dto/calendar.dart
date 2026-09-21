@@ -61,7 +61,12 @@ class CalendarDayPartItem {
     }
     return CalendarDayPartItem(
       name: text == null ? "" : (text["name"] ?? ""),
-      id: text == null ? null : text["_id"],
+      // `id`, а не только `_id`. Вторая версия API переименовала опознаватель,
+      // и здесь это пропустили: у обычного чтения id выходил пустым, а значит
+      // на главной по нему нельзя было перейти — плитка просто не нажималась.
+      // Зачала при этом переходили, потому что ведут не по id, а по книге и
+      // границам. Старое имя читаем следом: в кэше сутки лежат прежние ответы.
+      id: text == null ? null : (text["id"] ?? text["_id"]),
       content: text == null ? "" : (text["content"] ?? ""),
       cite: cite,
       description: description,
