@@ -6,5 +6,5 @@
 // Разъехавшись в меньшую сторону, копия объявит себя старой и будет предлагать
 // обновиться на себя же; в большую — не заметит настоящего обновления.
 const int majorVersion = 2;
-const int minorVersion = 1;
+const int minorVersion = 2;
 const int patchVersion = 0;

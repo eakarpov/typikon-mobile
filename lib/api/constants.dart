@@ -28,7 +28,7 @@ const Duration apiTimeout = Duration(seconds: 15);
 //
 // Версию держим здесь строкой и поднимаем вместе с version в pubspec.yaml.
 const String appHeaderName = 'X-Typikon-App';
-const String appVersion = '2.1.0+8';
+const String appVersion = '2.2.0+9';
 
 // Подписной календарь чтений на сайте. Хост и путь отдельно — из них же
 // собирается webcal://-ссылка, которую календари понимают как подписку.
@@ -42,16 +42,28 @@ const String calendarFeedUrl = 'https://$calendarFeedHost$calendarFeedPath';
 // основному содержимому, поэтому терпение здесь заметно короче.
 const Duration dneslovTimeout = Duration(seconds: 6);
 
-// Тот же Google OAuth web client id, что бекенд читает из GOOGLE_APP и
-// проверяет как audience при верификации id_token (не секрет, публичный
-// идентификатор). Передаётся в GoogleSignIn как serverClientId, чтобы
-// на Android/iOS id_token приходил с этой же audience.
+// Google OAuth web client id: приложение отдаёт его в GoogleSignIn как
+// serverClientId, чтобы id_token приходил с этой audience, а бекенд сверяет её
+// при проверке токена. Не секрет — публичный идентификатор.
 //
-// Сам по себе этот client id НЕ включает мобильные платформы — чтобы
-// диалог входа заработал на устройстве, нужно ещё зарегистрировать
-// отдельные Android (package su.typikon.typikon + SHA-1) и iOS
-// (bundle id su.typikon.typikon) OAuth-клиенты в том же проекте Google
-// Cloud Console. Без этого шага signInWithGoogle() будет падать с
-// ошибкой конфигурации, даже если код собран корректно.
+// **ЭТО СТАРЫЙ ПРОЕКТ, И ЭТО ВАЖНО ЗНАТЬ.** Идентификатор начинается с номера
+// проекта Google Cloud, и здесь это 632612414346 — проект времён typikon.su,
+// заведённый вместе с самим входом. А Firebase, через который ходят толчки,
+// живёт в другом проекте: `android/app/google-services.json` называет
+// `typikon-info` с номером 798720080241. То есть вход и уведомления разведены
+// по разным проектам, и держится это только тем, что бекенд пока принимает обе
+// audience.
+//
+// ЧТО НУЖНО, ЧТОБЫ ПЕРЕЕХАТЬ на проект typikon-info (и перестать держать на
+// сервере вторую audience):
+//   1. Завести в нём OAuth-клиент Android: пакет su.typikon.typikon и отпечаток
+//      релизного сертификата SHA-1 fa:c1:08:33:5a:7e:35:10:b6:d2:b1:74:d1:59:
+//      32:9f:30:19:48:36. Без него окно входа на устройстве откажет настройкой,
+//      как бы верно ни был собран код.
+//   2. Взять оттуда же web client id и поставить сюда.
+//   3. Поднять номер выпуска: пока старые копии не разойдутся, сервер обязан
+//      принимать обе audience — старую и новую.
+// Порядок именно такой: поставить сюда новый идентификатор раньше, чем заведён
+// Android-клиент, значит сломать вход у всех, кто обновится.
 const String googleServerClientId =
     '632612414346-v35c46qfr6sl39glq93r6g6m6cqkpolq.apps.googleusercontent.com';
