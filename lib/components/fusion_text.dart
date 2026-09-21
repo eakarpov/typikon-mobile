@@ -113,6 +113,11 @@ class FusionTextWidgets extends StatelessWidget {
 
     return RichText(
       textAlign: readingTextAlign(context),
+      // Без этих двух строк текст не выделяется вовсе: голый RichText, в
+      // отличие от Text, в SelectionArea себя не записывает — и до «Добавить
+      // заметку» и «Сообщить об ошибке» было не добраться, как и до «Копировать».
+      selectionRegistrar: SelectionContainer.maybeOf(context),
+      selectionColor: DefaultSelectionStyle.of(context).selectionColor,
       text: TextSpan(
         children: widgets,
       ),

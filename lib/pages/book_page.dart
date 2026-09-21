@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:typikon/components/api_error_view.dart';
 import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/library.dart';
 import 'package:typikon/dto/book.dart';
@@ -23,6 +25,14 @@ class _BookPageState extends State<BookPage> {
     book = getBook(widget.id);
   }
 
+  /// Повторная попытка после отказа. Прежде на её месте стоял текст
+  /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  void _retry() {
+    setState(() {
+      book = getBook(widget.id);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,7 +44,9 @@ class _BookPageState extends State<BookPage> {
               String name = future.data!.name;
               return Text(name);
             } else if (future.hasError) {
-              return Text('${future.error}');
+              // В заголовке — короткий ярлык, а не вид ошибки: целый экран
+              // с «Повторить» показывается ниже, в теле страницы.
+              return const Text("Книга", style: TextStyle(fontFamily: "OldStandard"));
             }
             return const CircularProgressIndicator();
           },
@@ -61,7 +73,11 @@ class _BookPageState extends State<BookPage> {
                 },
               );
             } else if (future.hasError) {
-              return Text('${future.error}');
+              return ApiErrorView(
+                error: future.error,
+                message: "Не удалось загрузить книгу.",
+                onRetry: _retry,
+              );
             }
             return Container(
               color: Theme.of(context).scaffoldBackgroundColor,

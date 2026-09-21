@@ -66,7 +66,7 @@ List<InlineSpan> buildPlaces(
           style: TextStyle(
             fontFamily: fontFamily,
             fontSize: size,
-            color: Colors.blue,
+            color: readingLinkColor(context),
           ),
           // children: [
           //   TextSpan(text: ),

@@ -185,7 +185,13 @@ class _PlaceTile extends StatelessWidget {
       title: Text(place.name, style: const TextStyle(fontFamily: "OldStandard")),
       subtitle: about.isEmpty
           ? null
-          : Text(about, style: const TextStyle(fontFamily: "OldStandard", color: Colors.grey)),
+          : Text(
+              about,
+              style: TextStyle(
+                fontFamily: "OldStandard",
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => Navigator.pushNamed(context, "/places", arguments: place.address),
     );
@@ -206,7 +212,9 @@ class _Attribution extends StatelessWidget {
       child: Text(
         "Сведения о местах: OpenBible.info (CC BY 4.0), Pleiades (CC BY 3.0), "
         "Wikidata (CC0) и правка проекта.",
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
       ),
     );
   }

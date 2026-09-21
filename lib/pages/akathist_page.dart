@@ -107,68 +107,73 @@ class _AkathistPageState extends State<AkathistPage> {
       if (akathist.stanzas > 0) "строф ${akathist.stanzas}",
     ].where((part) => part.isNotEmpty).join(" · ");
 
-    return ListView(
+    // Не ListView: тот строит детей лениво, и у раздела за экраном нет
+    // контекста — оглавление по нему молча не прокручивало (см. days_page).
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 40.0),
-      children: [
-        Text(
-          akathist.title,
-          style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize + 2.0),
-        ),
-        if (about.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Text(about, style: small),
-          ),
-        if ((akathist.memory ?? "").isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Text("напечатан в службе: ${akathist.memory}", style: small),
-          ),
-        if ((detail.sourceBook ?? "").isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Text("Источник: ${detail.sourceBook}", style: small),
-          ),
-        if ((detail.refrainIkos ?? "").isNotEmpty)
-          _Refrain(
-            title: "Рефрен икосов",
-            text: detail.refrainIkos!,
-            fontSize: fontSize,
-          ),
-        if ((detail.refrainKontakion ?? "").isNotEmpty)
-          _Refrain(
-            title: "Рефрен кондаков",
-            text: detail.refrainKontakion!,
-            fontSize: fontSize,
-          ),
-        const Divider(height: 32.0),
-        if (detail.stanzas.isEmpty)
-          Text("Текста акафиста в корпусе нет.", style: small)
-        else
-          ...detail.stanzas.map((stanza) => _Stanza(
-                key: _keyFor(stanza.index),
-                stanza: stanza,
-                fontSize: fontSize,
-              )),
-        if (detail.prayers.isNotEmpty) ...[
-          const Divider(height: 32.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Text(
-            "Молитвы при акафисте",
-            style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize),
+            akathist.title,
+            style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize + 2.0),
           ),
-          // Молитва при акафисте — не строфа: ни номера, ни места в акростихе.
-          // Но печатается она здесь же, и читателю нужна здесь же.
-          ...detail.prayers.map((prayer) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  prayer.display,
-                  style: const TextStyle(fontFamily: "OldStandard"),
-                ),
-                subtitle: (prayer.incipit ?? "").isEmpty ? null : Text(prayer.incipit!),
-                onTap: () => Navigator.pushNamed(context, "/prayers", arguments: prayer.id),
-              )),
+          if (about.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(about, style: small),
+            ),
+          if ((akathist.memory ?? "").isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text("напечатан в службе: ${akathist.memory}", style: small),
+            ),
+          if ((detail.sourceBook ?? "").isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text("Источник: ${detail.sourceBook}", style: small),
+            ),
+          if ((detail.refrainIkos ?? "").isNotEmpty)
+            _Refrain(
+              title: "Рефрен икосов",
+              text: detail.refrainIkos!,
+              fontSize: fontSize,
+            ),
+          if ((detail.refrainKontakion ?? "").isNotEmpty)
+            _Refrain(
+              title: "Рефрен кондаков",
+              text: detail.refrainKontakion!,
+              fontSize: fontSize,
+            ),
+          const Divider(height: 32.0),
+          if (detail.stanzas.isEmpty)
+            Text("Текста акафиста в корпусе нет.", style: small)
+          else
+            ...detail.stanzas.map((stanza) => _Stanza(
+                  key: _keyFor(stanza.index),
+                  stanza: stanza,
+                  fontSize: fontSize,
+                )),
+          if (detail.prayers.isNotEmpty) ...[
+            const Divider(height: 32.0),
+            Text(
+              "Молитвы при акафисте",
+              style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize),
+            ),
+            // Молитва при акафисте — не строфа: ни номера, ни места в акростихе.
+            // Но печатается она здесь же, и читателю нужна здесь же.
+            ...detail.prayers.map((prayer) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    prayer.display,
+                    style: const TextStyle(fontFamily: "OldStandard"),
+                  ),
+                  subtitle: (prayer.incipit ?? "").isEmpty ? null : Text(prayer.incipit!),
+                  onTap: () => Navigator.pushNamed(context, "/prayers", arguments: prayer.id),
+                )),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

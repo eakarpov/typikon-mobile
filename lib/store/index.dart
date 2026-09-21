@@ -25,20 +25,6 @@ class AppState {
     favourites: FavouritesState.init(),
   );
 
-  AppState copyWith({
-    bool isLoading = false,
-    Settings settings = const Settings(),
-    Common? common = null,
-    AuthState auth = const AuthState(),
-  }) {
-    return AppState(
-      isLoading: isLoading ?? this.isLoading,
-      settings: settings ?? this.settings,
-      common: common ?? Common.init(),
-      auth: auth ?? this.auth,
-    );
-  }
-
   @override
   int get hashCode =>
       settings.hashCode ^
@@ -71,7 +57,6 @@ class AppState {
     };
   }
 
-  @override
   static AppState fromJson(dynamic json) {
     return AppState(
       settings: Settings.fromJson(json["settings"]),

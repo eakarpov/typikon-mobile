@@ -26,6 +26,7 @@ import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
 import '../utils/day_preloader.dart';
+import '../utils/day_rollover.dart';
 import '../components/trapeza_line.dart';
 import '../utils/bible_route.dart';
 import '../utils/route_observer.dart';
@@ -60,9 +61,16 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin, RouteAware {
+class _MainPageState extends State<MainPage>
+    with SingleTickerProviderStateMixin, RouteAware, WidgetsBindingObserver {
   late Future<MainPageData> data;
   late Future<Version> version;
+
+  /// За какой день сейчас загружены (или грузятся) чтения.
+  String? _loadedDateKey;
+
+  /// Какой день был сегодняшним, когда на приложение смотрели в прошлый раз.
+  DateTime _lastSeenToday = DateTime.now();
 
   /// Что ответил сервер. Нужен ящику: пункт «Обновить приложение» показывается
   /// тому, кто предложение пропустил, — а адрес выпуска называет сервер, и до
@@ -83,6 +91,9 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
+    // Главная лежит в основании стопки экранов всё время работы приложения,
+    // поэтому за сменой дня следит она (см. utils/day_rollover.dart).
+    WidgetsBinding.instance.addObserver(this);
     version = getVersion();
     // Отказ проглатываем нарочно, и без него было бы хуже: результат этого
     // будущего никто, кроме здешнего `then`, не ждёт, а необработанная ошибка
@@ -100,9 +111,30 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     routeObserver.unsubscribe(this);
     if (_preloadBannerVisible) _messenger?.hideCurrentMaterialBanner();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+
+    final now = DateTime.now();
+    final store = StoreProvider.of<AppState>(context, listen: false);
+    final next = dateAfterResume(
+      selected: store.state.common.date,
+      lastSeenToday: _lastSeenToday,
+      now: now,
+    );
+    _lastSeenToday = now;
+    if (next == null) return;
+
+    store.dispatch(ChangeCommonDateAction(next));
+    setState(() {
+      data = _loadDay(DateFormat('yyyy-MM-dd').format(next));
+    });
   }
 
   /// Поверх главной положили другой экран.
@@ -133,12 +165,13 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     var val = StoreProvider.of<AppState>(context).state.common.date != null
         ? StoreProvider.of<AppState>(context).state.common.date
         : DateTime.now().subtract(const Duration(days: 13));
-    data = _loadDay(
-        DateFormat('yyyy-MM-dd').format(
-            val
-        )
-        // val.millisecondsSinceEpoch + 3 * 60 * 60 * 1000
-    );
+    // Зависимости меняются не только от даты: `ModalRoute.of` дёргает этот
+    // метод на каждый экран, положенный поверх главной и снятый с неё. День
+    // перезагружаем, только если он и вправду другой, — иначе возврат из текста
+    // стоил бы запроса, крутилки и потерянного места в списке.
+    final dateKey = DateFormat('yyyy-MM-dd').format(val!);
+    if (dateKey == _loadedDateKey) return;
+    data = _loadDay(dateKey);
     // final SharedPreferences prefs = await SharedPreferences.getInstance();
     // var stateString = prefs.getString(APP_STATE_KEY);
     // print(stateString);
@@ -148,6 +181,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   /// докачивает его тексты, чтобы они открылись и без сети. Ошибки
   /// предзагрузки страницы не касаются.
   Future<MainPageData> _loadDay(String date) {
+    _loadedDateKey = date;
     final future = updateData(date);
     future.then((value) {
       final day = value.day;
@@ -221,6 +255,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       // cancelText: 'Not now',
       // confirmText: 'Book',
     );
+    if (!mounted) return;
     if (picked != null && picked != StoreProvider.of<AppState>(context).state.common.date) {
     // if (picked != null && picked != _selectedDate.value) {
       // setState(() {
@@ -229,12 +264,11 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(picked)
       );
-      data = _loadDay(
-          DateFormat('yyyy-MM-dd').format(
-            picked
-                // .subtract(const Duration(days: 13))
-          )
-      );
+      // Через setState: без него новый день показывался лишь потому, что
+      // закрытие окна выбора дёргало didChangeDependencies.
+      setState(() {
+        data = _loadDay(DateFormat('yyyy-MM-dd').format(picked));
+      });
     }
   }
 
@@ -388,6 +422,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
             ),
             actions: <Widget>[
               IconButton(
+                tooltip: "Выбрать дату",
                 icon: Icon(
                   Icons.calendar_today,
                   color: Colors.white,
@@ -454,7 +489,10 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
             child: FutureBuilder(
               future: data,
               builder: (context, future) {
-                if (future.hasData) {
+                // Сверяем и состояние, а не одно `hasData`: FutureBuilder при
+                // смене будущего держит прежние данные, и после «День вперёд»
+                // под новой датой стояли бы чтения вчерашнего дня.
+                if (future.connectionState == ConnectionState.done && future.hasData) {
                   CalendarDay? calendarDay = future.data?.day;
                   ReadingList list2 = future.data!.lastTexts!;
 
@@ -474,7 +512,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
-                          Text("В данных момент доступна библиотека книг и текстов, подборка чтений по дням Цветной Триоди, "
+                          Text("В данный момент доступна библиотека книг и текстов, подборка чтений по дням Цветной Триоди, "
                               "календарные чтения на каждый день года, поиск по названию текста, "
                               "а также просмотр памятей на день. Ждите новых обновлений!", textAlign: TextAlign.justify,),
                         ],
@@ -527,9 +565,9 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                             final item = list2.list[index];
                             return Container(
                               child: ListTile(
-                                title: Text(item.name ?? "test", style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),
+                                title: Text(item.name ?? "Без названия", style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),
                                 subtitle: Text(
-                                    "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}" ?? "test"),
+                                    "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}"),
                                 onTap: () => {
                                   Navigator.pushNamed(context, "/reading", arguments: item.id)
                                 },
@@ -568,7 +606,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   ),
                 ],
                 );
-               } else if (future.hasError) {
+               } else if (future.connectionState == ConnectionState.done && future.hasError) {
                   return Container(
                     color: Theme.of(context).scaffoldBackgroundColor,
                     child: Column(
@@ -644,11 +682,15 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Типикон ($majorVersion.$minorVersion.0)'),
-                      GestureDetector(
-                        onTap: () {
+                      // IconButton, а не GestureDetector поверх иконки: у того
+                      // зона нажатия ровно по глифу (24 точки при положенных 48)
+                      // и нет ни отклика на нажатие, ни имени для чтеца экрана.
+                      IconButton(
+                        tooltip: "Поиск",
+                        onPressed: () {
                           Navigator.pushNamed(context, "/search");
                         },
-                        child: Icon(
+                        icon: Icon(
                           Icons.search,
                           color: Colors.white,
                         ),

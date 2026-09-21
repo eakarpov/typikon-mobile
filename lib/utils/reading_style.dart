@@ -43,6 +43,17 @@ TextAlign readingTextAlign(BuildContext context) =>
         ? TextAlign.left
         : TextAlign.justify;
 
+/// Цвет ссылки в тексте чтения — сноски, названия мест, имена святых.
+///
+/// Подбирается по светлоте самого текста, а не по теме: цвет чтений читатель
+/// мог выбрать вручную, и тогда тема о нём ничего не говорит (то же правило у
+/// подложки заметок в `components/highlighted_text.dart`). Прибитый `Colors.blue`
+/// на тёмном фоне сливался с ним настолько, что сноску было не разглядеть.
+Color readingLinkColor(BuildContext context) {
+  final isLightText = readingTextColor(context).computeLuminance() > 0.5;
+  return isLightText ? const Color(0xFF82B1FF) : const Color(0xFF1565C0);
+}
+
 /// Колонка чтения заданной читателем ширины.
 ///
 /// Без выбора не делает ничего: на телефоне ограничивать нечего, а лишний

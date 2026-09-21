@@ -54,7 +54,11 @@ class _TrapezaLineState extends State<TrapezaLine> {
     return FutureBuilder<Trapeza>(
       future: trapeza,
       builder: (context, future) {
-        if (!future.hasData || !future.data!.hasLine) {
+        // Пока идёт запрос за новый день, строку прежнего не показываем: пост
+        // вчерашнего дня под сегодняшней датой хуже пустого места.
+        if (future.connectionState != ConnectionState.done ||
+            !future.hasData ||
+            !future.data!.hasLine) {
           return const SizedBox.shrink();
         }
 

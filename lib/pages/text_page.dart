@@ -187,17 +187,29 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     }
   }
 
+  /// Доля прокрутки на последнем движении.
+  ///
+  /// Запоминается, потому что в `dispose` спросить её уже не у кого: дети
+  /// снимаются с дерева раньше родителя, и контроллер к тому времени без
+  /// клиентов. Прокрутил, сразу нажал «назад» — и место терялось: пауза в две
+  /// секунды отменена, а запись на выходе молча выходила по `hasClients`.
+  double? _lastFraction;
+
   void _onScroll() {
+    if (_scrollController.hasClients) {
+      final position = _scrollController.position;
+      if (position.maxScrollExtent > 0) {
+        _lastFraction = (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0);
+      }
+    }
     _persistDebounce?.cancel();
     _persistDebounce = Timer(const Duration(seconds: 2), _persistProgressNow);
   }
 
   void _persistProgressNow() {
-    if (!_scrollController.hasClients) return;
-    final position = _scrollController.position;
-    final maxExtent = position.maxScrollExtent;
-    if (maxExtent <= 0) return;
-    final fraction = (position.pixels / maxExtent).clamp(0.0, 1.0);
+    final fraction = _lastFraction;
+    // Не прокручивали — записывать нечего, и прежнюю запись не затираем.
+    if (fraction == null) return;
     saveReadingProgress(_realId, fraction);
   }
 
@@ -421,14 +433,17 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                     child: Text("ЦС", style: TextStyle(color: Colors.white),),
                   ),
                   if (future.data!.dneslovId != null) IconButton(
+                      tooltip: "К святому",
                       onPressed: () => Navigator.pushNamed(context, "/saints", arguments: future.data!.dneslovId),
                       icon: Icon(Icons.person, color: Colors.white),
                   ),
                   if (future.data!.bookId != null) IconButton(
+                      tooltip: "К книге",
                       onPressed: () => Navigator.pushNamed(context, "/library", arguments: future.data!.bookId),
                       icon: Icon(Icons.menu_book, color: Colors.white),
                   ),
                   if (future.data!.dayId != null) IconButton(
+                      tooltip: "К дню",
                       onPressed: () => Navigator.pushNamed(context, "/days", arguments: future.data!.dayId),
                       icon: Icon(Icons.calendar_month, color: Colors.white),
                   ),

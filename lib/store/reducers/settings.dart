@@ -4,6 +4,7 @@ import '../actions/actions.dart';
 import '../models/models.dart';
 
 final settingsReducer = combineReducers<Settings>([
+  TypedReducer<Settings, SettingsRestoredAction>(_restored),
   TypedReducer<Settings, ChangeFontSizeAction>(_changeFontSize),
   TypedReducer<Settings, ChangeLineHeightAction>(_changeLineHeight),
   TypedReducer<Settings, ChangeReminderSourceAction>(_changeReminderSource),
@@ -17,6 +18,8 @@ final settingsReducer = combineReducers<Settings>([
   TypedReducer<Settings, ChangeBibleEditionsAction>(_changeBibleEditions),
   TypedReducer<Settings, ResetReadingColorsAction>(_resetReadingColors),
 ]);
+
+Settings _restored(Settings state, SettingsRestoredAction action) => action.settings;
 
 Settings _changeFontSize(Settings state, ChangeFontSizeAction action) {
   return state.copyWith(fontSize: action.fontSize);

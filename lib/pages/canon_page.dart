@@ -119,51 +119,56 @@ class _CanonPageState extends State<CanonPage> {
       languageLabel(canon.language),
     ].where((part) => part.isNotEmpty).join(" · ");
 
-    return ListView(
+    // Не ListView: тот строит детей лениво, и у раздела за экраном нет
+    // контекста — оглавление по нему молча не прокручивало (см. days_page).
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 40.0),
-      children: [
-        Text(
-          canon.memory.isEmpty ? "Без метки памяти" : canon.memory,
-          style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize + 2.0),
-        ),
-        if (address.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Text(address, style: small),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            canon.memory.isEmpty ? "Без метки памяти" : canon.memory,
+            style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize + 2.0),
           ),
-        // Лицо и надписание — разные вещи, и стоят порознь. Сверху то, с чем
-        // надписание отождествлено; ниже — как эту же строку напечатала книга,
-        // потому что напечатанное и есть свидетельство, а отождествление —
-        // вывод из него, и он может быть неверен.
-        if (canon.authorLabel.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text("Творение: ${canon.authorLabel}", style: small),
-          ),
-        if ((canon.creator ?? "").isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 2.0),
-            child: Text(
-              "Надписание книги: ${canon.creator}",
-              style: small?.copyWith(fontFamily: "OldStandard"),
+          if (address.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(address, style: small),
             ),
-          ),
-        if ((canon.acrostic ?? "").isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 2.0),
-            child: Text(
-              "Краегранесие: ${canon.acrostic}",
-              style: small?.copyWith(fontFamily: "OldStandard"),
+          // Лицо и надписание — разные вещи, и стоят порознь. Сверху то, с чем
+          // надписание отождествлено; ниже — как эту же строку напечатала книга,
+          // потому что напечатанное и есть свидетельство, а отождествление —
+          // вывод из него, и он может быть неверен.
+          if (canon.authorLabel.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text("Творение: ${canon.authorLabel}", style: small),
             ),
-          ),
-        if (detail.odes.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 24.0),
-            child: Text("Песней этого канона в корпусе нет.", style: small),
-          ),
-        ...detail.odes.map((ode) =>
-            _Ode(ode: ode, anchorKey: _keyFor(ode.ode), fontSize: fontSize, font: font)),
-      ],
+          if ((canon.creator ?? "").isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2.0),
+              child: Text(
+                "Надписание книги: ${canon.creator}",
+                style: small?.copyWith(fontFamily: "OldStandard"),
+              ),
+            ),
+          if ((canon.acrostic ?? "").isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2.0),
+              child: Text(
+                "Краегранесие: ${canon.acrostic}",
+                style: small?.copyWith(fontFamily: "OldStandard"),
+              ),
+            ),
+          if (detail.odes.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 24.0),
+              child: Text("Песней этого канона в корпусе нет.", style: small),
+            ),
+          ...detail.odes.map((ode) =>
+              _Ode(ode: ode, anchorKey: _keyFor(ode.ode), fontSize: fontSize, font: font)),
+        ],
+      ),
     );
   }
 }

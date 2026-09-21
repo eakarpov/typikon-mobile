@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:typikon/api/constants.dart';
 import 'package:typikon/dto/version.dart';
 import 'package:typikon/version.dart';
@@ -28,3 +30,24 @@ bool isUpdateAvailable(Version remote) {
 /// прежнего корня.
 String updateUrl(Version remote) =>
     remote.download.isEmpty ? '$apiBaseUrl/app/app.apk' : remote.download;
+
+/// О какой версии уведомление уже показывали.
+const String updateNotifiedVersionKey = "update_notified_version";
+
+/// Говорить ли об этой версии уведомлением — и запомнить, что сказали.
+///
+/// Фоновая проверка идёт раз в час, и без этой памяти человек на старой версии
+/// получал уведомление каждый час, пока не обновится. От такого отключают
+/// уведомления приложению целиком — вместе с чтениями дня и помянником. Об
+/// одной версии говорим один раз; выйдет следующая — скажем снова. Диалог при
+/// запуске этим не задет: он про «сейчас», а не про «напомнить».
+Future<bool> claimUpdateNotification(Version remote) async {
+  if (!isUpdateAvailable(remote)) return false;
+
+  final prefs = await SharedPreferences.getInstance();
+  final version = remote.toString();
+  if (prefs.getString(updateNotifiedVersionKey) == version) return false;
+
+  await prefs.setString(updateNotifiedVersionKey, version);
+  return true;
+}

@@ -44,6 +44,9 @@ class VerseListView extends StatelessWidget {
     );
     return RichText(
       textAlign: readingTextAlign(context),
+      // Голый RichText в SelectionArea себя не записывает (см. fusion_text).
+      selectionRegistrar: SelectionContainer.maybeOf(context),
+      selectionColor: DefaultSelectionStyle.of(context).selectionColor,
       text: TextSpan(
         style: baseStyle,
         children: verses.expand((v) {

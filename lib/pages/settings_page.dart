@@ -7,6 +7,9 @@ import 'dart:ui';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/api/cached_fetch.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
+import 'package:typikon/components/api_error_view.dart';
 import 'package:typikon/components/calendar_subscription.dart';
 import 'package:typikon/apiMapper/auth.dart' as auth_api;
 import 'package:typikon/store/pomyannik_cache.dart';
@@ -27,6 +30,9 @@ class SettingsPage extends StatefulWidget {
 typedef OnFontSizeChange = Function(int fontSize);
 
 class _SettingsPageState extends State<SettingsPage> {
+  /// Размер под пальцем, пока ползунок не отпущен.
+  double? _draftFontSize;
+
   @override
   void initState() {
     super.initState();
@@ -145,10 +151,18 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() { _authInProgress = true; });
     try {
       await auth_api.signInWithGoogle(StoreProvider.of<AppState>(context));
+    } on GoogleSignInException catch (e) {
+      // Закрыл окно входа — это не неудача, и сообщать о ней незачем.
+      if (e.code != GoogleSignInExceptionCode.canceled && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Не удалось войти через Google")),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
+        // Не текст исключения: см. failureMessage.
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Не удалось войти: $e")),
+          SnackBar(content: Text(failureMessage(e, "войти не удалось"))),
         );
       }
     } finally {
@@ -161,6 +175,12 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() { _authInProgress = true; });
     try {
       await auth_api.signOut(StoreProvider.of<AppState>(context));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(failureMessage(e, "выйти не удалось"))),
+        );
+      }
     } finally {
       if (mounted) setState(() { _authInProgress = false; });
     }
@@ -170,13 +190,21 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Pick a color!'),
+        title: const Text('Выберите цвет'),
         content: SingleChildScrollView(
           child: MaterialPicker(
             pickerColor: value,
             onColorChanged: cb,
           ),
         ),
+        actions: [
+          Builder(
+            builder: (dialogContext) => TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text("Готово"),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -217,17 +245,25 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   Padding(
                     padding: EdgeInsets.only(top: 20, left: 16),
-                    child: GestureDetector(
-                      onTap: () { viewModel.onChangeFontSize(viewModel.fontSize + 1); },
-                      child: Text("Размер текста чтений", style: TextStyle(fontWeight: FontWeight.bold)),
-                    )),
+                    child: Text("Размер текста чтений", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Slider(
-                      value: viewModel.fontSize.toDouble(),
-                      onChanged: (newValue) { viewModel.onChangeFontSize(newValue.toInt()); },
-                      min: 5,
-                      max: 40,
+                      // Пока палец на ползунке, размер живёт здесь, а в стор
+                      // уходит по отпусканию: иначе каждое деление перестраивало
+                      // всё приложение и переписывало настройки на диске.
+                      value: (_draftFontSize ?? viewModel.fontSize.toDouble())
+                          .clamp(minFontSize.toDouble(), maxFontSize.toDouble()),
+                      onChanged: (newValue) => setState(() => _draftFontSize = newValue),
+                      onChangeEnd: (newValue) {
+                        viewModel.onChangeFontSize(newValue.round());
+                        setState(() => _draftFontSize = null);
+                      },
+                      min: minFontSize.toDouble(),
+                      max: maxFontSize.toDouble(),
+                      divisions: maxFontSize - minFontSize,
+                      label: "${(_draftFontSize ?? viewModel.fontSize.toDouble()).round()}",
                     ),
                   ),
                   _Choices<double>(
@@ -309,7 +345,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           : TextAlign.justify,
                       style: TextStyle(
                           fontFamily: "OldStandard",
-                          fontSize: viewModel.fontSize.toDouble(),
+                          fontSize: _draftFontSize ?? viewModel.fontSize.toDouble(),
                           height: viewModel.lineHeight,
                           color: viewModel.fontColor ?? Theme.of(context).textTheme.bodyLarge?.color
                       ),

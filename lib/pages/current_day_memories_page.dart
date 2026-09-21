@@ -21,6 +21,18 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
   late Future<CalendarDayD> currentDay;
   String? _lastRequestedDay;
 
+  /// Загружает памяти на выбранный день. Dneslov считает по старому стилю —
+  /// отсюда тринадцать дней.
+  ///
+  /// Один вход на все смены дня: запоминает, что запрошено, — иначе «Повторить»
+  /// спрашивал бы прежний день, а didChangeDependencies слал бы второй такой же
+  /// запрос следом.
+  void _loadFor(DateTime date) {
+    final day = DateFormat('dd.MM.yyyy').format(date.subtract(const Duration(days: 13)));
+    _lastRequestedDay = day;
+    currentDay = getCalendarDayD(day);
+  }
+
   void _retry() {
     final day = _lastRequestedDay;
     if (day == null) return;
@@ -61,6 +73,8 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
         ? StoreProvider.of<AppState>(context).state.common.date!.subtract(const Duration(days: 13))
         : DateTime.now().subtract(const Duration(days: 13));
     var valFormat = DateFormat('dd.MM.yyyy').format(val);
+    // Метод зовётся и тогда, когда день прежний (см. main_page): не перегружаем.
+    if (valFormat == _lastRequestedDay) return;
     _lastRequestedDay = valFormat;
     currentDay = getCalendarDayD(valFormat);
     // StoreProvider.of<AppState>(context).dispatch(FetchItemsAction());
@@ -113,18 +127,12 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
       // cancelText: 'Not now',
       // confirmText: 'Book',
     );
+    if (!mounted) return;
     if (picked != null && picked != StoreProvider.of<AppState>(context).state.common.date) {
-      // setState(() {
-      //   _selectedDate.value = picked;
-      // });
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(picked)
       );
-      currentDay = getCalendarDayD(
-          DateFormat('dd.MM.yyyy').format(
-              picked.subtract(const Duration(days: 13))
-          )
-      );
+      setState(() => _loadFor(picked));
     }
   }
 
@@ -140,11 +148,7 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(newSelectedDate)
       );
-      currentDay = getCalendarDayD(
-          DateFormat('dd.MM.yyyy').format(
-              newSelectedDate.subtract(const Duration(days: 13))
-          )
-      );
+      setState(() => _loadFor(newSelectedDate));
     }
   }
 
@@ -189,7 +193,10 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
         child: FutureBuilder<CalendarDayD>(
               future: currentDay,
               builder: (context, future) {
-                if (future.hasData) {
+                // И состояние, а не одно `hasData`: при смене будущего
+                // FutureBuilder держит прежние данные — под новой датой стоял
+                // бы вчерашний день.
+                if (future.connectionState == ConnectionState.done && future.hasData) {
                   List<CalendarDayDItem> list = future.data!.list;
                   return ListView.builder(
                     scrollDirection: Axis.vertical,
@@ -209,7 +216,7 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage> {
                       );
                     },
                   );
-                } else if (future.hasError) {
+                } else if (future.connectionState == ConnectionState.done && future.hasError) {
                   return ApiErrorView(
                     error: future.error,
                     message: "Не удалось загрузить памяти дня.",

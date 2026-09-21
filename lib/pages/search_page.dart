@@ -30,7 +30,10 @@ import '../utils/singing_labels.dart';
 /// своя постраничность и свои отказы — и это первое такое место, так что образец
 /// искать не там.
 class SearchPage extends StatefulWidget {
-  const SearchPage(context, {super.key});
+  const SearchPage(context, {super.key, this.searchTexts = getSearchResult});
+
+  /// Поиск по чтениям. Подменяется тестом, чтобы сосчитать запросы.
+  final Future<List<SearchBookText>> Function(String query) searchTexts;
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -45,6 +48,13 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
   String _query = "";
   String _typed = "";
   Timer? _debounce;
+
+  /// Поиск по чтениям, идущий или завершённый, — по [_query].
+  ///
+  /// Держится здесь, а не создаётся в `build`: экран перерисовывается на каждой
+  /// букве (крестик в поле), и запрос, созданный при перерисовке, уходил в сеть
+  /// на каждой букве же — по прежнему `_query`, мимо паузы и прямиком в лимит.
+  Future<List<SearchBookText>>? _textsFuture;
 
   @override
   void initState() {
@@ -68,7 +78,17 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
 
   void _runSearch() {
     _debounce?.cancel();
-    setState(() => _query = _typed.trim());
+    final query = _typed.trim();
+    // Тот же запрос второй раз не шлём: пауза срабатывает и на пробел в конце.
+    if (query == _query) return;
+    setState(() {
+      _query = query;
+      _textsFuture = query.isEmpty ? null : widget.searchTexts(query);
+    });
+  }
+
+  void _retryTexts() {
+    setState(() => _textsFuture = widget.searchTexts(_query));
   }
 
   void _clear() {
@@ -76,6 +96,7 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
     setState(() {
       _typed = "";
       _query = "";
+      _textsFuture = null;
     });
   }
 
@@ -144,7 +165,7 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
 
     return FutureBuilder<List<SearchBookText>>(
       key: ValueKey("texts:$_query"),
-      future: getSearchResult(_query),
+      future: _textsFuture,
       builder: (context, future) {
         if (future.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
@@ -162,7 +183,7 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
             context,
             future.error!,
             "Не удалось выполнить поиск.",
-            () => setState(() {}),
+            _retryTexts,
           );
         }
 

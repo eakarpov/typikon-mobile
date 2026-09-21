@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:typikon/dto/version.dart';
 import 'package:typikon/utils/app_version.dart';
 import 'package:typikon/version.dart';
@@ -93,6 +94,35 @@ void main() {
 
       expect(version.major, 0);
       expect(version.minor, 0);
+    });
+  });
+
+  group("уведомление об обновлении", () {
+    // Фоновая проверка идёт каждый час; говорить каждый час об одной и той же
+    // версии — значит дождаться, что уведомления приложению выключат целиком.
+    const newer = Version(major: majorVersion + 1, minor: 0);
+
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    test("об одной версии говорим один раз", () async {
+      expect(await claimUpdateNotification(newer), isTrue);
+      expect(await claimUpdateNotification(newer), isFalse);
+    });
+
+    test("о следующей версии говорим снова", () async {
+      await claimUpdateNotification(newer);
+      expect(
+        await claimUpdateNotification(const Version(major: majorVersion + 2, minor: 0)),
+        isTrue,
+      );
+    });
+
+    test("обновления нет — молчим и ничего не запоминаем", () async {
+      const same = Version(major: majorVersion, minor: minorVersion, patch: patchVersion);
+      expect(await claimUpdateNotification(same), isFalse);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(updateNotifiedVersionKey), isNull);
     });
   });
 }

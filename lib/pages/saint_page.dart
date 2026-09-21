@@ -81,7 +81,10 @@ class _SaintPageState extends State<SaintPage> {
                         Uri.parse(link.url),
                         mode: LaunchMode.externalApplication,
                       ),
-                      child: Text(link.url, style: const TextStyle(color: Colors.blue)),
+                      child: Text(
+                        link.url,
+                        style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                      ),
                     ),
                   ))
               .toList(),
@@ -117,6 +120,7 @@ class _SaintPageState extends State<SaintPage> {
           actions: <Widget>[
             if (links.isNotEmpty)
               IconButton(
+                tooltip: "Ссылки",
                 onPressed: () => _openLinks(links),
                 icon: const Icon(Icons.link, color: Colors.white),
               ),

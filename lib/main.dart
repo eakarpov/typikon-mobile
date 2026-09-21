@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import "routes.dart";
+import "pages/not_found_page.dart";
 import "version.dart";
 import "api/constants.dart";
 import "utils/app_version.dart";
@@ -30,7 +31,6 @@ import 'package:typikon/utils/route_observer.dart';
 
 import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
-import "package:typikon/store/actions/actions.dart";
 import "package:typikon/store/store.dart";
 import "package:typikon/store/pomyannik_cache.dart";
 import "package:typikon/utils/pomyannik_reminders.dart";
@@ -90,29 +90,42 @@ Future<void> main() async {
     android: android,
     iOS: IOS,
   );
-  await flutterLocalNotificationsPlugin.initialize(
-    settings,
-    onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) {
-      switch (notificationResponse.notificationResponseType) {
-        case NotificationResponseType.selectedNotification:
-          selectNotificationStream.add(notificationResponse.payload);
-          break;
-        case NotificationResponseType.selectedNotificationAction:
-          if (notificationResponse.actionId == navigationActionId) {
+  // Ни один из шагов ниже не стоит пустого экрана: сорвался — приложение
+  // открывается без него, а сбой уезжает в отчёт о падениях.
+  try {
+    await flutterLocalNotificationsPlugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) {
+        switch (notificationResponse.notificationResponseType) {
+          case NotificationResponseType.selectedNotification:
             selectNotificationStream.add(notificationResponse.payload);
-          }
-          break;
-      }
-    },
-    onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
-  );
+            break;
+          case NotificationResponseType.selectedNotificationAction:
+            if (notificationResponse.actionId == navigationActionId) {
+              selectNotificationStream.add(notificationResponse.payload);
+            }
+            break;
+        }
+      },
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+    );
+    _notificationsReady = true;
+  } catch (error, stack) {
+    unawaited(reportCrash(error, stack, context: "запуск: уведомления"));
+  }
 
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (error, stack) {
+    // Без ключа запросы уйдут анонимными — это медленнее, но это работает.
+    unawaited(reportCrash(error, stack, context: "запуск: dotenv"));
+  }
 
   // Толчки поднимаем до магазина состояния, но не ждём от них ничего: не
   // поднялись — приложение остаётся приложением, а напоминания за фоновой
   // задачей. Падать на запуске из-за службы уведомлений несоразмерно.
-  if (await initPush()) {
+  final pushReady = await initPush();
+  if (pushReady) {
     FirebaseMessaging.onBackgroundMessage(pushHandler);
     // То же сообщение при открытом приложении: система в этом случае фоновый
     // обработчик не зовёт, и без этой строки напоминание приходило бы всем,
@@ -124,8 +137,15 @@ Future<void> main() async {
 
   // Ключ доставки не вечен и меняется молча: не перепривязав его, мы перестали
   // бы получать толчки без единой ошибки на экране.
-  unawaited(refreshPushRegistration(wanted: store.state.settings.remindsFromServer));
-  watchPushToken(wanted: () => store.state.settings.remindsFromServer);
+  //
+  // Стор к этой строке уже поднят с диска (см. createReduxStore) — иначе
+  // `remindsFromServer` был бы значением по умолчанию и перепривязки не было бы
+  // никогда. Без Firebase не трогаем ничего: `FirebaseMessaging.instance` без
+  // поднятого приложения бросает, и до `runApp` дело бы не дошло.
+  if (pushReady) {
+    unawaited(refreshPushRegistration(wanted: store.state.settings.remindsFromServer));
+    watchPushToken(wanted: () => store.state.settings.remindsFromServer);
+  }
 
   runApp(MyApp(store));
   // Register to receive BackgroundFetch events after app is terminated.
@@ -137,12 +157,64 @@ Future<void> main() async {
 // Be sure to annotate your callback function to avoid issues in release mode on Flutter >= 3.3.0
 @pragma('vm:entry-point')
 void backgroundFetchHeadlessTask(HeadlessTask task) async {
-  String taskId = task.taskId;
-  await _checkVersionAndNotify("");
-  await _checkNewTextsAndNotify();
-  await _checkPomyannikAndNotify();
-  await _checkReadingAndNotify();
-  BackgroundFetch.finish(taskId);
+  final taskId = task.taskId;
+  // Система отвела время и оно вышло: доделывать нечего, надо только ответить.
+  if (task.timeout) {
+    BackgroundFetch.finish(taskId);
+    return;
+  }
+
+  try {
+    // Своя изоляция: ни обработчиков падений, ни поднятых уведомлений в ней нет.
+    installCrashReporting();
+    await _ensureNotificationsReady();
+    await _runBackgroundChecks();
+  } finally {
+    // Не ответив, получаем от системы всё более редкие пробуждения.
+    BackgroundFetch.finish(taskId);
+  }
+}
+
+bool _notificationsReady = false;
+
+/// Поднимает уведомления там, где `main()` не выполнялся: в изоляции фоновой
+/// задачи и толчка.
+///
+/// **В живом приложении не делает ничего.** Повторный `initialize` без
+/// обработчика нажатий затирает тот, что поставил `main()`, — а толчок при
+/// открытом приложении идёт через тот же `pushHandler`, и после первого же
+/// напоминания нажатия на уведомления перестали бы куда-либо вести.
+Future<void> _ensureNotificationsReady() async {
+  if (_notificationsReady) return;
+  await flutterLocalNotificationsPlugin.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(),
+    ),
+  );
+  _notificationsReady = true;
+}
+
+/// Всё, о чём приложение напоминает само. Один перечень на оба пути — с живым
+/// процессом и без него: пока их было два, чтения дня значились только во
+/// втором, и тому, кто не выгружает приложение, не приходили вовсе.
+///
+/// Каждая проверка отдельно: сорвавшаяся не должна отменять следующие.
+Future<void> _runBackgroundChecks({Future<void> Function()? beforePomyannik}) async {
+  final checks = <Future<void> Function()>[
+    () => _checkVersionAndNotify(""),
+    _checkNewTextsAndNotify,
+    if (beforePomyannik != null) beforePomyannik,
+    _checkPomyannikAndNotify,
+    _checkReadingAndNotify,
+  ];
+  for (final check in checks) {
+    try {
+      await check();
+    } catch (error, stack) {
+      unawaited(reportCrash(error, stack, context: "фоновая проверка"));
+    }
+  }
 }
 
 /// Толчок о поминальном дне.
@@ -164,12 +236,7 @@ Future<void> pushHandler(RemoteMessage message) async {
   // Фоновый обработчик поднимается в своей изоляции: ни магазина состояния, ни
   // подключённых плагинов в ней нет, и уведомления надо поднять заново.
   await Firebase.initializeApp();
-  await flutterLocalNotificationsPlugin.initialize(
-    const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      iOS: DarwinInitializationSettings(),
-    ),
-  );
+  await _ensureNotificationsReady();
 
   if (kind == "pomyannik") {
     await _checkPomyannikAndNotify();
@@ -202,15 +269,16 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
 Future _checkVersionAndNotify(String type) async {
   try {
     var version = await getVersion();
-    if (isUpdateAvailable(version)) {
+    // Об одной версии — один раз, а не каждый час (см. claimUpdateNotification).
+    if (await claimUpdateNotification(version)) {
       // Show a notification after every 15 minute with the first
       // appearance happening a minute after invoking the method
       var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
         'updateChannelId',
         'updateNotificationChannel',
         channelDescription: 'Notifications about update',
-        importance: Importance.max,
-        priority: Priority.high,
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
         ticker: "update version ticker",
       );
       var iOSPlatformChannelSpecifics = new DarwinNotificationDetails();
@@ -430,16 +498,21 @@ class MyAppState extends State<MyApp> {
         requiredNetworkType: NetworkType.ANY
     ), (String taskId) async {  // <-- Event handler
       // This is the fetch-event callback.
-      await _checkVersionAndNotify("");
-      await _checkNewTextsAndNotify();
-      // Зеркало обновляется отсюда, а не из фоновой задачи: там сессию продлить
-      // нечем — окна входа показать некому.
-      if (await remindersEnabled()) {
-        await refreshPomyannikMirror(appStore?.state.auth.userId);
+      try {
+        await _runBackgroundChecks(beforePomyannik: () async {
+          // Зеркало обновляется отсюда, а не из фоновой задачи: там сессию
+          // продлить нечем — окна входа показать некому.
+          if (await remindersEnabled()) {
+            await refreshPomyannikMirror(appStore?.state.auth.userId);
+          }
+        });
+      } finally {
+        // IMPORTANT:  You must signal completion of your task or the OS can punish your app
+        // for taking too long in the background.
+        BackgroundFetch.finish(taskId);
       }
-      await _checkPomyannikAndNotify();
-      // IMPORTANT:  You must signal completion of your task or the OS can punish your app
-      // for taking too long in the background.
+    }, (String taskId) async {
+      // Время вышло: отвечаем и на это, иначе система урежет пробуждения.
       BackgroundFetch.finish(taskId);
     });
     // print('[BackgroundFetch] configure success: $status');
@@ -568,7 +641,6 @@ class MyAppState extends State<MyApp> {
     return StoreProvider(
         store: widget.store,
         child: StoreBuilder<AppState>(
-            onInit: (store) => store.dispatch(FetchItemsAction()),
             builder: (context, store) {
               return MaterialApp(
                 navigatorKey: navigatorKey,
@@ -590,6 +662,12 @@ class MyAppState extends State<MyApp> {
                   settings,
                   hasSkippedUpdate: _hasSkippedUpdate,
                   skipUpdateWindow: _handleTapboxChanged,
+                ),
+                // generateRoute отвечает null на незнакомое имя и на негодный
+                // аргумент; без этой строки такой переход был исключением.
+                onUnknownRoute: (settings) => MaterialPageRoute(
+                  settings: settings,
+                  builder: (context) => const NotFoundPage(),
                 ),
                 theme: _buildTheme(Brightness.light),
                 darkTheme: _buildTheme(Brightness.dark),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:typikon/components/api_error_view.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:flutter/gestures.dart';
@@ -45,6 +47,14 @@ class _DaysPageState extends State<DaysPage> {
     day = getDay(widget.id);
   }
 
+  /// Повторная попытка после отказа. Прежде на её месте стоял текст
+  /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  void _retry() {
+    setState(() {
+      day = getDay(widget.id);
+    });
+  }
+
   GlobalKey _sectionKey(String title) => _sectionKeys.putIfAbsent(title, () => GlobalKey());
   GlobalKey _itemKey(String id) => _itemKeys.putIfAbsent(id, () => GlobalKey());
 
@@ -82,9 +92,7 @@ class _DaysPageState extends State<DaysPage> {
   }
 
   String getContent (DayTextsPart item) {
-    var statia = item.statia != null ? (item.statia! - 1) : 0;
-    var parts = getStatias(item.text!.content);
-    return parts[statia];
+    return statiaContent(item.text!.content, item.statia);
   }
 
   void _openTextSheet(BuildContext context, DayText text) {
@@ -105,7 +113,7 @@ class _DaysPageState extends State<DaysPage> {
                   child: Text("Перейти к тексту",
                     style: TextStyle(
                       fontFamily: "OldStandard",
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -121,7 +129,7 @@ class _DaysPageState extends State<DaysPage> {
                   child: Text("Перейти к книге",
                     style: TextStyle(
                       fontFamily: "OldStandard",
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -263,7 +271,11 @@ class _DaysPageState extends State<DaysPage> {
               );
             }
             if (future.hasError) {
-              return Text("Ошибка: ${future.error}");
+              return ApiErrorView(
+                error: future.error,
+                message: "Не удалось загрузить чтения дня.",
+                onRetry: _retry,
+              );
             }
             return Container(
               color: Theme.of(context).scaffoldBackgroundColor,

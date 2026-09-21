@@ -5,6 +5,16 @@ import 'package:flutter/material.dart';
 
 import 'package:typikon/models/color.dart';
 
+/// Границы размера текста чтений — те же, что у ползунка в настройках.
+///
+/// Держатся здесь, а не в экране: размер вне границ ронял `Slider` на assert
+/// (и успевал сохраниться), так что чинить надо и то, что уже лежит на диске.
+const int minFontSize = 5;
+const int maxFontSize = 40;
+
+int clampFontSize(int size) => size.clamp(minFontSize, maxFontSize);
+
+
 @immutable
 class Settings {
   final int fontSize;
@@ -119,7 +129,7 @@ class Settings {
     List<String>? bibleEditions,
   }) {
     return Settings(
-      fontSize: fontSize ?? this.fontSize,
+      fontSize: clampFontSize(fontSize ?? this.fontSize),
       themeMode: themeMode ?? this.themeMode,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       fontColor: fontColor ?? this.fontColor,
@@ -197,7 +207,7 @@ class Settings {
       if (fontColor == const Color(0xff000000)) fontColor = null;
     }
     return Settings(
-      fontSize: json["fontSize"] ?? 16,
+      fontSize: clampFontSize(json["fontSize"] is int ? json["fontSize"] : 16),
       themeMode: ThemeMode.values.firstWhere(
         (mode) => mode.name == json["themeMode"],
         orElse: () => ThemeMode.system,

@@ -74,11 +74,40 @@ void main() {
 
     // Пользователь убрал единственный текст из избранного — и перезапустил.
     // Старый ключ никуда не делся, но список из него больше не поднимается.
+    first.dispatch(ToggleFavouriteAction("a"));
+    await Future<void>.delayed(Duration.zero);
+    expect(first.state.favourites.textIds, isEmpty);
+
     final second = makeStore();
     await Future<void>.delayed(Duration.zero);
 
     expect(prefs.getBool("favouritesMigratedToStore"), isTrue);
     expect(second.state.favourites.textIds, isEmpty);
+  });
+
+  test("перенесённый список переживает перезапуск", () async {
+    // Перенос помечается сделанным сразу. Пока состояние после него на диск не
+    // писалось, список жил до конца запуска: на следующем старый ключ уже не
+    // читался, а в сохранённом состоянии избранного не было — и оно пропадало у
+    // всякого, кто в первый запуск после обновления не тронул настроек.
+    SharedPreferences.setMockInitialValues({"favourites": ["a", "b"]});
+    final prefs = await SharedPreferences.getInstance();
+
+    Future<Store<AppState>> launch() async {
+      final store = Store<AppState>(
+        appReducer,
+        initialState: AppState.init(),
+        middleware: [SharedPrefMiddleware(prefs)],
+      );
+      store.dispatch(FetchItemsAction());
+      await Future<void>.delayed(Duration.zero);
+      return store;
+    }
+
+    await launch();
+    final second = await launch();
+
+    expect(second.state.favourites.textIds, ["a", "b"]);
   });
 
   test("пустое прежнее хранилище ничего не ломает", () async {

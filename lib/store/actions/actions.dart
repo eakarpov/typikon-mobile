@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 
 import 'package:typikon/models/color.dart';
 import '../models/favourites.dart';
+import '../models/settings.dart';
 
 // abstract class AppActions {
 //   ActionDispatcher<Settings> changeFontSizeAction;
@@ -23,7 +24,16 @@ class AppNotLoadedAction {}
 
 class AppLoadedAction {}
 
-class AppSaveAdditional {}
+/// Настройки подняты с диска — все разом.
+///
+/// Прежде восстановление было дюжиной отдельных действий, по одному на поле, и
+/// у этого было две цены: каждое запускало запись состояния обратно на диск, а
+/// новое поле настроек надо было не забыть дописать ещё и туда.
+class SettingsRestoredAction {
+  final Settings settings;
+
+  SettingsRestoredAction(this.settings);
+}
 
 class ChangeCommonDateAction {
   final DateTime date;

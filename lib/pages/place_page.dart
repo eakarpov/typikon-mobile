@@ -176,29 +176,34 @@ class _PlacePageState extends State<PlacePage> {
       );
     }
 
-    return ListView(
-      children: [
-        _header(place),
-        ...sections.expand((section) => [
-              Container(key: _anchor(section.title)),
-              _Section(title: section.title, children: section.children),
-            ]),
-        if (_mentionsLoading)
-          const Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-        if (_mentionsError != null)
-          // Внутри страницы, а не вместо неё: имена и описание уже загружены, и
-          // терять их из-за отказа второго запроса незачем.
-          ApiErrorView(
-            error: _mentionsError,
-            message: "Не удалось загрузить упоминания места",
-            onRetry: _retry,
-          ),
-        _sources(place),
-        const SizedBox(height: 24.0),
-      ],
+    // Не ListView: тот строит детей лениво, и у раздела за экраном нет
+    // контекста — оглавление по нему молча не прокручивало (см. days_page).
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _header(place),
+          ...sections.expand((section) => [
+                Container(key: _anchor(section.title)),
+                _Section(title: section.title, children: section.children),
+              ]),
+          if (_mentionsLoading)
+            const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          if (_mentionsError != null)
+            // Внутри страницы, а не вместо неё: имена и описание уже загружены, и
+            // терять их из-за отказа второго запроса незачем.
+            ApiErrorView(
+              error: _mentionsError,
+              message: "Не удалось загрузить упоминания места",
+              onRetry: _retry,
+            ),
+          _sources(place),
+          const SizedBox(height: 24.0),
+        ],
+      ),
     );
   }
 

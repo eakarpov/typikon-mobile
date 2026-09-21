@@ -81,15 +81,16 @@ class _SelectionMenuState extends State<SelectionMenu> {
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.enabled) return widget.child;
-
     return SelectionArea(
       onSelectionChanged: (content) {
         _lastSelection = content?.plainText;
       },
       contextMenuBuilder: (context, state) {
         final rawPhrase = _lastSelection?.trim();
-        if (rawPhrase == null || rawPhrase.isEmpty) {
+        // Не вошедшему — обычное системное меню: заметки и сообщения об ошибке
+        // требуют аккаунта, а скопировать стих вправе всякий. Прежде без входа
+        // текст не выделялся вообще.
+        if (!widget.enabled || rawPhrase == null || rawPhrase.isEmpty) {
           return AdaptiveTextSelectionToolbar.selectableRegion(selectableRegionState: state);
         }
         final phrase = rawPhrase;
