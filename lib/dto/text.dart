@@ -39,18 +39,23 @@ class Reading {
   });
 
   factory Reading.fromJson(Map<String, dynamic> json, Map<String, dynamic>? jsonDay) {
-    var id = json["id"];
-    var name = json["name"];
+    // Обязательные по типу поля читаются с запасным значением, и это не
+    // перестраховка. Списочные ручки отдают текст урезанным — в `/texts?sort=
+    // updated` нет поля `content` вовсе, потому что содержимое в перечне ни к
+    // чему, — а `content` объявлен непустым `String`. Один отсутствующий ключ
+    // ронял разбор всего списка, а с ним и главную страницу целиком.
+    var id = json["id"] ?? "";
+    var name = json["name"] ?? "";
     var author = json["author"];
-    var readiness = json["readiness"];
-    var content = json["content"];
+    var readiness = json["readiness"] ?? "";
+    var content = json["content"] ?? "";
     // Вторая версия API переименовала обе ссылки: `ruLink` стал `russianUrl`,
     // `link` — `scanUrl`. Читаем оба имени: в кэше на диске сутки лежат ответы
     // прежней версии, а имена эти ведут к переводу и к скану, то есть к тому,
     // что читатель ищет чаще прочего.
     var ruLink = json["russianUrl"] ?? json["ruLink"];
     var link = json["scanUrl"] ?? json["link"];
-    var type = json["type"];
+    var type = json["type"] ?? "";
     var dneslovId = json["dneslovId"];
     var updatedAtString = json["updatedAt"];
     var bookId = json["bookId"];

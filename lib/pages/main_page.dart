@@ -369,7 +369,9 @@ class _MainPageState extends State<MainPage>
                 // под новой датой стояли бы чтения вчерашнего дня.
                 if (future.connectionState == ConnectionState.done && future.hasData) {
                   CalendarDay? calendarDay = future.data?.day;
-                  ReadingList list2 = future.data!.lastTexts!;
+                  // Может не прийти: отказ этого списка главную больше не
+                  // гасит (см. apiMapper/common.dart).
+                  final ReadingList? list2 = future.data?.lastTexts;
 
                 return TabBarView(
                   children: [
@@ -435,9 +437,9 @@ class _MainPageState extends State<MainPage>
                           shrinkWrap: true,
                           scrollDirection: Axis.vertical,
                           physics: new NeverScrollableScrollPhysics(),
-                          itemCount: list2.list.length,
+                          itemCount: list2?.list.length ?? 0,
                           itemBuilder: (context, index) {
-                            final item = list2.list[index];
+                            final item = list2!.list[index];
                             return Container(
                               child: ListTile(
                                 title: Text(item.name, style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),

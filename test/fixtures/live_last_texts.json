@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "id": "6aa85229d97972c724e093e6",
+      "alias": "nikifor-yascherica",
+      "name": "Ящерица",
+      "description": null,
+      "author": null,
+      "translator": null,
+      "type": "Reference",
+      "contentType": null,
+      "readiness": "ready",
+      "bookId": "6aa851caa21b602b9e97a4c3",
+      "bookIndex": 4582,
+      "dneslovId": null,
+      "updatedAt": "2026-09-14T19:59:36.205Z"
+    },
+    {
+      "id": "6aa85229d97972c724e093e5",
+      "alias": "nikifor-yashen",
+      "name": "Яшен",
+      "description": null,
+      "author": null,
+      "translator": null,
+      "type": "Reference",
+      "contentType": null,
+      "readiness": "ready",
+      "bookId": "6aa851caa21b602b9e97a4c3",
+      "bookIndex": 4581,
+      "dneslovId": null,
+      "updatedAt": "2026-09-14T19:59:36.205Z"
+    }
+  ],
+  "total": 7972,
+  "limit": 3,
+  "offset": 0
+}
