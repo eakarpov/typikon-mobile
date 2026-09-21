@@ -5,12 +5,13 @@ import 'package:flutter_redux/flutter_redux.dart';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/apiMapper/calendar.dart';
 import 'package:typikon/dto/calendar.dart';
-import 'package:typikon/store/actions/actions.dart';
+import 'package:typikon/components/async_view.dart';
 import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/components/verse_list.dart';
 import 'package:typikon/components/day_memories.dart';
 import 'package:typikon/components/trapeza_line.dart';
 import 'package:typikon/utils/bible_route.dart';
+import 'package:typikon/utils/selected_day.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage(context, {super.key});
@@ -26,92 +27,22 @@ class _Section {
   _Section(this.title, this.part);
 }
 
-class _CalculatorPageState extends State<CalculatorPage> {
+class _CalculatorPageState extends State<CalculatorPage>
+    with WidgetsBindingObserver, SelectedDay {
   late Future<CalendarDay> currentDay;
 
   final Map<String, GlobalKey> _sectionKeys = {};
   final Map<String, GlobalKey> _itemKeys = {};
 
-  // final RestorableDateTime _selectedDate = RestorableDateTime(DateTime.now());
-  // late final RestorableRouteFuture<DateTime?> _restorableDatePickerRouteFuture =
-  // RestorableRouteFuture<DateTime?>(
-  //   onComplete: _selectDate,
-  //   onPresent: (NavigatorState navigator, Object? arguments) {
-  //     return navigator.restorablePush(
-  //       _datePickerRoute,
-  //       arguments: _selectedDate.value.millisecondsSinceEpoch,
-  //     );
-  //   },
-  // );
+  Future<void> _refresh() {
+    reloadSelectedDay();
+    return settle(currentDay);
+  }
 
+  /// Как калькулятор грузит свой день; когда — знает примесь SelectedDay.
   @override
-  void initState() {
-    super.initState();
-    currentDay = getCalendarDay(DateFormat('yyyy-MM-dd').format(
-        StoreProvider.of<AppState>(context, listen: false).state.common.date));
-  }
-
-  // static Route<DateTime> _datePickerRoute(BuildContext context, Object? arguments) {
-  //   return DialogRoute<DateTime>(
-  //     context: context,
-  //     builder: (BuildContext context) {
-  //       // return showDatePicker(
-  //       //     context: context,
-  //       //     initialDate: DateTime.fromMillisecondsSinceEpoch(arguments! as int),
-  //       //     firstDate: DateTime(1970),
-  //       //     lastDate: DateTime(2026));
-  //       // );
-  //       return DatePickerDialog(
-  //         cancelText: "Отменить",
-  //         confirmText: "Выбрать",
-  //         helpText: "Выбрать дату",
-  //         // locale: const Locale("fr", "FR"),
-  //         restorationId: 'date_picker_dialog',
-  //         initialEntryMode: DatePickerEntryMode.calendarOnly,
-  //         initialDate: DateTime.fromMillisecondsSinceEpoch(arguments! as int),
-  //         firstDate: DateTime(1970),
-  //         lastDate: DateTime(2026),
-  //       );
-  //     },
-  //   );
-  // }
-
-  void buildMaterialDatePicker(BuildContext context) async {
-    DateTime now = new DateTime.now();
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      locale: const Locale("ru", "RU"),
-      initialDate: StoreProvider.of<AppState>(context).state.common.date,
-      // initialDate: DateTime.fromMillisecondsSinceEpoch(_selectedDate.value.millisecondsSinceEpoch! as int),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(now.year + 5),
-      initialEntryMode: DatePickerEntryMode.calendar,
-      initialDatePickerMode: DatePickerMode.day,
-      // helpText: 'Select booking date',
-      // cancelText: 'Not now',
-      // confirmText: 'Book',
-    );
-    if (!context.mounted) return;
-    if (picked != null && picked != StoreProvider.of<AppState>(context).state.common.date) {
-      // setState(() {
-      //   _selectedDate.value = picked;
-      // });
-      StoreProvider.of<AppState>(context).dispatch(
-          ChangeCommonDateAction(picked)
-      );
-      setState(() {
-        currentDay = getCalendarDay(
-            DateFormat('yyyy-MM-dd').format(
-                picked
-                    // .subtract(const Duration(days: 13))
-            )
-        );
-      });
-    }
-  }
-
-  void _showSelectDate(BuildContext context) {
-    return buildMaterialDatePicker(context);
+  void loadDay(DateTime day) {
+    currentDay = getCalendarDay(SelectedDay.keyOf(day));
   }
 
   GlobalKey _sectionKey(String title) => _sectionKeys.putIfAbsent(title, () => GlobalKey());
@@ -219,8 +150,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
   Widget build(BuildContext context) {
     DateFormat format = DateFormat("dd.MM.yyyy");
     // String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
-    String value =
-        format.format(StoreProvider.of<AppState>(context).state.common.date);
+    String value = format.format(selectedDay);
     return Scaffold(
       appBar: AppBar(
         title: Text(value, style: TextStyle(fontFamily: "OldStandard")),
@@ -244,49 +174,35 @@ class _CalculatorPageState extends State<CalculatorPage> {
               Icons.calendar_today,
               color: Colors.white,
             ),
-            onPressed: () {
-              _showSelectDate(context);
-              // _restorableDatePickerRouteFuture.present();
-            },
+            onPressed: pickDay,
           )
         ],
       ),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<CalendarDay>(
+        child: AsyncView<CalendarDay>(
           future: currentDay,
-          builder: (context, future) {
-            // И состояние, а не одно `hasData`: при смене будущего FutureBuilder
-            // держит прежние данные — под новой датой стоял бы вчерашний день.
-            if (future.connectionState == ConnectionState.done && future.hasData) {
-              final sections = _sections(future.data!);
-              return SingleChildScrollView(
-                child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Своим запросом: служба устава отвечает до восьми
-                        // секунд, и чтения ждать её не должны.
-                        TrapezaLine(
-                          date: StoreProvider.of<AppState>(context).state.common.date,
-                        ),
-                        DayMemoriesView(memories: future.data!.memories),
-                        ...sections.map((section) => renderItem(context, section)),
-                      ],
-                    ),
+          // Прежде здесь на всякий отказ стояло «Для этой даты формирование
+          // выдачи недоступно» — в том числе когда просто не было сети.
+          message: "Не удалось составить чтения на этот день.",
+          onRetry: reloadSelectedDay,
+          onRefresh: _refresh,
+          builder: (context, data) {
+            final sections = _sections(data);
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Своим запросом: служба устава отвечает до восьми
+                    // секунд, и чтения ждать её не должны.
+                    TrapezaLine(date: selectedDay),
+                    DayMemoriesView(memories: data.memories),
+                    ...sections.map((section) => renderItem(context, section)),
+                  ],
                 ),
-              );
-            } else if (future.connectionState == ConnectionState.done && future.hasError) {
-              return Center(child: Text('Для этой даты формирование выдачи недоступно'));
-            }
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              child: const Center(child: CircularProgressIndicator()),
+              ),
             );
           },
         ),

@@ -131,8 +131,9 @@ Widget errorViewFor(
   BuildContext context,
   Object? error,
   String fallbackMessage,
-  VoidCallback? onRetry,
-) {
+  VoidCallback? onRetry, {
+  String? hint,
+}) {
   if (error is SearchQueryTooShort) {
     return searchHint("Введите хотя бы ${error.minLength} символа.");
   }
@@ -155,5 +156,10 @@ Widget errorViewFor(
     return ApiErrorView(error: error, message: error.message, hint: error.hint, onRetry: onRetry);
   }
 
-  return ApiErrorView(error: error, message: fallbackMessage, onRetry: onRetry);
+  return ApiErrorView(
+    error: error,
+    message: fallbackMessage,
+    hint: hint,
+    onRetry: onRetry,
+  );
 }

@@ -32,6 +32,7 @@ class AsyncView<T> extends StatelessWidget {
     this.emptyMessage,
     this.onRefresh,
     this.loading,
+    this.hint,
   });
 
   /// Что грузим. Держится в состоянии страницы, а не создаётся в `build`:
@@ -61,6 +62,9 @@ class AsyncView<T> extends StatelessWidget {
   /// Чем занять экран на время загрузки. По умолчанию — крутилка посередине.
   final Widget? loading;
 
+  /// Уточнение под сообщением об отказе — например, что источник сторонний.
+  final String? hint;
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<T>(
@@ -72,13 +76,14 @@ class AsyncView<T> extends StatelessWidget {
         }
 
         if (snapshot.hasError) {
-          return _short(errorViewFor(context, snapshot.error!, message, onRetry));
+          return _short(
+              errorViewFor(context, snapshot.error!, message, onRetry, hint: hint));
         }
 
         if (!snapshot.hasData) {
           // Будущее завершилось без данных и без ошибки — такого быть не
           // должно, но показать пустой экран молча хуже, чем сказать.
-          return _short(errorViewFor(context, null, message, onRetry));
+          return _short(errorViewFor(context, null, message, onRetry, hint: hint));
         }
 
         final data = snapshot.data as T;
