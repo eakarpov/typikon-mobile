@@ -102,6 +102,24 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
     }
   }
 
+  /// Список имён разом — из файла или вставкой.
+  ///
+  /// Разбор и показ живут на своём экране: догадки о чине и родстве надо
+  /// показать до записи, а в диалог такой разбор не умещается.
+  Future<void> _import(String kind) async {
+    final written = await Navigator.pushNamed<Object?>(
+      context,
+      "/pomyannik/import",
+      arguments: kind,
+    );
+    if (!mounted || written is! int || written == 0) return;
+
+    _reload();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Вписано имён: $written")),
+    );
+  }
+
   /// Имя, каким его записать.
   ///
   /// Подсказка НЕ ПРИМЕНЯЕТСЯ САМА. «Анны» — почти наверняка родительный от
@@ -128,6 +146,14 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
       appBar: AppBar(
         title: const Text("Помянник", style: TextStyle(fontFamily: "OldStandard")),
         actions: [
+          AnimatedBuilder(
+            animation: _tabs,
+            builder: (context, _) => IconButton(
+              tooltip: "Загрузить список",
+              icon: const Icon(Icons.playlist_add),
+              onPressed: () => _import(_tabs.index == 0 ? living : departed),
+            ),
+          ),
           IconButton(
             tooltip: "Ближайшее",
             icon: const Icon(Icons.event_outlined),

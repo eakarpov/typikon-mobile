@@ -27,6 +27,7 @@ import 'package:typikon/pages/pericope_page.dart';
 import 'package:typikon/pages/pericopes_page.dart';
 import 'package:typikon/pages/place_page.dart';
 import 'package:typikon/pages/places_page.dart';
+import 'package:typikon/pages/pomyannik_import_page.dart';
 import 'package:typikon/pages/pomyannik_note_page.dart';
 import 'package:typikon/pages/pomyannik_page.dart';
 import 'package:typikon/pages/pomyannik_person_page.dart';
@@ -321,6 +322,12 @@ Route<dynamic>? generateRoute(
       }
       return MaterialPageRoute(
         builder: (context) => PomyannikPage(context),
+      );
+    // Столбец берётся у вкладки, с которой пришли, — он и есть аргумент.
+    case "/pomyannik/import":
+      if (arguments is! String) return null;
+      return MaterialPageRoute(
+        builder: (context) => PomyannikImportPage(kind: arguments),
       );
     case "/pomyannik/upcoming":
       return MaterialPageRoute(
