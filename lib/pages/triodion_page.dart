@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:typikon/components/api_error_view.dart';
 import 'package:intl/intl.dart';
 
 import 'package:typikon/apiMapper/collections.dart';
@@ -29,6 +31,14 @@ class _TriodionPageState extends State<TriodionPage> {
     triodion = getTriodion();
   }
 
+  /// Повторная попытка после отказа. Прежде на её месте стоял текст
+  /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  void _retry() {
+    setState(() {
+      triodion = getTriodion();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,7 +64,11 @@ class _TriodionPageState extends State<TriodionPage> {
                 },
               );
             } else if (future.hasError) {
-              return Text('${future.error}');
+              return ApiErrorView(
+                error: future.error,
+                message: "Не удалось загрузить Постную Триодь.",
+                onRetry: _retry,
+              );
             }
             return Container(
               color: Theme.of(context).scaffoldBackgroundColor,

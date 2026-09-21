@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:typikon/components/api_error_view.dart';
 import 'package:intl/intl.dart';
 
 import 'package:typikon/apiMapper/collections.dart';
@@ -39,6 +41,14 @@ class _OutsidePageState extends State<OutsidePage> {
     data = getOutTriodion();
   }
 
+  /// Повторная попытка после отказа. Прежде на её месте стоял текст
+  /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  void _retry() {
+    setState(() {
+      data = getOutTriodion();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,7 +74,11 @@ class _OutsidePageState extends State<OutsidePage> {
                 },
               );
             } else if (future.hasError) {
-              return Text('${future.error}');
+              return ApiErrorView(
+                error: future.error,
+                message: "Не удалось загрузить чтения вне Триоди.",
+                onRetry: _retry,
+              );
             }
             return Container(
               color: Theme.of(context).scaffoldBackgroundColor,

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:typikon/components/api_error_view.dart';
 import 'package:intl/intl.dart';
 
 import 'package:typikon/apiMapper/collections.dart';
@@ -30,6 +32,14 @@ class _PenticostarionPageState extends State<PenticostarionPage> {
     penticostarion = getPenticostarion();
   }
 
+  /// Повторная попытка после отказа. Прежде на её месте стоял текст
+  /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  void _retry() {
+    setState(() {
+      penticostarion = getPenticostarion();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,7 +65,11 @@ class _PenticostarionPageState extends State<PenticostarionPage> {
                 },
               );
             } else if (future.hasError) {
-              return Text('${future.error}');
+              return ApiErrorView(
+                error: future.error,
+                message: "Не удалось загрузить Цветную Триодь.",
+                onRetry: _retry,
+              );
             }
             return Container(
               color: Theme.of(context).scaffoldBackgroundColor,

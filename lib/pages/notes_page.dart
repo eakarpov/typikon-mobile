@@ -115,6 +115,7 @@ class _NotesPageState extends State<NotesPage> {
                   ),
                   isThreeLine: true,
                   trailing: IconButton(
+                    tooltip: "Убрать заметку",
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () => _onDelete(note),
                   ),

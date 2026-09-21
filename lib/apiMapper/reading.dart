@@ -4,18 +4,34 @@ import '../api/reading.dart';
 import '../dto/text.dart';
 import 'package:typikon/apiMapper/v2/errors.dart';
 
+/// Текст и день, в который он читается.
+///
+/// Два запроса идут разом, а не друг за другом: второй от первого не зависит, и
+/// ждать его очередью значило удваивать время открытия текста на медленной сети.
+///
+/// **День — дополнение, и его отказ текста не касается.** Прежде сорвавшийся
+/// запрос дня (нет сети, а в кэше лежит только сам текст) ронял всё вместе:
+/// человек видел ошибку на месте текста, который у него был.
 Future<Reading> getText(String id) async {
+  final dayFuture = _dayByText(id);
   final response = await fetchText(id);
-  final responseDay = await fetchDayByText(id);
+  final day = await dayFuture;
 
   if (response.statusCode == 200) {
-    int contentLength = responseDay.contentLength ?? -1;
-    return Reading.fromJson(
-      jsonDecode(response.body),
-      contentLength > 0 ? jsonDecode(responseDay.body): null,
-    );
+    return Reading.fromJson(jsonDecode(response.body), day);
   } else {
     throw Exception('Не получено чтение');
+  }
+}
+
+Future<Map<String, dynamic>?> _dayByText(String id) async {
+  try {
+    final response = await fetchDayByText(id);
+    if (response.statusCode != 200 || response.body.trim().isEmpty) return null;
+    final decoded = jsonDecode(response.body);
+    return decoded is Map<String, dynamic> ? decoded : null;
+  } catch (_) {
+    return null;
   }
 }
 

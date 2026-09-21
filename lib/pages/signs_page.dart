@@ -135,7 +135,10 @@ class _SignsPageState extends State<SignsPage> {
           ),
           subtitle: Text(
             [_dateTitle(item), subtitle].where((s) => s.isNotEmpty).join(" — "),
-            style: const TextStyle(fontFamily: "OldStandard", color: Colors.grey),
+            style: TextStyle(
+              fontFamily: "OldStandard",
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           trailing: item.sourceUrl == null || item.sourceUrl!.isEmpty
               ? null

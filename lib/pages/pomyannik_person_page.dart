@@ -83,10 +83,12 @@ class _PomyannikPersonPageState extends State<PomyannikPersonPage> with WidgetsB
       ),
     );
     if (saved == true && mounted) {
-      setState(_load);
-      // Список позади тоже показывает имя и чин: вернувшись в него, хозяин
-      // должен увидеть правку, а не прежнее.
-      _changed = true;
+      setState(() {
+        _load();
+        // Список позади тоже показывает имя и чин: вернувшись в него, хозяин
+        // должен увидеть правку, а не прежнее.
+        _changed = true;
+      });
     }
   }
 
@@ -116,48 +118,62 @@ class _PomyannikPersonPageState extends State<PomyannikPersonPage> with WidgetsB
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: () => Navigator.pop(context, _changed)),
-        // Имени в заголовке нет нарочно: список недавних экранов — не то место,
-        // где имени из чужого помянника стоит показываться через плечо.
-        title: const Text("Помянник", style: TextStyle(fontFamily: "OldStandard")),
-        actions: [
-          if (_loaded != null) ...[
-            IconButton(
-              tooltip: "Править",
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: () => _edit(_loaded!.person),
-            ),
-            IconButton(
-              tooltip: "Убрать",
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () => _remove(_loaded!.person),
-            ),
+    // Системная «назад» и жест возвращают `null`, а не `_changed`: список после
+    // правки имени показывал бы прежнее. Поэтому уход перехватываем и отдаём
+    // признак сами — одним путём для кнопки в шапке, кнопки системы и жеста.
+    //
+    // Перехват включается, только когда есть о чём сообщить: `canPop: false`
+    // гасит боковой жест возврата, и держать его выключенным всё время ради
+    // случая, который может не наступить, незачем.
+    return PopScope(
+      canPop: !_changed,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.pop(context, _changed);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const BackButton(),
+          // Имени в заголовке нет нарочно: список недавних экранов — не то место,
+          // где имени из чужого помянника стоит показываться через плечо.
+          title: const Text("Помянник", style: TextStyle(fontFamily: "OldStandard")),
+          actions: [
+            if (_loaded != null) ...[
+              IconButton(
+                tooltip: "Править",
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () => _edit(_loaded!.person),
+              ),
+              IconButton(
+                tooltip: "Убрать",
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _remove(_loaded!.person),
+              ),
+            ],
           ],
-        ],
-      ),
-      body: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: FutureBuilder<PersonCard>(
-          future: card,
-          builder: (context, future) {
-            if (future.error is SessionExpiredException) {
-              return const SignInNeeded(
-                message: "Помянник хранится при вашей учётной записи и виден только вам.",
-              );
-            }
-            if (future.hasError) {
-              return ApiErrorView(
-                error: future.error,
-                message: "Не удалось открыть запись.",
-                onRetry: () => setState(_load),
-              );
-            }
-            if (!future.hasData) return const Center(child: CircularProgressIndicator());
+        ),
+        body: Container(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: FutureBuilder<PersonCard>(
+            future: card,
+            builder: (context, future) {
+              if (future.error is SessionExpiredException) {
+                return const SignInNeeded(
+                  message: "Помянник хранится при вашей учётной записи и виден только вам.",
+                );
+              }
+              if (future.hasError) {
+                return ApiErrorView(
+                  error: future.error,
+                  message: "Не удалось открыть запись.",
+                  onRetry: () => setState(_load),
+                );
+              }
+              if (!future.hasData) return const Center(child: CircularProgressIndicator());
 
-            return _Card(card: future.data!, vocabulary: _vocabulary);
-          },
+              return _Card(card: future.data!, vocabulary: _vocabulary);
+            },
+          ),
         ),
       ),
     );
@@ -605,7 +621,11 @@ class _DateField extends StatelessWidget {
         style: Theme.of(context).textTheme.bodySmall,
       ),
       trailing: set
-          ? IconButton(icon: const Icon(Icons.clear), onPressed: onClear)
+          ? IconButton(
+              tooltip: "Убрать дату",
+              icon: const Icon(Icons.clear),
+              onPressed: onClear,
+            )
           : const Icon(Icons.event_outlined),
       onTap: onPick,
     );

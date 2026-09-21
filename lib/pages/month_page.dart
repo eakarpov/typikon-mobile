@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:typikon/components/api_error_view.dart';
 import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/months.dart';
 import 'package:typikon/dto/month.dart';
@@ -22,6 +24,14 @@ class _MonthPageState extends State<MonthPage> {
     month = getMonth(widget.id);
   }
 
+  /// Повторная попытка после отказа. Прежде на её месте стоял текст
+  /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  void _retry() {
+    setState(() {
+      month = getMonth(widget.id);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,7 +46,9 @@ class _MonthPageState extends State<MonthPage> {
               String month = DateFormat.MMMM(locale).format(newDate);
               return Text(month, style: TextStyle(fontFamily: "OldStandard"));
             } else if (future.hasError) {
-              return Text('${future.error}');
+              // В заголовке — короткий ярлык, а не вид ошибки: целый экран
+              // с «Повторить» показывается ниже, в теле страницы.
+              return const Text("Месяц", style: TextStyle(fontFamily: "OldStandard"));
             }
             return const Text("");
           },
@@ -68,7 +80,11 @@ class _MonthPageState extends State<MonthPage> {
                 },
               );
             } else if (future.hasError) {
-              return Text('${future.error}');
+              return ApiErrorView(
+                error: future.error,
+                message: "Не удалось загрузить месяц.",
+                onRetry: _retry,
+              );
             }
             return Container(
               color: Theme.of(context).scaffoldBackgroundColor,

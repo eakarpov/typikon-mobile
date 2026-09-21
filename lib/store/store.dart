@@ -1,4 +1,4 @@
-import 'package:flutter_redux/flutter_redux.dart';
+import 'package:flutter/foundation.dart';
 import 'package:redux/redux.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,15 +17,24 @@ Store<AppState>? get appStore => _appStore;
 
 Future<Store<AppState>> createReduxStore() async {
   final sharedPreferences = await SharedPreferences.getInstance();
+  final persistence = SharedPrefMiddleware(sharedPreferences);
   final store = Store<AppState>(
     appReducer,
     initialState: AppState.init(),
     middleware: [
-      SharedPrefMiddleware(sharedPreferences),
+      persistence,
       FavouritesMiddleware(sharedPreferences),
     ],
     // AppActions(),
   );
   _appStore = store;
+
+  // Состояние поднимаем здесь, до первого кадра. Нечитаемая запись запуск не
+  // срывает: приложение с настройками по умолчанию лучше пустого экрана.
+  try {
+    await persistence.restore(store);
+  } catch (error) {
+    debugPrint("Сохранённое состояние не поднялось: $error");
+  }
   return store;
 }

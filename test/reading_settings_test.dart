@@ -59,4 +59,21 @@ void main() {
     expect(base == base.copyWith(readingAlign: "left"), isFalse);
     expect(base == base.copyWith(readingMeasure: 544.0), isFalse);
   });
+
+  group("размер текста держится в границах ползунка", () {
+    // Подпись «Размер текста чтений» прибавляла по единице без верхней границы,
+    // и за сороковой Slider падал на assert — а значение к тому времени уже
+    // лежало на диске, так что настройки не открывались и после перезапуска.
+    test("слишком большой размер прижимается к максимуму", () {
+      expect(const Settings().copyWith(fontSize: 400).fontSize, maxFontSize);
+    });
+
+    test("слишком малый — к минимуму", () {
+      expect(const Settings().copyWith(fontSize: 0).fontSize, minFontSize);
+    });
+
+    test("сохранённый за границей чинится при чтении", () {
+      expect(Settings.fromJson({"fontSize": 999}).fontSize, maxFontSize);
+    });
+  });
 }

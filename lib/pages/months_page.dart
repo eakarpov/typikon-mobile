@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:typikon/components/api_error_view.dart';
 import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/library.dart';
 import 'package:typikon/dto/library.dart';
@@ -20,6 +22,14 @@ class _MonthsPageState extends State<MonthsPage> {
   void initState() {
     super.initState();
     months = getMonths();
+  }
+
+  /// Повторная попытка после отказа. Прежде на её месте стоял текст
+  /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  void _retry() {
+    setState(() {
+      months = getMonths();
+    });
   }
 
   @override
@@ -60,7 +70,11 @@ class _MonthsPageState extends State<MonthsPage> {
                 },
               );
             } else if (future.hasError) {
-              return Text('${future.error}');
+              return ApiErrorView(
+                error: future.error,
+                message: "Не удалось загрузить список месяцев.",
+                onRetry: _retry,
+              );
             }
             return Container(
               color: Theme.of(context).scaffoldBackgroundColor,

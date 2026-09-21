@@ -14,47 +14,38 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
 
   SharedPrefMiddleware(this.preferences);
 
+  /// Идёт восстановление: его собственные действия на диск не пишем — запись
+  /// одна, в конце.
+  bool _restoring = false;
+
+  /// Сохраняет состояние после действия — и по тому, что изменилось, а не по
+  /// тому, какое действие пришло.
+  ///
+  /// Прежде здесь стоял перечень сохраняемых действий, и держался он памятью:
+  /// настройки читаемости в него однажды не попали и писались на диск лишь
+  /// случайно, за компанию с чем-нибудь другим. Сверка сохраняемых частей до и
+  /// после действия забыть ничего не может. Она же закрывает давний TODO
+  /// «сохранять после действия, а не перед»: запись идёт за `next`.
+  ///
+  /// Дата в перечне не значится нарочно: она не восстанавливается (приложение
+  /// открывается на сегодня), и писать состояние на каждый «День вперёд» незачем.
   @override
   Future<void> call(Store<AppState> store, action, NextDispatcher next) async {
-    if (
-      action is ChangeFontSizeAction ||
-      action is ChangeFontColorAction ||
-      action is ChangeBackgroundColorAction ||
-      action is ChangeThemeModeAction ||
-      action is ChangePreloadTextsAction ||
-      action is ChangeBibleEditionsAction ||
-      // Настройки читаемости и показа. Их тут не было: они писались на диск
-      // случайно, за компанию с каким-нибудь другим сохраняемым действием, —
-      // а выбранные последними и не писались вовсе.
-      action is ChangeLineHeightAction ||
-      action is ChangeReadingAlignAction ||
-      action is ChangeReadingMeasureAction ||
-      action is ChangeReminderSourceAction ||
-      action is ChangeShowAccentsAction ||
-      action is ToggleFavouriteAction ||
-      action is FavouritesLoadedAction ||
-      action is FavouritesQueueConfirmedAction ||
-      action is FavouritesClearedAction ||
-      action is ResetReadingColorsAction ||
-      action is ChangeCommonDateAction ||
-      action is SignInSuccessAction ||
-      action is SignOutAction
-    ) {
-      // await _saveStateToPrefs(store.state); // TODO - after store update save to storage, not before!!
-      Future.delayed(const Duration(seconds: 0), () {
-        store.dispatch(AppSaveAdditional());
-      });
-    }
-
-    if (action is AppSaveAdditional) {
-      await _saveStateToPrefs(store.state);
-    }
-
     if (action is FetchItemsAction) {
-      await _loadStateFromPrefs(store);
+      await restore(store);
     }
 
+    final before = store.state;
     next(action);
+    final after = store.state;
+
+    if (_restoring) return;
+    if (before.settings == after.settings &&
+        before.favourites == after.favourites &&
+        before.auth == after.auth) {
+      return;
+    }
+    await _saveStateToPrefs(after);
   }
 
   Future _saveStateToPrefs(AppState state) async {
@@ -93,8 +84,27 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     await prefs.setBool(_favouritesMigratedKey, true);
   }
 
-  Future _loadStateFromPrefs(Store<AppState> store) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+  /// Поднимает сохранённое состояние в стор.
+  ///
+  /// Зовётся из `createReduxStore` до `runApp`, а не из дерева виджетов: пока
+  /// восстановление шло после первого кадра, всё, что читало стор при запуске,
+  /// видело значения по умолчанию — перепривязка толчков всегда считала, что
+  /// напоминает приложение, и не делала ничего, а тёмная тема мигала светлой.
+  Future<void> restore(Store<AppState> store) async {
+    _restoring = true;
+    try {
+      await _restore(store);
+    } finally {
+      _restoring = false;
+    }
+    // Одна запись на всё восстановление. Нужна и она: перенос старого избранного
+    // помечается сделанным сразу, и без записи перенесённый список жил бы только
+    // до конца этого запуска.
+    await _saveStateToPrefs(store.state);
+  }
+
+  Future<void> _restore(Store<AppState> store) async {
+    final SharedPreferences prefs = preferences;
     var stateString = prefs.getString(APP_STATE_KEY);
     if (stateString == null) {
       // Настройки человек мог ни разу не открыть, и тогда сохранённого
@@ -104,27 +114,12 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
     }
     AppState state = AppState.fromJson(json.decode(stateString));
     await _restoreFavourites(store, prefs, state.favourites);
-    store.dispatch(ChangeFontSizeAction(state.settings.fontSize));
-    store.dispatch(ChangeThemeModeAction(state.settings.themeMode));
-    store.dispatch(ChangeLineHeightAction(state.settings.lineHeight));
-    store.dispatch(ChangeReminderSourceAction(state.settings.reminderSource));
-    store.dispatch(ChangeShowAccentsAction(state.settings.showAccents));
-    store.dispatch(ChangeReadingAlignAction(state.settings.readingAlign));
-    // Отправляем и `null`: «во всю ширину» — такой же выбор, как прочие.
-    store.dispatch(ChangeReadingMeasureAction(state.settings.readingMeasure));
-    if (state.settings.preloadTexts != null) {
-      store.dispatch(ChangePreloadTextsAction(state.settings.preloadTexts!));
-    }
-    if (state.settings.bibleEditions.isNotEmpty) {
-      store.dispatch(ChangeBibleEditionsAction(state.settings.bibleEditions));
-    }
-    if (state.settings.fontColor != null) {
-      store.dispatch(ChangeFontColorAction(state.settings.fontColor!));
-    }
-    if (state.settings.backgroundColor != null) {
-      store.dispatch(ChangeBackgroundColorAction(state.settings.backgroundColor!));
-    }
-    // store.dispatch(ChangeCommonDateAction(state.common.date)); // Дату пока не сохраняем
+    store.dispatch(SettingsRestoredAction(state.settings));
+    // Дату не восстанавливаем: приложение открывается на сегодня.
+    //
+    // Вход — прежним действием, а не подменой состояния: на него подписано
+    // избранное (см. middleware/favourites.dart), и синхронизация при запуске
+    // начинается именно отсюда.
     if (state.auth.isSignedIn && state.auth.userId != null) {
       store.dispatch(SignInSuccessAction(
         userId: state.auth.userId!,

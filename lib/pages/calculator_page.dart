@@ -177,13 +177,19 @@ class _CalculatorPageState extends State<CalculatorPage> {
     ].where((s) => s.part?.items?.isNotEmpty == true).toList();
   }
 
+  /// Ключ якоря включает место службы: один и тот же текст может стоять сразу
+  /// в нескольких местах дня, а два одинаковых GlobalKey в дереве — это
+  /// исключение и пустой экран, а не просто неудобство (то же в days_page).
+  String _itemAnchor(CalendarDayPartItem item, String sectionTitle) =>
+      "$sectionTitle::${item.id ?? item.name}";
+
   List<TocEntry> _toc(List<_Section> sections) {
     return sections.map((s) => TocEntry(
       title: s.title,
       anchorKey: _sectionKey(s.title),
       children: s.part!.items!.map((item) => TocEntry(
         title: item.name,
-        anchorKey: _itemKey(item.id ?? item.name),
+        anchorKey: _itemKey(_itemAnchor(item, s.title)),
       )).toList(),
     )).toList();
   }
@@ -200,7 +206,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
       children: [
         Text(section.title, style: titleStyle),
         ...list.map((item) => Column(
-          key: _itemKey(item.id ?? item.name),
+          key: _itemKey(_itemAnchor(item, section.title)),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(item.name, style: titleStyle),
@@ -269,6 +275,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
             },
           ),
           IconButton(
+            tooltip: "Выбрать дату",
             icon: Icon(
               Icons.calendar_today,
               color: Colors.white,
@@ -287,7 +294,9 @@ class _CalculatorPageState extends State<CalculatorPage> {
         child: FutureBuilder<CalendarDay>(
           future: currentDay,
           builder: (context, future) {
-            if (future.hasData) {
+            // И состояние, а не одно `hasData`: при смене будущего FutureBuilder
+            // держит прежние данные — под новой датой стоял бы вчерашний день.
+            if (future.connectionState == ConnectionState.done && future.hasData) {
               final sections = _sections(future.data!);
               return SingleChildScrollView(
                 child: Padding(
@@ -306,7 +315,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
                     ),
                 ),
               );
-            } else if (future.hasError) {
+            } else if (future.connectionState == ConnectionState.done && future.hasError) {
               return Center(child: Text('Для этой даты формирование выдачи недоступно'));
             }
             return Container(

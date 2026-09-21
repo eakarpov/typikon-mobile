@@ -13,11 +13,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:typikon/pages/outside_page.dart';
-import 'package:typikon/pages/signs_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import "routes.dart";
+import "pages/not_found_page.dart";
 import "version.dart";
 import "api/constants.dart";
 import "utils/app_version.dart";
@@ -27,51 +27,10 @@ import "utils/crash_reporter.dart";
 
 import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
-import 'package:typikon/pages/book_page.dart';
-import 'package:typikon/utils/bible_route.dart';
-import 'package:typikon/utils/incipit_route.dart';
 import 'package:typikon/utils/route_observer.dart';
-import 'package:typikon/pages/bible_chapter_page.dart';
-import 'package:typikon/pages/akathist_page.dart';
-import 'package:typikon/pages/akathists_page.dart';
-import 'package:typikon/pages/canon_page.dart';
-import 'package:typikon/pages/canons_page.dart';
-import 'package:typikon/pages/prayer_page.dart';
-import 'package:typikon/pages/prayers_page.dart';
-import 'package:typikon/pages/chronology_page.dart';
-import 'package:typikon/pages/dictionary_page.dart';
-import 'package:typikon/pages/imeniny_page.dart';
-import 'package:typikon/pages/incipit_page.dart';
-import 'package:typikon/pages/pericope_page.dart';
-import 'package:typikon/pages/pericopes_page.dart';
-import 'package:typikon/pages/bible_page.dart';
-import 'package:typikon/pages/library_page.dart';
-import 'package:typikon/pages/main_page.dart';
-import 'package:typikon/pages/text_page.dart';
-import 'package:typikon/pages/current_day_memories_page.dart';
-import 'package:typikon/pages/settings_page.dart';
-import 'package:typikon/pages/calculator_page.dart';
-import 'package:typikon/pages/months_page.dart';
-import 'package:typikon/pages/month_page.dart';
-import 'package:typikon/pages/days_page.dart';
-import 'package:typikon/pages/search_page.dart';
-import 'package:typikon/pages/triodion_page.dart';
-import 'package:typikon/pages/penticostarion_page.dart';
-import 'package:typikon/pages/saint_page.dart';
-import 'package:typikon/pages/place_page.dart';
-import 'package:typikon/pages/favourite_page.dart';
-import 'package:typikon/pages/notes_page.dart';
-import 'package:typikon/pages/pomyannik_page.dart';
-import 'package:typikon/pages/pomyannik_person_page.dart';
-import 'package:typikon/pages/pomyannik_upcoming_page.dart';
-import 'package:typikon/pages/pomyannik_note_page.dart';
-import 'package:typikon/pages/pomyannik_prinyatye_page.dart';
-import 'package:typikon/pages/contact_page.dart';
-import 'package:typikon/pages/resources_page.dart';
 
 import "package:typikon/store/rootReducer.dart";
 import "package:typikon/store/index.dart";
-import "package:typikon/store/actions/actions.dart";
 import "package:typikon/store/store.dart";
 import "package:typikon/store/pomyannik_cache.dart";
 import "package:typikon/utils/pomyannik_reminders.dart";
@@ -131,29 +90,42 @@ Future<void> main() async {
     android: android,
     iOS: IOS,
   );
-  await flutterLocalNotificationsPlugin.initialize(
-    settings,
-    onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) {
-      switch (notificationResponse.notificationResponseType) {
-        case NotificationResponseType.selectedNotification:
-          selectNotificationStream.add(notificationResponse.payload);
-          break;
-        case NotificationResponseType.selectedNotificationAction:
-          if (notificationResponse.actionId == navigationActionId) {
+  // Ни один из шагов ниже не стоит пустого экрана: сорвался — приложение
+  // открывается без него, а сбой уезжает в отчёт о падениях.
+  try {
+    await flutterLocalNotificationsPlugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) {
+        switch (notificationResponse.notificationResponseType) {
+          case NotificationResponseType.selectedNotification:
             selectNotificationStream.add(notificationResponse.payload);
-          }
-          break;
-      }
-    },
-    onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
-  );
+            break;
+          case NotificationResponseType.selectedNotificationAction:
+            if (notificationResponse.actionId == navigationActionId) {
+              selectNotificationStream.add(notificationResponse.payload);
+            }
+            break;
+        }
+      },
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+    );
+    _notificationsReady = true;
+  } catch (error, stack) {
+    unawaited(reportCrash(error, stack, context: "запуск: уведомления"));
+  }
 
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (error, stack) {
+    // Без ключа запросы уйдут анонимными — это медленнее, но это работает.
+    unawaited(reportCrash(error, stack, context: "запуск: dotenv"));
+  }
 
   // Толчки поднимаем до магазина состояния, но не ждём от них ничего: не
   // поднялись — приложение остаётся приложением, а напоминания за фоновой
   // задачей. Падать на запуске из-за службы уведомлений несоразмерно.
-  if (await initPush()) {
+  final pushReady = await initPush();
+  if (pushReady) {
     FirebaseMessaging.onBackgroundMessage(pushHandler);
     // То же сообщение при открытом приложении: система в этом случае фоновый
     // обработчик не зовёт, и без этой строки напоминание приходило бы всем,
@@ -165,8 +137,15 @@ Future<void> main() async {
 
   // Ключ доставки не вечен и меняется молча: не перепривязав его, мы перестали
   // бы получать толчки без единой ошибки на экране.
-  unawaited(refreshPushRegistration(wanted: store.state.settings.remindsFromServer));
-  watchPushToken(wanted: () => store.state.settings.remindsFromServer);
+  //
+  // Стор к этой строке уже поднят с диска (см. createReduxStore) — иначе
+  // `remindsFromServer` был бы значением по умолчанию и перепривязки не было бы
+  // никогда. Без Firebase не трогаем ничего: `FirebaseMessaging.instance` без
+  // поднятого приложения бросает, и до `runApp` дело бы не дошло.
+  if (pushReady) {
+    unawaited(refreshPushRegistration(wanted: store.state.settings.remindsFromServer));
+    watchPushToken(wanted: () => store.state.settings.remindsFromServer);
+  }
 
   runApp(MyApp(store));
   // Register to receive BackgroundFetch events after app is terminated.
@@ -178,12 +157,64 @@ Future<void> main() async {
 // Be sure to annotate your callback function to avoid issues in release mode on Flutter >= 3.3.0
 @pragma('vm:entry-point')
 void backgroundFetchHeadlessTask(HeadlessTask task) async {
-  String taskId = task.taskId;
-  await _checkVersionAndNotify("");
-  await _checkNewTextsAndNotify();
-  await _checkPomyannikAndNotify();
-  await _checkReadingAndNotify();
-  BackgroundFetch.finish(taskId);
+  final taskId = task.taskId;
+  // Система отвела время и оно вышло: доделывать нечего, надо только ответить.
+  if (task.timeout) {
+    BackgroundFetch.finish(taskId);
+    return;
+  }
+
+  try {
+    // Своя изоляция: ни обработчиков падений, ни поднятых уведомлений в ней нет.
+    installCrashReporting();
+    await _ensureNotificationsReady();
+    await _runBackgroundChecks();
+  } finally {
+    // Не ответив, получаем от системы всё более редкие пробуждения.
+    BackgroundFetch.finish(taskId);
+  }
+}
+
+bool _notificationsReady = false;
+
+/// Поднимает уведомления там, где `main()` не выполнялся: в изоляции фоновой
+/// задачи и толчка.
+///
+/// **В живом приложении не делает ничего.** Повторный `initialize` без
+/// обработчика нажатий затирает тот, что поставил `main()`, — а толчок при
+/// открытом приложении идёт через тот же `pushHandler`, и после первого же
+/// напоминания нажатия на уведомления перестали бы куда-либо вести.
+Future<void> _ensureNotificationsReady() async {
+  if (_notificationsReady) return;
+  await flutterLocalNotificationsPlugin.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(),
+    ),
+  );
+  _notificationsReady = true;
+}
+
+/// Всё, о чём приложение напоминает само. Один перечень на оба пути — с живым
+/// процессом и без него: пока их было два, чтения дня значились только во
+/// втором, и тому, кто не выгружает приложение, не приходили вовсе.
+///
+/// Каждая проверка отдельно: сорвавшаяся не должна отменять следующие.
+Future<void> _runBackgroundChecks({Future<void> Function()? beforePomyannik}) async {
+  final checks = <Future<void> Function()>[
+    () => _checkVersionAndNotify(""),
+    _checkNewTextsAndNotify,
+    if (beforePomyannik != null) beforePomyannik,
+    _checkPomyannikAndNotify,
+    _checkReadingAndNotify,
+  ];
+  for (final check in checks) {
+    try {
+      await check();
+    } catch (error, stack) {
+      unawaited(reportCrash(error, stack, context: "фоновая проверка"));
+    }
+  }
 }
 
 /// Толчок о поминальном дне.
@@ -205,12 +236,7 @@ Future<void> pushHandler(RemoteMessage message) async {
   // Фоновый обработчик поднимается в своей изоляции: ни магазина состояния, ни
   // подключённых плагинов в ней нет, и уведомления надо поднять заново.
   await Firebase.initializeApp();
-  await flutterLocalNotificationsPlugin.initialize(
-    const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      iOS: DarwinInitializationSettings(),
-    ),
-  );
+  await _ensureNotificationsReady();
 
   if (kind == "pomyannik") {
     await _checkPomyannikAndNotify();
@@ -243,15 +269,16 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
 Future _checkVersionAndNotify(String type) async {
   try {
     var version = await getVersion();
-    if (isUpdateAvailable(version)) {
+    // Об одной версии — один раз, а не каждый час (см. claimUpdateNotification).
+    if (await claimUpdateNotification(version)) {
       // Show a notification after every 15 minute with the first
       // appearance happening a minute after invoking the method
       var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
         'updateChannelId',
         'updateNotificationChannel',
         channelDescription: 'Notifications about update',
-        importance: Importance.max,
-        priority: Priority.high,
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
         ticker: "update version ticker",
       );
       var iOSPlatformChannelSpecifics = new DarwinNotificationDetails();
@@ -471,16 +498,21 @@ class MyAppState extends State<MyApp> {
         requiredNetworkType: NetworkType.ANY
     ), (String taskId) async {  // <-- Event handler
       // This is the fetch-event callback.
-      await _checkVersionAndNotify("");
-      await _checkNewTextsAndNotify();
-      // Зеркало обновляется отсюда, а не из фоновой задачи: там сессию продлить
-      // нечем — окна входа показать некому.
-      if (await remindersEnabled()) {
-        await refreshPomyannikMirror(appStore?.state.auth.userId);
+      try {
+        await _runBackgroundChecks(beforePomyannik: () async {
+          // Зеркало обновляется отсюда, а не из фоновой задачи: там сессию
+          // продлить нечем — окна входа показать некому.
+          if (await remindersEnabled()) {
+            await refreshPomyannikMirror(appStore?.state.auth.userId);
+          }
+        });
+      } finally {
+        // IMPORTANT:  You must signal completion of your task or the OS can punish your app
+        // for taking too long in the background.
+        BackgroundFetch.finish(taskId);
       }
-      await _checkPomyannikAndNotify();
-      // IMPORTANT:  You must signal completion of your task or the OS can punish your app
-      // for taking too long in the background.
+    }, (String taskId) async {
+      // Время вышло: отвечаем и на это, иначе система урежет пробуждения.
       BackgroundFetch.finish(taskId);
     });
     // print('[BackgroundFetch] configure success: $status');
@@ -609,7 +641,6 @@ class MyAppState extends State<MyApp> {
     return StoreProvider(
         store: widget.store,
         child: StoreBuilder<AppState>(
-            onInit: (store) => store.dispatch(FetchItemsAction()),
             builder: (context, store) {
               return MaterialApp(
                 navigatorKey: navigatorKey,
@@ -625,318 +656,19 @@ class MyAppState extends State<MyApp> {
                 ],
                 restorationScopeId: "root",
                 initialRoute: '/',
-                onGenerateRoute: (RouteSettings settings) {
-                  final arguments = settings.arguments;
-                  switch (settings.name) {
-                    // Аргумент необязателен, как у '/library': без него —
-                    // оглавление, с ним — глава. Разбор аргумента живёт в
-                    // utils/bible_route.dart, потому что собирают его из
-                    // нескольких мест сразу.
-                    case '/bible':
-                      if (arguments is String) {
-                        final target = parseBibleArgument(arguments);
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return BibleChapterPage(
-                              context,
-                              canonId: target.canonId,
-                              chapter: target.chapter,
-                              highlight: target.ranges,
-                            );
-                          },
-                        );
-                      } else {
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return BiblePage(context);
-                          },
-                        );
-                      }
-                    // У зачина нет своего идентификатора: ключ и есть
-                    // идентификатор. Поэтому аргумент несёт язык и ключ разом,
-                    // разбор — в utils/incipit_route.dart.
-                    case '/incipit':
-                      if (arguments is String) {
-                        final target = parseIncipitArgument(arguments);
-                        if (target.isValid) {
-                          return MaterialPageRoute(
-                            builder: (context) {
-                              return IncipitPage(
-                                context,
-                                language: target.language,
-                                incipit: target.incipit,
-                              );
-                            },
-                          );
-                        }
-                      }
-                      return null;
-                    case '/pericopes':
-                      return MaterialPageRoute(
-                        builder: (context) => PericopesPage(context),
-                      );
-                    case '/pericope':
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) => PericopePage(context, id: arguments),
-                        );
-                      }
-                      return null;
-                    // Как у '/library' и '/bible': без аргумента список, с ним —
-                    // отдельная запись.
-                    case '/imeniny':
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) => NamePage(context, name: arguments),
-                        );
-                      }
-                      return MaterialPageRoute(
-                        builder: (context) => ImeninyPage(context),
-                      );
-                    case '/dictionary':
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) => LexemePage(context, id: arguments),
-                        );
-                      }
-                      return MaterialPageRoute(
-                        builder: (context) => DictionaryPage(context),
-                      );
-                    // Певческий корпус: три раздела по одному обычаю —
-                    // без аргумента перечень, с ним чтение целиком.
-                    case '/canons':
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) => CanonPage(context, id: arguments),
-                        );
-                      }
-                      return MaterialPageRoute(
-                        builder: (context) => CanonsPage(context),
-                      );
-                    case '/akathists':
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) => AkathistPage(context, id: arguments),
-                        );
-                      }
-                      return MaterialPageRoute(
-                        builder: (context) => AkathistsPage(context),
-                      );
-                    case '/prayers':
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) => PrayerPage(context, id: arguments),
-                        );
-                      }
-                      return MaterialPageRoute(
-                        builder: (context) => PrayersPage(context),
-                      );
-                    case '/chronology':
-                      return MaterialPageRoute(
-                        builder: (context) => ChronologyPage(context),
-                      );
-                    case '/library':
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return BookPage(
-                              context,
-                              id: arguments,
-                            );
-                          },
-                        );
-                      } else {
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return LibraryPage(context);
-                          },
-                        );
-                      }
-                    case "/reading":
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return TextPage(
-                              context,
-                              id: arguments,
-                            );
-                          },
-                        );
-                      }
-                      return null;
-                    case "/settings":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return SettingsPage(
-                            context,
-                          );
-                        },
-                      );
-                    case "/calculator":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return CalculatorPage(
-                            context,
-                          );
-                        },
-                      );
-                    case "/saints":
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return SaintPage(
-                              context,
-                              id: arguments,
-                            );
-                          },
-                        );
-                      }
-                    case "/places":
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return PlacePage(
-                              context,
-                              id: arguments,
-                            );
-                          },
-                        );
-                      }
-                    case "/triodion":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return TriodionPage(
-                            context,
-                          );
-                        },
-                      );
-                    case "/penticostarion":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return PenticostarionPage(
-                            context,
-                          );
-                        },
-                      );
-                    case "/search":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return SearchPage(
-                            context,
-                          );
-                        },
-                      );
-                    case "/days":
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return DaysPage(
-                              context,
-                              id: arguments,
-                            );
-                          },
-                        );
-                      }
-                    case "/months":
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return MonthPage(
-                              context,
-                              id: arguments,
-                            );
-                          },
-                        );
-                      } else {
-                        return MaterialPageRoute(
-                          builder: (context) {
-                            return MonthsPage(context);
-                          },
-                        );
-                      }
-                    case "/favourites":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return FavouritePage(
-                            context,
-                          );
-                        },
-                      );
-                    // Как у '/library' и '/imeniny': без аргумента разворот
-                    // помянника, с ним — карточка лица.
-                    case "/pomyannik":
-                      if (arguments is String) {
-                        return MaterialPageRoute(
-                          builder: (context) => PomyannikPersonPage(context, id: arguments),
-                        );
-                      }
-                      return MaterialPageRoute(
-                        builder: (context) => PomyannikPage(context),
-                      );
-                    case "/pomyannik/upcoming":
-                      return MaterialPageRoute(
-                        builder: (context) => PomyannikUpcomingPage(context),
-                      );
-                    case "/pomyannik/zapiska":
-                      return MaterialPageRoute(
-                        builder: (context) => PomyannikNotePage(context),
-                      );
-                    case "/pomyannik/prinyatye":
-                      return MaterialPageRoute(
-                        builder: (context) => PomyannikPrinyatyePage(context),
-                      );
-                    case "/notes":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return NotesPage(context);
-                        },
-                      );
-                    case "/contact":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return ContactPage(
-                            context,
-                          );
-                        },
-                      );
-                    case "/dneslov/memories":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return CurrentDayMemoriesPage(context);
-                        },
-                      );
-                    case "/resources":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return ResourcesPage(context);
-                        },
-                      );
-                    case "/outside":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return OutsidePage(context);
-                        },
-                      );
-                    case "/signs":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return SignsPage(context);
-                        },
-                      );
-                    case "/":
-                      return MaterialPageRoute(
-                        builder: (context) {
-                          return MainPage(
-                            context,
-                            hasSkippedUpdate: _hasSkippedUpdate,
-                            skipUpdateWindow: _handleTapboxChanged,
-                          );
-                        },
-                      );
-                    default:
-                      return null;
-                  }
-                },
+                // Разбор маршрутов живёт в lib/routes.dart: он же сверяется
+                // тестом с перечнем пунктов меню.
+                onGenerateRoute: (settings) => generateRoute(
+                  settings,
+                  hasSkippedUpdate: _hasSkippedUpdate,
+                  skipUpdateWindow: _handleTapboxChanged,
+                ),
+                // generateRoute отвечает null на незнакомое имя и на негодный
+                // аргумент; без этой строки такой переход был исключением.
+                onUnknownRoute: (settings) => MaterialPageRoute(
+                  settings: settings,
+                  builder: (context) => const NotFoundPage(),
+                ),
                 theme: _buildTheme(Brightness.light),
                 darkTheme: _buildTheme(Brightness.dark),
                 themeMode: store.state.settings.themeMode,

@@ -26,11 +26,26 @@ import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../api/constants.dart';
 import '../utils/day_preloader.dart';
+import '../utils/day_rollover.dart';
 import '../components/trapeza_line.dart';
 import '../utils/bible_route.dart';
 import '../utils/route_observer.dart';
+import 'menu_entries.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
+
+/// Пункты раздела, видимые сейчас.
+///
+/// Личные разделы без учётной записи не прячутся из вежливости: заметок,
+/// помянника и поданных записок у невошедшего нет вовсе, и открытый пустой
+/// экран читался бы как поломка.
+List<MenuEntry> _visibleEntries(BuildContext context, MenuSection section) {
+  final signedIn = StoreProvider.of<AppState>(context).state.auth.isSignedIn;
+  return section.entries
+      .where((entry) =>
+          entry.visibility == MenuVisibility.always || signedIn)
+      .toList();
+}
 
 class MainPage extends StatefulWidget {
   const MainPage(context, {
@@ -46,9 +61,16 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin, RouteAware {
+class _MainPageState extends State<MainPage>
+    with SingleTickerProviderStateMixin, RouteAware, WidgetsBindingObserver {
   late Future<MainPageData> data;
   late Future<Version> version;
+
+  /// За какой день сейчас загружены (или грузятся) чтения.
+  String? _loadedDateKey;
+
+  /// Какой день был сегодняшним, когда на приложение смотрели в прошлый раз.
+  DateTime _lastSeenToday = DateTime.now();
 
   /// Что ответил сервер. Нужен ящику: пункт «Обновить приложение» показывается
   /// тому, кто предложение пропустил, — а адрес выпуска называет сервер, и до
@@ -69,6 +91,9 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
+    // Главная лежит в основании стопки экранов всё время работы приложения,
+    // поэтому за сменой дня следит она (см. utils/day_rollover.dart).
+    WidgetsBinding.instance.addObserver(this);
     version = getVersion();
     // Отказ проглатываем нарочно, и без него было бы хуже: результат этого
     // будущего никто, кроме здешнего `then`, не ждёт, а необработанная ошибка
@@ -86,9 +111,30 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     routeObserver.unsubscribe(this);
     if (_preloadBannerVisible) _messenger?.hideCurrentMaterialBanner();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+
+    final now = DateTime.now();
+    final store = StoreProvider.of<AppState>(context, listen: false);
+    final next = dateAfterResume(
+      selected: store.state.common.date,
+      lastSeenToday: _lastSeenToday,
+      now: now,
+    );
+    _lastSeenToday = now;
+    if (next == null) return;
+
+    store.dispatch(ChangeCommonDateAction(next));
+    setState(() {
+      data = _loadDay(DateFormat('yyyy-MM-dd').format(next));
+    });
   }
 
   /// Поверх главной положили другой экран.
@@ -119,12 +165,13 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
     var val = StoreProvider.of<AppState>(context).state.common.date != null
         ? StoreProvider.of<AppState>(context).state.common.date
         : DateTime.now().subtract(const Duration(days: 13));
-    data = _loadDay(
-        DateFormat('yyyy-MM-dd').format(
-            val
-        )
-        // val.millisecondsSinceEpoch + 3 * 60 * 60 * 1000
-    );
+    // Зависимости меняются не только от даты: `ModalRoute.of` дёргает этот
+    // метод на каждый экран, положенный поверх главной и снятый с неё. День
+    // перезагружаем, только если он и вправду другой, — иначе возврат из текста
+    // стоил бы запроса, крутилки и потерянного места в списке.
+    final dateKey = DateFormat('yyyy-MM-dd').format(val!);
+    if (dateKey == _loadedDateKey) return;
+    data = _loadDay(dateKey);
     // final SharedPreferences prefs = await SharedPreferences.getInstance();
     // var stateString = prefs.getString(APP_STATE_KEY);
     // print(stateString);
@@ -134,6 +181,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   /// докачивает его тексты, чтобы они открылись и без сети. Ошибки
   /// предзагрузки страницы не касаются.
   Future<MainPageData> _loadDay(String date) {
+    _loadedDateKey = date;
     final future = updateData(date);
     future.then((value) {
       final day = value.day;
@@ -207,6 +255,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       // cancelText: 'Not now',
       // confirmText: 'Book',
     );
+    if (!mounted) return;
     if (picked != null && picked != StoreProvider.of<AppState>(context).state.common.date) {
     // if (picked != null && picked != _selectedDate.value) {
       // setState(() {
@@ -215,12 +264,11 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       StoreProvider.of<AppState>(context).dispatch(
           ChangeCommonDateAction(picked)
       );
-      data = _loadDay(
-          DateFormat('yyyy-MM-dd').format(
-            picked
-                // .subtract(const Duration(days: 13))
-          )
-      );
+      // Через setState: без него новый день показывался лишь потому, что
+      // закрытие окна выбора дёргало didChangeDependencies.
+      setState(() {
+        data = _loadDay(DateFormat('yyyy-MM-dd').format(picked));
+      });
     }
   }
 
@@ -374,6 +422,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
             ),
             actions: <Widget>[
               IconButton(
+                tooltip: "Выбрать дату",
                 icon: Icon(
                   Icons.calendar_today,
                   color: Colors.white,
@@ -440,7 +489,10 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
             child: FutureBuilder(
               future: data,
               builder: (context, future) {
-                if (future.hasData) {
+                // Сверяем и состояние, а не одно `hasData`: FutureBuilder при
+                // смене будущего держит прежние данные, и после «День вперёд»
+                // под новой датой стояли бы чтения вчерашнего дня.
+                if (future.connectionState == ConnectionState.done && future.hasData) {
                   CalendarDay? calendarDay = future.data?.day;
                   ReadingList list2 = future.data!.lastTexts!;
 
@@ -460,7 +512,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
-                          Text("В данных момент доступна библиотека книг и текстов, подборка чтений по дням Цветной Триоди, "
+                          Text("В данный момент доступна библиотека книг и текстов, подборка чтений по дням Цветной Триоди, "
                               "календарные чтения на каждый день года, поиск по названию текста, "
                               "а также просмотр памятей на день. Ждите новых обновлений!", textAlign: TextAlign.justify,),
                         ],
@@ -513,9 +565,9 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                             final item = list2.list[index];
                             return Container(
                               child: ListTile(
-                                title: Text(item.name ?? "test", style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),
+                                title: Text(item.name ?? "Без названия", style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),
                                 subtitle: Text(
-                                    "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}" ?? "test"),
+                                    "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}"),
                                 onTap: () => {
                                   Navigator.pushNamed(context, "/reading", arguments: item.id)
                                 },
@@ -554,7 +606,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   ),
                 ],
                 );
-               } else if (future.hasError) {
+               } else if (future.connectionState == ConnectionState.done && future.hasError) {
                   return Container(
                     color: Theme.of(context).scaffoldBackgroundColor,
                     child: Column(
@@ -630,11 +682,15 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Типикон ($majorVersion.$minorVersion.0)'),
-                      GestureDetector(
-                        onTap: () {
+                      // IconButton, а не GestureDetector поверх иконки: у того
+                      // зона нажатия ровно по глифу (24 точки при положенных 48)
+                      // и нет ни отклика на нажатие, ни имени для чтеца экрана.
+                      IconButton(
+                        tooltip: "Поиск",
+                        onPressed: () {
                           Navigator.pushNamed(context, "/search");
                         },
-                        child: Icon(
+                        icon: Icon(
                           Icons.search,
                           color: Colors.white,
                         ),
@@ -642,170 +698,33 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                     ],
                   ),
                 ),
-                ListTile(
-                  title: const Text('Главная страница', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Избранное', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/favourites",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/favourites");
-                  },
-                ),
-                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
-                  title: const Text('Мои заметки', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/notes",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/notes");
-                  },
-                ),
-                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
-                  title: const Text('Помянник', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/pomyannik",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/pomyannik");
-                  },
-                ),
-                // Приём записок открыт не всякому, и проверяет это сервер.
-                // Прятать пункт по своему флагу нельзя: флаг протухнет молча, а
-                // экран сам скажет «приём вам пока не открыт» словами сервера.
-                if (StoreProvider.of<AppState>(context).state.auth.isSignedIn) ListTile(
-                  title: const Text('Поданные записки', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/pomyannik/prinyatye",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/pomyannik/prinyatye");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Библия', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/bible",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/bible");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Зачала', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/pericopes",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/pericopes");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Каноны', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/canons",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/canons");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Акафисты', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/akathists",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/akathists");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Молитвы', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/prayers",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/prayers");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Библиотека', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/library",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/library");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Пятидесятница', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/penticostarion",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/penticostarion");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Триодион', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/triodion",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/triodion");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Вне триодного цикла', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/outside",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/outside");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Чтения на календарный день', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/months",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/months");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Калькулятор чтений на день', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/calculator",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/calculator");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Памяти на день', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/dneslov/memories",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/dneslov/memories");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Именины', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/imeniny",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/imeniny");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Словарь', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/dictionary",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/dictionary");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Хронология', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/chronology",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/chronology");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Полезные ресурсы', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/resources",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/resources");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Обратная связь', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/contact",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/contact");
-                  },
-                ),
-                ListTile(
-                  title: const Text('Настройки', style: TextStyle(fontSize: 14.0),),
-                  selected: ModalRoute.of(context)?.settings.name == "/settings",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/settings");
-                  },
-                ),
+                // Меню строится из описи lib/pages/menu_entries.dart: двадцать
+                // пять одинаковых ListTile подряд разъезжались с маршрутами и
+                // росли с каждым разделом. Одиннадцать пунктов ушли под
+                // «Собрание» и «Пособия».
+                for (final section in drawerSections) ...[
+                  if (_visibleEntries(context, section).isNotEmpty) ...[
+                    if (section.title != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 4.0),
+                        child: Text(
+                          section.title!,
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                        ),
+                      ),
+                    for (final entry in _visibleEntries(context, section))
+                      ListTile(
+                        title: Text(entry.title, style: const TextStyle(fontSize: 14.0)),
+                        selected: ModalRoute.of(context)?.settings.name == entry.route,
+                        onTap: () {
+                          Navigator.pushNamed(context, entry.route);
+                        },
+                      ),
+                    const Divider(height: 1),
+                  ],
+                ],
                 ListTile(
                   title: const Text('Помочь проекту', style: TextStyle(fontSize: 14.0),),
                   onTap: () {

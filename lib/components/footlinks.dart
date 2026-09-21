@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+
+import 'package:typikon/utils/text.dart';
 import "package:typikon/components/places.dart";
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/utils/reading_style.dart';
@@ -57,16 +59,19 @@ List<InlineSpan> buildFootlinks(
             showModalBottomSheet<void>(
               context: context,
               builder: (BuildContext context) {
-                String footnote = footnotes[int.parse(match.group(1)??"0")]??"test";
-                return Container(
-                  height: 100,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Text(footnote),
-                      ],
+                final footnote = footnoteAt(footnotes, match.group(1)) ??
+                    "Сноска с этим номером в тексте не найдена.";
+                // Высота по содержимому и прокрутка: в прежние сто точек
+                // длинная сноска не помещалась и обрезалась.
+                return SafeArea(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: 100,
+                      maxHeight: MediaQuery.of(context).size.height * 0.5,
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(footnote),
                     ),
                   ),
                 );
@@ -77,7 +82,7 @@ List<InlineSpan> buildFootlinks(
             fontFamily: fontFamily,
             fontSize: size,
             height: readingLineHeight(context),
-            color: Colors.blue,
+            color: readingLinkColor(context),
           ),
           // children: [
             // TextSpan(text: " [${match.group(1)}]"),

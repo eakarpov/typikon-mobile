@@ -48,6 +48,15 @@ class _PagedListState<T> extends State<PagedList<T>> {
   bool _loadedOnce = false;
   Object? _error;
 
+  /// Номер нынешней выдачи. Растёт при каждой смене запроса; ответ, ушедший при
+  /// прежнем номере, молча отбрасывается.
+  ///
+  /// Одного флага занятости тут мало, и стоило это зависшей крутилки: сменился
+  /// запрос, пока прежний был в пути, — новая загрузка не начиналась («занято»),
+  /// а прежний ответ выходил по несовпадению запроса, флага не сняв. Список
+  /// оставался крутиться, пока с экрана не уйдёшь.
+  int _generation = 0;
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +78,11 @@ class _PagedListState<T> extends State<PagedList<T>> {
   }
 
   void _restart() {
+    _generation++;
     setState(() {
+      // Прежний запрос ещё в пути, но он уже не наш: его ответ будет отброшен,
+      // и ждать его новой выдаче незачем.
+      _isLoading = false;
       _items.clear();
       _offset = 0;
       _hasMore = true;
@@ -87,7 +100,7 @@ class _PagedListState<T> extends State<PagedList<T>> {
 
   Future<void> _loadNextPage() async {
     if (_isLoading || !_hasMore) return;
-    final token = widget.resetToken;
+    final generation = _generation;
 
     setState(() {
       _isLoading = true;
@@ -98,7 +111,7 @@ class _PagedListState<T> extends State<PagedList<T>> {
       final page = await widget.load(_offset);
       // Пока ходили в сеть, запрос мог смениться: ответ на прежний вопрос в
       // новом списке выглядел бы как найденное не то.
-      if (!mounted || token != widget.resetToken) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         _items.addAll(page.items);
         _offset += page.items.length;
@@ -106,14 +119,25 @@ class _PagedListState<T> extends State<PagedList<T>> {
         _isLoading = false;
         _loadedOnce = true;
       });
+      _fillViewport();
     } catch (error) {
-      if (!mounted || token != widget.resetToken) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         _error = error;
         _isLoading = false;
         _loadedOnce = true;
       });
     }
+  }
+
+  /// Страница короче экрана — прокручивать нечего, и догрузка по прокрутке не
+  /// началась бы никогда (планшет, короткие строки). Добираем, пока экран не
+  /// заполнится или выдача не кончится.
+  void _fillViewport() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      if (_scrollController.position.maxScrollExtent <= 0) _loadNextPage();
+    });
   }
 
   @override
