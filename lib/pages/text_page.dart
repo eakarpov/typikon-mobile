@@ -1,39 +1,24 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import "package:google_fonts/google_fonts.dart";
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:file_saver_ffi/file_saver_ffi.dart';
-import "package:path_provider/path_provider.dart";
-import 'package:epub_pro/epub_pro.dart' hide Image;
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:typikon/main.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:redux/redux.dart';
 import 'package:flutter_redux/flutter_redux.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import "package:typikon/components/api_error_view.dart";
 import "package:typikon/utils/fb2.dart";
 import "package:typikon/components/fusion_text.dart";
-import "package:typikon/components/table_of_contents.dart";
-import "package:typikon/components/verse_list.dart";
 import "package:typikon/components/selection_menu.dart";
 import "package:typikon/components/report_error_sheet.dart";
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/favourites_sync.dart';
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/store/reading_progress.dart';
-import 'package:typikon/dto/book.dart';
-import 'package:typikon/dto/pericope.dart';
 import 'package:typikon/utils/pericope_route.dart';
 import 'package:typikon/dto/place.dart';
 import 'package:typikon/dto/text.dart';
@@ -44,7 +29,6 @@ import '../apiMapper/reading.dart';
 import '../apiMapper/user_notes.dart';
 import "../apiMapper/dneslov/images.dart";
 import 'package:typikon/utils/reading_style.dart';
-import 'package:typikon/apiMapper/reading.dart';
 import 'package:typikon/store/store.dart';
 
 class TextPage extends StatefulWidget {

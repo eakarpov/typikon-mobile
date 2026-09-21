@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/foundation.dart' show listEquals;
-import 'package:meta/meta.dart';
 import 'package:flutter/material.dart';
 
 import 'package:typikon/models/color.dart';

@@ -37,12 +37,8 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   background_fetch: ^1.5.0
-  built_value: ^8.12.3
   carousel_slider: ^5.1.2
-  cupertino_icons: ^1.0.2
   device_info_plus: ^12.3.0
-  epub_pro: ^5.6.0
-  file_saver: ^0.3.1
   file_saver_ffi: ^0.0.5
   flutter_redux: ^0.10.0
   flutter_markdown_plus: ^1.0.7
@@ -50,11 +46,9 @@ dependencies:
   flutter_colorpicker: ^1.1.0
   flutter_local_notifications: ^19.1.0
   fluttertoast: ^9.0.0
-  google_fonts: ^8.0.1
   http: ^1.6.0
   intl: ^0.20.2
   path_provider: ^2.1.5
-  pdf: ^3.11.3
   redux: ^5.0.0
   shared_preferences: ^2.5.4
   url_launcher: ^6.3.1
@@ -122,11 +116,20 @@ flutter:
   #         weight: 700
   fonts:
     - family: OldStandard
+      # weight и style обязательны: Flutter подбирает начертание не по имени
+      # файла, а по этим полям. Без них все четыре объявлены обычным прямым
+      # (400), движок берёт первый попавшийся и рисует жирное и курсив сам —
+      # наклоняя и утолщая прямое. Три файла из четырёх при этом не
+      # показывались никогда, занимая 750 КБ в сборке.
       fonts:
         - asset: assets/fonts/OldStandard-Regular.otf
-        - asset: assets/fonts/OldStandard-Bold.otf
-        - asset: assets/fonts/OldStandard-BoldItalic.otf
         - asset: assets/fonts/OldStandard-Italic.otf
+          style: italic
+        - asset: assets/fonts/OldStandard-Bold.otf
+          weight: 700
+        - asset: assets/fonts/OldStandard-BoldItalic.otf
+          weight: 700
+          style: italic
     - family: Monomakh
       fonts:
         - asset: assets/fonts/MonomakhUnicode.otf

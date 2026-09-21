@@ -1,4 +1,3 @@
-import 'package:redux/redux.dart';
 import "reducers/loading.dart";
 import "reducers/settings.dart";
 import "reducers/common.dart";

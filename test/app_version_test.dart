@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:typikon/api/constants.dart';
 import 'package:typikon/dto/version.dart';
 import 'package:typikon/utils/app_version.dart';
 import 'package:typikon/version.dart';
@@ -24,6 +25,32 @@ void main() {
     expect(int.parse(line!.group(1)!), majorVersion);
     expect(int.parse(line.group(2)!), minorVersion);
     expect(int.parse(line.group(3)!), patchVersion);
+  });
+
+  test("заголовок X-Typikon-App несёт ту же версию, что и сборка", () {
+    // Третья запись того же числа — `appVersion` в constants.dart, и её до сих
+    // пор проверяли только на вид. По этому заголовку сервер считает долю
+    // приложения среди клиентов первой версии API и решает, можно ли её
+    // закрывать: разъехавшись, он припишет запросы не тому выпуску, и молча.
+    final pubspec = File("pubspec.yaml").readAsStringSync();
+    final version = RegExp(r"^version:\s*(\S+)", multiLine: true)
+        .firstMatch(pubspec)!
+        .group(1);
+
+    expect(appVersion, version);
+  });
+
+  test("CHANGELOG знает о нынешнем выпуске", () {
+    // Раздела 2.1.0 в нём не было: список изменений отстал на выпуск, а
+    // заметить это можно было только заглянув в файл.
+    final changelog = File("CHANGELOG.md").readAsStringSync();
+    final expected = "$majorVersion.$minorVersion.$patchVersion";
+
+    expect(
+      RegExp("^#+\\s*$expected\\s*\$", multiLine: true).hasMatch(changelog),
+      isTrue,
+      reason: "в CHANGELOG.md нет раздела $expected",
+    );
   });
 
   group("есть ли обновление", () {

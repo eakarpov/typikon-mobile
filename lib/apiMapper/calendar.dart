@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import '../api/calendar.dart';
 import '../dto/calendar.dart';
-import "../dto/day.dart";
 
 Future<CalendarDay> getCalendarDay(String dateTime) async {
   final response = await fetchCalendarDay(dateTime);

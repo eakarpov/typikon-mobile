@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'package:typikon/components/api_error_view.dart';
-import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/library.dart';
 import 'package:typikon/dto/library.dart';
 
-import '../apiMapper/calendar.dart';
-import '../dto/calendar.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage(context, {super.key});

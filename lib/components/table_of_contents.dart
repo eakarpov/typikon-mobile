@@ -58,6 +58,8 @@ List<Widget> _tocTiles(BuildContext context, TocEntry entry, int depth) {
 void _jumpTo(BuildContext context, GlobalKey key) {
   Navigator.pop(context);
   Future.delayed(const Duration(milliseconds: 300), () {
+    // Ждём закрытия шторки, и за эти 300 мс экран могли закрыть.
+    if (!context.mounted) return;
     final targetContext = key.currentContext;
     if (targetContext != null) {
       Scrollable.ensureVisible(

@@ -3,28 +3,21 @@ import 'package:typikon/dto/version.dart';
 import 'package:typikon/version.dart';
 import 'package:typikon/utils/app_version.dart';
 import 'package:url_launcher/url_launcher.dart';
-import "package:google_fonts/google_fonts.dart";
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_redux/flutter_redux.dart';
-import 'package:redux/redux.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../components/api_error_view.dart' show isNetworkError;
 import "../dto/text.dart";
 import "../apiMapper/common.dart";
 import "../dto/common.dart";
-import "../apiMapper/reading.dart";
-import '../apiMapper/calendar.dart';
 import '../dto/calendar.dart';
-import "../dto/day.dart";
 import "../components/day_memories.dart";
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
-import '../api/constants.dart';
 import '../utils/day_preloader.dart';
 import '../utils/day_rollover.dart';
 import '../components/trapeza_line.dart';
@@ -72,6 +65,18 @@ class _MainPageState extends State<MainPage>
   /// Какой день был сегодняшним, когда на приложение смотрели в прошлый раз.
   DateTime _lastSeenToday = DateTime.now();
 
+  /// Выбранный день. `common.date` не бывает null — он ставится при создании
+  /// состояния, — а проверки на null стояли в шести местах и все были мертвы.
+  DateTime get _selectedDate =>
+      StoreProvider.of<AppState>(context, listen: false).state.common.date;
+
+  /// Перейти на другой день: запомнить выбор и перезагрузить чтения.
+  void _goToDay(DateTime date) {
+    StoreProvider.of<AppState>(context, listen: false)
+        .dispatch(ChangeCommonDateAction(date));
+    data = _loadDay(DateFormat('yyyy-MM-dd').format(date));
+  }
+
   /// Что ответил сервер. Нужен ящику: пункт «Обновить приложение» показывается
   /// тому, кто предложение пропустил, — а адрес выпуска называет сервер, и до
   /// ответа его взять неоткуда.
@@ -102,7 +107,10 @@ class _MainPageState extends State<MainPage>
     // ручка ещё не выложена. Молчать тут правильно: экран главной от версии не
     // зависит, и говорить читателю нечего.
     version.then((value) {
-      if (mounted) setState(() => _remote = value);
+      // Экран мог закрыться, пока ходили за версией: showAlert стоял вне
+      // проверки и показывал окно поверх уже снятого дерева.
+      if (!mounted) return;
+      setState(() => _remote = value);
       if (isUpdateAvailable(value) && !widget.hasSkippedUpdate) {
         showAlert(context, value);
       }
@@ -162,14 +170,11 @@ class _MainPageState extends State<MainPage>
     _messenger = ScaffoldMessenger.of(context);
     final route = ModalRoute.of(context);
     if (route is PageRoute) routeObserver.subscribe(this, route);
-    var val = StoreProvider.of<AppState>(context).state.common.date != null
-        ? StoreProvider.of<AppState>(context).state.common.date
-        : DateTime.now().subtract(const Duration(days: 13));
     // Зависимости меняются не только от даты: `ModalRoute.of` дёргает этот
     // метод на каждый экран, положенный поверх главной и снятый с неё. День
     // перезагружаем, только если он и вправду другой, — иначе возврат из текста
     // стоил бы запроса, крутилки и потерянного места в списке.
-    final dateKey = DateFormat('yyyy-MM-dd').format(val!);
+    final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
     if (dateKey == _loadedDateKey) return;
     data = _loadDay(dateKey);
     // final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -255,7 +260,7 @@ class _MainPageState extends State<MainPage>
       // cancelText: 'Not now',
       // confirmText: 'Book',
     );
-    if (!mounted) return;
+    if (!context.mounted) return;
     if (picked != null && picked != StoreProvider.of<AppState>(context).state.common.date) {
     // if (picked != null && picked != _selectedDate.value) {
       // setState(() {
@@ -274,23 +279,6 @@ class _MainPageState extends State<MainPage>
 
   void _showSelectDate(BuildContext context) {
       return buildMaterialDatePicker(context);
-  }
-
-  void _selectDate(BuildContext context, DateTime? newSelectedDate) {
-    if (newSelectedDate != null) {
-      // setState(() {
-      //   _selectedDate.value = newSelectedDate;
-      // });
-      StoreProvider.of<AppState>(context).dispatch(
-          ChangeCommonDateAction(newSelectedDate)
-      );
-      data = _loadDay(
-          DateFormat('yyyy-MM-dd').format(
-              newSelectedDate
-                // .subtract(const Duration(days: 13))
-          )
-      );
-    }
   }
 
   void onLoadUpdate(BuildContext context, Version remote) async {
@@ -365,11 +353,6 @@ class _MainPageState extends State<MainPage>
   }
 
   Widget renderItem(BuildContext context, List<CalendarDayPartItem> list, String title) {
-    var textStyle = TextStyle(
-      fontFamily: "OldStandard",
-      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
-      color: StoreProvider.of<AppState>(context).state.settings.fontColor,
-    );
     const titleStyle = const TextStyle(
       fontWeight: FontWeight.bold,
       color:  Colors.red,
@@ -388,7 +371,7 @@ class _MainPageState extends State<MainPage>
                   return Container(
                     child: ListTile(
                       title: Text(
-                        item.name ?? "Без названия",
+                        item.name,
                         style: TextStyle(fontFamily: "OldStandard", color: Colors.red),
                       ),
                       // Зачало ведёт в раздел Библии, обычное чтение — в текст.
@@ -409,9 +392,7 @@ class _MainPageState extends State<MainPage>
   Widget build(BuildContext context) {
     DateFormat format = DateFormat("dd.MM.yyyy");
     // String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
-    String value = StoreProvider.of<AppState>(context).state.common.date != null
-        ? format.format(StoreProvider.of<AppState>(context).state.common.date)
-        : "Не задано";
+    String value = format.format(_selectedDate);
     return DefaultTabController(
         length: 3,
         child: Scaffold(
@@ -446,31 +427,9 @@ class _MainPageState extends State<MainPage>
               onTap: (int _index) {
                 setState(() {
                   if (_index == 0) { // День назад
-                    if (StoreProvider.of<AppState>(context).state.common.date != null) {
-                      DateTime newDate = StoreProvider.of<AppState>(context).state.common.date!.subtract(const Duration(days: 1));
-                      StoreProvider.of<AppState>(context).dispatch(
-                          ChangeCommonDateAction(newDate)
-                      );
-                      data = _loadDay(
-                          DateFormat('yyyy-MM-dd').format(
-                              newDate
-                            // .subtract(const Duration(days: 13))
-                          )
-                      );
-                    }
+                    _goToDay(_selectedDate.subtract(const Duration(days: 1)));
                   } else if (_index == 1) { // День вперед
-                    if (StoreProvider.of<AppState>(context).state.common.date != null) {
-                      DateTime newDate = StoreProvider.of<AppState>(context).state.common.date!.add(const Duration(days: 1));
-                      StoreProvider.of<AppState>(context).dispatch(
-                          ChangeCommonDateAction(newDate)
-                      );
-                      data = _loadDay(
-                          DateFormat('yyyy-MM-dd').format(
-                              newDate
-                            // .subtract(const Duration(days: 13))
-                          )
-                      );
-                    }
+                    _goToDay(_selectedDate.add(const Duration(days: 1)));
                   }
                 });
               },
@@ -565,7 +524,7 @@ class _MainPageState extends State<MainPage>
                             final item = list2.list[index];
                             return Container(
                               child: ListTile(
-                                title: Text(item.name ?? "Без названия", style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),
+                                title: Text(item.name, style: TextStyle(fontFamily: "OldStandard", color: Colors.red),),
                                 subtitle: Text(
                                     "Обновлено ${item.updatedAt.day}.${item.updatedAt.month}.${item.updatedAt.year}"),
                                 onTap: () => {
@@ -640,11 +599,7 @@ class _MainPageState extends State<MainPage>
                           onPressed: () {
                             setState(() {
                               data = _loadDay(
-                                  DateFormat('yyyy-MM-dd').format(
-                                      StoreProvider.of<AppState>(context).state.common.date ??
-                                          DateTime.now().subtract(const Duration(days: 13))
-                                  )
-                              );
+                                  DateFormat('yyyy-MM-dd').format(_selectedDate));
                             });
                           },
                           child: Text("Повторить"),

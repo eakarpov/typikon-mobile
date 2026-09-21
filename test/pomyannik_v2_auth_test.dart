@@ -147,7 +147,7 @@ void main() {
       final methods = <String>[];
       final client = MockClient((request) async {
         methods.add(request.method);
-        bodies.add((request as http.Request).bodyBytes);
+        bodies.add(request.bodyBytes);
         return json('{"items":[]}', 201);
       });
 

@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_redux/flutter_redux.dart';
-import 'package:redux/redux.dart';
 
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/apiMapper/calendar.dart';
 import 'package:typikon/dto/calendar.dart';
 import 'package:typikon/store/actions/actions.dart';
-import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/components/verse_list.dart';
 import 'package:typikon/components/day_memories.dart';
@@ -35,9 +32,6 @@ class _CalculatorPageState extends State<CalculatorPage> {
   final Map<String, GlobalKey> _sectionKeys = {};
   final Map<String, GlobalKey> _itemKeys = {};
 
-  @override
-  String? get restorationId => "test";
-
   // final RestorableDateTime _selectedDate = RestorableDateTime(DateTime.now());
   // late final RestorableRouteFuture<DateTime?> _restorableDatePickerRouteFuture =
   // RestorableRouteFuture<DateTime?>(
@@ -53,19 +47,8 @@ class _CalculatorPageState extends State<CalculatorPage> {
   @override
   void initState() {
     super.initState();
-    currentDay = getCalendarDay(
-        DateFormat('yyyy-MM-dd').format(
-            DateTime.now()
-                // .subtract(const Duration(days: 13))
-        )
-    );
-  }
-
-  @override
-  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    // registerForRestoration(_selectedDate, 'selected_date');
-    // registerForRestoration(
-    //     _restorableDatePickerRouteFuture, 'date_picker_route_future');
+    currentDay = getCalendarDay(DateFormat('yyyy-MM-dd').format(
+        StoreProvider.of<AppState>(context, listen: false).state.common.date));
   }
 
   // static Route<DateTime> _datePickerRoute(BuildContext context, Object? arguments) {
@@ -108,6 +91,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
       // cancelText: 'Not now',
       // confirmText: 'Book',
     );
+    if (!context.mounted) return;
     if (picked != null && picked != StoreProvider.of<AppState>(context).state.common.date) {
       // setState(() {
       //   _selectedDate.value = picked;
@@ -128,25 +112,6 @@ class _CalculatorPageState extends State<CalculatorPage> {
 
   void _showSelectDate(BuildContext context) {
     return buildMaterialDatePicker(context);
-  }
-
-  void _selectDate(DateTime? newSelectedDate) {
-    if (newSelectedDate != null) {
-      // setState(() {
-      //   _selectedDate.value = newSelectedDate;
-      // });
-      StoreProvider.of<AppState>(context).dispatch(
-          ChangeCommonDateAction(newSelectedDate)
-      );
-      setState(() {
-        currentDay = getCalendarDay(
-            DateFormat('yyyy-MM-dd').format(
-                newSelectedDate
-                    // .subtract(const Duration(days: 13))
-            )
-        );
-      });
-    }
   }
 
   GlobalKey _sectionKey(String title) => _sectionKeys.putIfAbsent(title, () => GlobalKey());
@@ -254,9 +219,8 @@ class _CalculatorPageState extends State<CalculatorPage> {
   Widget build(BuildContext context) {
     DateFormat format = DateFormat("dd.MM.yyyy");
     // String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
-    String value = StoreProvider.of<AppState>(context).state.common.date != null
-        ? format.format(StoreProvider.of<AppState>(context).state.common.date)
-        : "Не задано";
+    String value =
+        format.format(StoreProvider.of<AppState>(context).state.common.date);
     return Scaffold(
       appBar: AppBar(
         title: Text(value, style: TextStyle(fontFamily: "OldStandard")),

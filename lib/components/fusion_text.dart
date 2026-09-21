@@ -1,9 +1,5 @@
-import "dart:ui";
-import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter_redux/flutter_redux.dart';
-import 'package:redux/redux.dart';
 import 'package:flutter/material.dart';
 
 import 'package:typikon/store/models/models.dart';

@@ -3,11 +3,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="su.typikon.typikon"
 >
+    <!-- Каждое разрешение названо тем, что его просит. Лишние отсюда уже
+         вычищались: QUERY_ALL_PACKAGES (его заменяет перечень <queries> ниже, а
+         в Google Play он сам по себе повод для отказа), USE_FULL_SCREEN_INTENT и
+         FOREGROUND_SERVICE — ни полноэкранных уведомлений, ни службы переднего
+         плана в приложении нет. -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <!-- background_fetch со stopOnTerminate=false: после перезагрузки задачу
+         надо завести снова. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- flutter_local_notifications. -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <queries>
         <intent>
@@ -25,6 +31,8 @@
         android:label="typikon"
         android:name="${applicationName}"
         android:networkSecurityConfig="@xml/network_security_config"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
@@ -92,10 +100,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-       <service
-           android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
-           android:exported="false"
-           android:stopWithTask="false"/>
        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
@@ -107,5 +111,4 @@
            </intent-filter>
        </receiver>
     </application>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 </manifest>

@@ -93,11 +93,14 @@ android {
             }
             minifyEnabled true
         }
+        // В profile и debug R8 не нужен: он только замедляет сборку и путает
+        // стеки при отладке, а проверять правила сжатия надо на релизе, где они
+        // и применяются. Стояло true во всех трёх — похоже, по недосмотру.
         profile {
-            minifyEnabled true
+            minifyEnabled false
         }
         debug {
-            minifyEnabled true
+            minifyEnabled false
         }
     }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:typikon/components/api_error_view.dart';
-import 'package:intl/intl.dart';
 
 import 'package:typikon/apiMapper/collections.dart';
 import 'package:typikon/dto/penticostarion.dart';
