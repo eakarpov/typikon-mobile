@@ -48,14 +48,27 @@ android {
     compileSdkVersion rootProject.ext.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
+    // Java 11, а не 8: на восьмёрке AGP ругался при каждой сборке, что значение
+    // устарело и будет убрано.
+    //
+    // Пользователя это не касается. Здесь задан язык и версия class-файлов для
+    // двух файлов самого модуля (MainActivity.kt и сгенерированный
+    // GeneratedPluginRegistrant.java) — а не то, на каких устройствах пойдёт
+    // приложение: минимальную версию Android задаёт minSdkVersion и она не
+    // тронута (24). Всё, что компилятор выдаст, D8 всё равно переводит в dex
+    // под этот minSdk, а библиотечные вызовы новее восьмёрки подменяет
+    // coreLibraryDesugaring — он включён строкой ниже и включён был всегда.
+    //
+    // jvmTarget держится в согласии с targetCompatibility: разъехавшись, они
+    // роняют сборку, и это единственное, за чем тут надо следить.
     compileOptions {
         coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '11'
     }
 
     sourceSets {
