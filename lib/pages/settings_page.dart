@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
@@ -16,6 +18,7 @@ import 'package:typikon/store/pomyannik_cache.dart';
 import 'package:typikon/store/store.dart';
 import 'package:typikon/utils/pomyannik_reminders.dart';
 import 'package:typikon/utils/reading_schemes.dart';
+import 'package:typikon/utils/commemorator.dart';
 import 'package:typikon/utils/notification_permission.dart';
 import 'package:typikon/utils/push.dart';
 import 'package:typikon/store/calendar_feed.dart';
@@ -172,6 +175,10 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() { _authInProgress = true; });
     try {
       await auth_api.signInWithGoogle(StoreProvider.of<AppState>(context));
+      // Спрашиваем сразу: иначе раздел поданных записок появился бы у
+      // подтверждённого только со следующим запуском.
+      forgetCommemorator();
+      unawaited(refreshCommemorator());
     } on GoogleSignInException catch (e) {
       // Закрыл окно входа — это не неудача, и сообщать о ней незачем.
       if (e.code != GoogleSignInExceptionCode.canceled && context.mounted) {
@@ -196,6 +203,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() { _authInProgress = true; });
     try {
       await auth_api.signOut(StoreProvider.of<AppState>(context));
+      forgetCommemorator();
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

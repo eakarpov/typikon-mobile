@@ -126,6 +126,13 @@ class SharedPrefMiddleware extends MiddlewareClass<AppState> {
         email: state.auth.email,
         name: state.auth.name,
       ));
+      // Отдельным действием, потому что вход собирает `AuthState` заново и
+      // признака о себе не знает. Без этой строки раздел поданных записок
+      // пропадал бы при каждом запуске до ответа сервера — а спрашивают его
+      // раз в сутки.
+      if (state.auth.isCommemorator) {
+        store.dispatch(CommemoratorCheckedAction(true));
+      }
     }
   }
 }

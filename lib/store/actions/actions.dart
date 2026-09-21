@@ -228,4 +228,13 @@ class SignInSuccessAction {
   }
 }
 
+/// Ответ сервера на вопрос, открыт ли человеку приём записок.
+///
+/// Спрашивается тем же разделом: отдельной ручки у сервера нет.
+class CommemoratorCheckedAction {
+  final bool isCommemorator;
+
+  CommemoratorCheckedAction(this.isCommemorator);
+}
+
 class SignOutAction {}

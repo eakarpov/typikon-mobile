@@ -25,6 +25,11 @@ enum MenuVisibility {
 
   /// Вошедшему: личные разделы без учётной записи пусты.
   signedIn,
+
+  /// Тому, кому открыт приём записок, — подтверждают это в личном кабинете на
+  /// сайте. Прочим пункта нет вовсе: заглушка «вам не открыто» в меню у всех
+  /// подряд обещает возможность, которой у человека нет.
+  commemorator,
 }
 
 /// Пункт меню — он же строка экрана-раздела.
@@ -119,7 +124,7 @@ const List<MenuSection> drawerSections = <MenuSection>[
     MenuEntry("Мои заметки", "/notes", visibility: MenuVisibility.signedIn),
     MenuEntry("Помянник", "/pomyannik", visibility: MenuVisibility.signedIn),
     MenuEntry("Поданные записки", "/pomyannik/prinyatye",
-        visibility: MenuVisibility.signedIn),
+        visibility: MenuVisibility.commemorator),
   ]),
   MenuSection(title: "Приложение", entries: <MenuEntry>[
     MenuEntry("Настройки", "/settings"),

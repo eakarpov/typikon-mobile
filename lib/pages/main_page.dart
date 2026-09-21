@@ -18,6 +18,7 @@ import '../dto/calendar.dart';
 import "../components/day_memories.dart";
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
+import '../utils/commemorator.dart';
 import '../utils/day_preloader.dart';
 import '../utils/selected_day.dart';
 import '../components/trapeza_line.dart';
@@ -29,15 +30,26 @@ const String APP_STATE_KEY = "APP_STATE";
 
 /// Пункты раздела, видимые сейчас.
 ///
-/// Личные разделы без учётной записи не прячутся из вежливости: заметок,
-/// помянника и поданных записок у невошедшего нет вовсе, и открытый пустой
-/// экран читался бы как поломка.
+/// Личные разделы без учётной записи не прячутся из вежливости: заметок и
+/// помянника у невошедшего нет вовсе, и открытый пустой экран читался бы как
+/// поломка.
+///
+/// Приём записок — отдельный случай: его открывают не входом, а подтверждением
+/// в личном кабинете на сайте. Неподтверждённому пункта нет совсем, потому что
+/// заглушка «приём вам не открыт» в меню у всех подряд обещает возможность,
+/// которой у человека нет.
 List<MenuEntry> _visibleEntries(BuildContext context, MenuSection section) {
-  final signedIn = StoreProvider.of<AppState>(context).state.auth.isSignedIn;
-  return section.entries
-      .where((entry) =>
-          entry.visibility == MenuVisibility.always || signedIn)
-      .toList();
+  final auth = StoreProvider.of<AppState>(context).state.auth;
+  return section.entries.where((entry) {
+    switch (entry.visibility) {
+      case MenuVisibility.always:
+        return true;
+      case MenuVisibility.signedIn:
+        return auth.isSignedIn;
+      case MenuVisibility.commemorator:
+        return auth.isSignedIn && auth.isCommemorator;
+    }
+  }).toList();
 }
 
 class MainPage extends StatefulWidget {
@@ -78,6 +90,9 @@ class _MainPageState extends State<MainPage>
   @override
   void initState() {
     super.initState();
+    // Открыт ли приём записок — спрашивается редко и молча: см.
+    // utils/commemorator.dart.
+    unawaited(refreshCommemorator());
     version = getVersion();
     // Отказ проглатываем нарочно, и без него было бы хуже: результат этого
     // будущего никто, кроме здешнего `then`, не ждёт, а необработанная ошибка
