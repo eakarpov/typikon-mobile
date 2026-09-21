@@ -1,6 +1,7 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../components/faceted_search.dart';
 
 import '../apiMapper/reference.dart';
 import '../components/api_error_view.dart';
@@ -16,25 +17,7 @@ class ImeninyPage extends StatefulWidget {
 }
 
 class _ImeninyPageState extends State<ImeninyPage> {
-  final TextEditingController _controller = TextEditingController();
   String _query = "";
-  String _typed = "";
-  Timer? _debounce;
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onChanged(String value) {
-    setState(() => _typed = value);
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      setState(() => _query = _typed.trim());
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,27 +29,9 @@ class _ImeninyPageState extends State<ImeninyPage> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
-            child: TextField(
-              controller: _controller,
-              onChanged: _onChanged,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: "Начало имени",
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _typed.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _controller.clear();
-                          setState(() {
-                            _typed = "";
-                            _query = "";
-                          });
-                        },
-                      ),
-                border: const OutlineInputBorder(),
-              ),
+            child: SearchQueryField(
+              hintText: "Начало имени",
+              onQuery: (query) => setState(() => _query = query),
             ),
           ),
           Expanded(

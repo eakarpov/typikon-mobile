@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter_redux/flutter_redux.dart';
 
-import 'package:typikon/store/models/models.dart';
+import 'package:typikon/utils/reading_style.dart';
+import 'package:intl/intl.dart';
+
 import 'package:typikon/apiMapper/calendar.dart';
 import 'package:typikon/dto/calendar.dart';
 import 'package:typikon/components/async_view.dart';
@@ -96,7 +96,7 @@ class _CalculatorPageState extends State<CalculatorPage>
       fontWeight: FontWeight.bold,
       color: Colors.red,
     );
-    final fontSize = StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble();
+    final fontSize = readingFontSize(context);
     return Column(
       key: _sectionKey(section.title),
       children: [
@@ -113,16 +113,13 @@ class _CalculatorPageState extends State<CalculatorPage>
                 fontFamily: "Monomakh",
               )
             else if (item.isPericope)
-              Text(
+              const ReadingText(
                 "Текст для этого языка Библии ещё не размечен.",
-                style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize, fontStyle: FontStyle.italic),
+                italic: true,
               )
             else
-              Text(
-                item.content,
-                textAlign: TextAlign.justify,
-                style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize),
-              ),
+              // Прежде калькулятор не брал ни цвета, ни выключки, ни интервала.
+              ReadingText(item.content),
             if (item.isPericope && item.bookSlug != null && item.ranges.isNotEmpty)
               Align(
                 alignment: Alignment.centerLeft,

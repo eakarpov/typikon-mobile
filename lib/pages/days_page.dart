@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:typikon/utils/reading_style.dart';
+
 import 'package:typikon/components/async_view.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
@@ -145,21 +147,11 @@ class _DaysPageState extends State<DaysPage> {
   }
 
   Widget renderItem(BuildContext context, _Section section) {
-    var textStyle = TextStyle(
-      fontFamily: "OldStandard",
-      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
-      color: StoreProvider.of<AppState>(context).state.settings.fontColor,
-    );
-    var textCsStyle = TextStyle(
-      fontFamily: "Monomakh",
-      fontSize: StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble(),
-      color: StoreProvider.of<AppState>(context).state.settings.fontColor,
-    );
     const titleStyle = const TextStyle(
       fontWeight: FontWeight.bold,
       color:  Colors.red,
     );
-    final fontSize = StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble();
+    final fontSize = readingFontSize(context);
     return Column(
       key: _sectionKey(section.title),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,9 +173,9 @@ class _DaysPageState extends State<DaysPage> {
                   fontFamily: "Monomakh",
                 )
               else
-                Text(
+                const ReadingText(
                   "Текст для этого языка Библии ещё не размечен.",
-                  style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize, fontStyle: FontStyle.italic),
+                  italic: true,
                 ),
               // Кнопка показывается только когда есть куда вести: без книги
               // или без границ она уводила бы в ошибку, а дневные ответы лежат
@@ -205,10 +197,11 @@ class _DaysPageState extends State<DaysPage> {
                 ),
               ),
             ] else if (item.text != null)
-              Text(
+              // Выключку и интервал берёт из настроек, а не прибивает к
+              // `justify`, как было здесь.
+              ReadingText(
                 getContent(item),
-                textAlign: TextAlign.justify,
-                style: item.text!.csSource ? textCsStyle : textStyle,
+                churchSlavonic: item.text!.csSource,
               ),
           ],
         )),

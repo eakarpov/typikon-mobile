@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:typikon/components/dossier.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:typikon/apiMapper/places.dart';
@@ -185,7 +187,7 @@ class _PlacePageState extends State<PlacePage> {
           _header(place),
           ...sections.expand((section) => [
                 Container(key: _anchor(section.title)),
-                _Section(title: section.title, children: section.children),
+                DossierSection(title: section.title, children: section.children),
               ]),
           if (_mentionsLoading)
             const Padding(
@@ -275,7 +277,7 @@ class _PlacePageState extends State<PlacePage> {
     if (mentions != null && mentions.articles.isNotEmpty) {
       sections.add(_SectionSpec("Библейская энциклопедия", [
         for (final article in mentions.articles)
-          _Line(
+          DossierLine(
             title: article.name,
             subtitle: "архим. Никифор, 1891",
             onTap: () => Navigator.pushNamed(context, "/reading", arguments: article.address),
@@ -290,14 +292,14 @@ class _PlacePageState extends State<PlacePage> {
     if (place.periods.isNotEmpty) {
       sections.add(_SectionSpec("Эпохи", [
         for (final period in place.periods)
-          _Line(title: period.label, subtitle: placeSpanLabel(period.from, period.to)),
+          DossierLine(title: period.label, subtitle: placeSpanLabel(period.from, period.to)),
       ]));
     }
 
     if (mentions != null && mentions.relations.isNotEmpty) {
       sections.add(_SectionSpec("Преемственность и отождествления", [
         for (final relation in mentions.relations)
-          _Line(
+          DossierLine(
             title: relation.otherName,
             subtitle: [
               placeRelationLabel(relation.type, relation.direction),
@@ -332,7 +334,7 @@ class _PlacePageState extends State<PlacePage> {
     if (mentions != null && mentions.texts.isNotEmpty) {
       sections.add(_SectionSpec("В чтениях", [
         for (final text in mentions.texts)
-          _Line(
+          DossierLine(
             title: text.name,
             subtitle: text.book ?? "",
             onTap: () => Navigator.pushNamed(context, "/reading", arguments: text.address),
@@ -364,7 +366,7 @@ class _PlacePageState extends State<PlacePage> {
         // Без перехода: экрана отдельного песнопения в приложении нет, и
         // подчёркнутая строка обещала бы страницу, которой не существует.
         for (final chant in mentions.chants.items)
-          _Line(
+          DossierLine(
             title: chant.context,
             subtitle: [
               if (mentions.chants.labelled && chant.unit != null) chant.unit!,
@@ -382,7 +384,7 @@ class _PlacePageState extends State<PlacePage> {
             child: Text(mentions.saintsCaveat, style: Theme.of(context).textTheme.bodySmall),
           ),
         for (final saint in mentions.saints)
-          _Line(
+          DossierLine(
             title: saint.name,
             subtitle: saint.texts > 1 ? "в ${saint.texts} чтениях" : "",
             onTap: () => Navigator.pushNamed(context, "/saints", arguments: saint.dneslovId),
@@ -405,7 +407,7 @@ class _PlacePageState extends State<PlacePage> {
       final lines = <Widget>[];
       for (final name in names) {
         if (!seen.add("${name.name}|${name.lang}")) continue;
-        lines.add(_Line(
+        lines.add(DossierLine(
           title: name.transliteration == null || name.transliteration!.isEmpty
               ? name.name
               : "${name.name} (${name.transliteration})",
@@ -456,7 +458,7 @@ class _PlacePageState extends State<PlacePage> {
           ),
         if (verses != null)
           for (final verse in verses)
-            _Line(
+            DossierLine(
               title: "${verse.abbr ?? book.name} ${verse.chapter}:${verse.verse}",
               subtitle: verse.context,
               onTap: () => _openVerse(verse),
@@ -470,7 +472,7 @@ class _PlacePageState extends State<PlacePage> {
     for (final key in place.externals) {
       final url = placeExternalUrl(key.source, key.id);
       if (url == null) continue;
-      external.add(_Line(
+      external.add(DossierLine(
         title: placeSourceLabel(key.source),
         subtitle: key.id,
         onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
@@ -478,7 +480,7 @@ class _PlacePageState extends State<PlacePage> {
     }
     for (final link in place.links) {
       if (link.url == null || link.url!.isEmpty) continue;
-      external.add(_Line(
+      external.add(DossierLine(
         title: link.text ?? link.url!,
         subtitle: "",
         onTap: () => launchUrl(Uri.parse(link.url!), mode: LaunchMode.externalApplication),
@@ -489,7 +491,7 @@ class _PlacePageState extends State<PlacePage> {
 
     if (external.isEmpty && attribution.isEmpty) return const SizedBox.shrink();
 
-    return _Section(title: "Источники", children: [
+    return DossierSection(title: "Источники", children: [
       ...external,
       if (attribution.isNotEmpty)
         Padding(
@@ -508,63 +510,4 @@ class _SectionSpec {
   const _SectionSpec(this.title, this.children);
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
 
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 4.0),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontFamily: "OldStandard",
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-          ),
-        ),
-        ...children,
-      ],
-    );
-  }
-}
-
-class _Line extends StatelessWidget {
-  const _Line({required this.title, required this.subtitle, this.onTap});
-
-  final String title;
-  final String subtitle;
-
-  /// Есть ли куда вести. Строка без перехода не красится: подчёркнутая строка
-  /// обещала бы страницу, которой нет.
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final body = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontFamily: "OldStandard",
-            color: onTap == null ? null : Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        if (subtitle.isNotEmpty)
-          Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    );
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 4.0),
-      child: onTap == null ? body : InkWell(onTap: onTap, child: body),
-    );
-  }
-}
