@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:typikon/components/api_error_view.dart';
+import 'package:typikon/components/async_view.dart';
 
 import 'package:typikon/apiMapper/collections.dart';
 import 'package:typikon/dto/triodion.dart';
-import "package:typikon/dto/week.dart";
 import 'package:typikon/components/week_tile.dart';
 
 String getTitle(int? value, String? type, String? label) {
@@ -42,6 +41,11 @@ class _OutsidePageState extends State<OutsidePage> {
 
   /// Повторная попытка после отказа. Прежде на её месте стоял текст
   /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  Future<void> _refresh() {
+    _retry();
+    return settle(data);
+  }
+
   void _retry() {
     setState(() {
       data = getOutTriodion();
@@ -56,34 +60,22 @@ class _OutsidePageState extends State<OutsidePage> {
       ),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<TriodionCollection>(
+        child: AsyncView<TriodionCollection>(
           future: data,
-          builder: (context, future) {
-            if (future.hasData) {
-              List<WeekWithDays> list = future.data!.weeks;
-              return ListView.builder(
-                scrollDirection: Axis.vertical,
-                itemCount: list.length,
-                itemBuilder: (context, index) {
+          message: "Не удалось загрузить чтения вне Триоди.",
+          onRetry: _retry,
+          onRefresh: _refresh,
+          isEmpty: (data) => data.weeks.isEmpty,
+          emptyMessage: "Седмиц вне Триоди нет.",
+          builder: (context, data) {
+            final list = data.weeks;
+            return ListView.builder(
+              itemCount: list.length,
+              itemBuilder: (context, index) {
                   final item = list[index];
                   // Дни грузятся по раскрытии: перечень их больше не несёт.
                   return WeekTile(week: item, title: getTitle(item.value, item.type, item.label));
-                },
-              );
-            } else if (future.hasError) {
-              return ApiErrorView(
-                error: future.error,
-                message: "Не удалось загрузить чтения вне Триоди.",
-                onRetry: _retry,
-              );
-            }
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              child: const Center(child: CircularProgressIndicator()),
+              },
             );
           },
         ),

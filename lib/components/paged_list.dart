@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../apiMapper/singing.dart';
-import '../apiMapper/v2/errors.dart';
 import '../dto/paged.dart';
 import 'api_error_view.dart';
 
@@ -143,7 +141,7 @@ class _PagedListState<T> extends State<PagedList<T>> {
   @override
   Widget build(BuildContext context) {
     if (_items.isEmpty) {
-      if (_error != null) return searchErrorView(context, _error!, widget.errorMessage, _loadNextPage);
+      if (_error != null) return errorViewFor(context, _error!, widget.errorMessage, _loadNextPage);
       if (_isLoading || !_loadedOnce) return const Center(child: CircularProgressIndicator());
       return searchHint(widget.emptyMessage);
     }
@@ -163,7 +161,7 @@ class _PagedListState<T> extends State<PagedList<T>> {
 
   Widget _footer(BuildContext context) {
     if (_error != null) {
-      return searchErrorView(context, _error!, widget.errorMessage, _loadNextPage);
+      return errorViewFor(context, _error!, widget.errorMessage, _loadNextPage);
     }
     if (_isLoading) {
       return const Padding(
@@ -173,50 +171,4 @@ class _PagedListState<T> extends State<PagedList<T>> {
     }
     return const SizedBox.shrink();
   }
-}
-
-/// Короткая подсказка вместо списка — «ещё не искали», «ничего не нашлось».
-Widget searchHint(String message) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Text(message, textAlign: TextAlign.center),
-      ),
-    );
-
-/// Отказ поиска, названный своим именем.
-///
-/// Четыре случая, и каждый читателю говорит разное: слишком короткий запрос —
-/// его дело поправимо; корпус не выложен — не его вина и повторять бесполезно;
-/// раздел не дан по ключу — тем более; слишком часто — надо подождать. Общее
-/// «не удалось выполнить поиск» на всех четырёх было бы неправдой в трёх, и в
-/// трёх же предлагало бы кнопку «Повторить» там, где повтор не поможет.
-Widget searchErrorView(
-  BuildContext context,
-  Object error,
-  String fallbackMessage,
-  VoidCallback onRetry,
-) {
-  if (error is SearchQueryTooShort) {
-    return searchHint("Введите хотя бы ${error.minLength} символа.");
-  }
-
-  if (error is CorpusUnavailableException) {
-    return ApiErrorView(
-      error: error,
-      message: error.message,
-      hint: "Это не поломка приложения: корпус певческих текстов выкладывается "
-          "на сервер отдельно, и сейчас его там нет. Повторять бесполезно.",
-    );
-  }
-
-  if (error is ApiUnauthorizedException) {
-    // Повторять нечего: раздел не дают, а не он сломался.
-    return ApiErrorView(error: error, message: error.message);
-  }
-
-  if (error is ApiRateLimitedException) {
-    return ApiErrorView(error: error, message: error.message, hint: error.hint, onRetry: onRetry);
-  }
-
-  return ApiErrorView(error: error, message: fallbackMessage, onRetry: onRetry);
 }

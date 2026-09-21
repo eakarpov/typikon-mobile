@@ -54,6 +54,75 @@ Color readingLinkColor(BuildContext context) {
   return isLightText ? const Color(0xFF82B1FF) : const Color(0xFF1565C0);
 }
 
+/// Размер текста чтений, выбранный читателем.
+double readingFontSize(BuildContext context) =>
+    StoreProvider.of<AppState>(context).state.settings.fontSize.toDouble();
+
+/// Стиль текста чтения — все настройки читателя разом.
+///
+/// Их шесть: размер, цвет, фон, интервал, выключка и ширина колонки. Собирались
+/// они в каждом месте заново, и половина мест про половину настроек не знала:
+/// калькулятор не брал ни цвет, ни выключку, страница дня прибивала выключку к
+/// `justify` и забывала интервал, а разметка Markdown не знала ни об одной.
+/// Настройка, которую половина экранов не соблюдает, хуже отсутствующей: человек
+/// её выставил и считает, что она действует.
+///
+/// [churchSlavonic] — набран ли текст церковнославянским: у него свой шрифт
+/// (Monomakh), потому что OldStandard не несёт ни надстрочных знаков, ни
+/// буквенных цифр (см. utils/bible_style.dart).
+TextStyle readingTextStyle(
+  BuildContext context, {
+  bool churchSlavonic = false,
+  bool italic = false,
+}) {
+  return TextStyle(
+    fontFamily: churchSlavonic ? "Monomakh" : "OldStandard",
+    fontSize: readingFontSize(context),
+    height: readingLineHeight(context),
+    color: readingTextColor(context),
+    fontStyle: italic ? FontStyle.italic : null,
+  );
+}
+
+/// Проза чтения: строка, набранная по настройкам читателя.
+///
+/// Для всего, что рисуется обычным [Text], — содержимое чтения на странице дня
+/// и в калькуляторе, пояснения, жития. Текст со сносками, местами и заметками
+/// идёт мимо: он собирается из кусков и живёт в `components/fusion_text.dart`,
+/// но стиль берёт отсюда же.
+class ReadingText extends StatelessWidget {
+  const ReadingText(
+    this.text, {
+    super.key,
+    this.churchSlavonic = false,
+    this.italic = false,
+  });
+
+  final String text;
+  final bool churchSlavonic;
+  final bool italic;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      textAlign: readingTextAlign(context),
+      style: readingTextStyle(
+        context,
+        churchSlavonic: churchSlavonic,
+        italic: italic,
+      ),
+    );
+  }
+}
+
+/// Та же выключка, что и у [readingTextAlign], но в виде `WrapAlignment` —
+/// её ждёт таблица стилей разметки.
+WrapAlignment readingWrapAlignment(BuildContext context) =>
+    readingTextAlign(context) == TextAlign.left
+        ? WrapAlignment.start
+        : WrapAlignment.spaceBetween;
+
 /// Колонка чтения заданной читателем ширины.
 ///
 /// Без выбора не делает ничего: на телефоне ограничивать нечего, а лишний

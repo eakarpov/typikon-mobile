@@ -1,6 +1,7 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../components/faceted_search.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/paged_list.dart';
@@ -21,29 +22,13 @@ class PrayersPage extends StatefulWidget {
 }
 
 class _PrayersPageState extends State<PrayersPage> {
-  final TextEditingController _controller = TextEditingController();
-  Timer? _debounce;
 
   String _query = "";
-  String _typed = "";
   String? _kind;
 
   PrayerFacets _facets = const PrayerFacets();
 
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
 
-  void _onQueryChanged(String value) {
-    _typed = value;
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      if (mounted) setState(() => _query = _typed.trim());
-    });
-  }
 
   Future<Paged<Prayer>> _load(int offset) async {
     final page = await getPrayers(query: _query, offset: offset, kind: _kind);
@@ -66,59 +51,23 @@ class _PrayersPageState extends State<PrayersPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 4.0),
-              child: TextField(
-                controller: _controller,
-                onChanged: _onQueryChanged,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: "При ком или по началу",
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _typed.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _controller.clear();
-                            setState(() {
-                              _typed = "";
-                              _query = "";
-                            });
-                          },
-                        ),
-                  border: const OutlineInputBorder(),
-                ),
+              child: SearchQueryField(
+                hintText: "При ком или по началу",
+                onQuery: (query) => setState(() => _query = query),
               ),
             ),
-            if (_facets.kinds.length > 1)
-              SizedBox(
-                height: 52.0,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
-                      child: PopupMenuButton<String?>(
-                        onSelected: (value) => setState(() => _kind = value),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem<String?>(value: null, child: Text("любой род")),
-                          ..._facets.kinds.map((item) => PopupMenuItem<String?>(
-                                value: item,
-                                child: Text(prayerKindLabel(item)),
-                              )),
-                        ],
-                        child: Chip(
-                          label: Text(_kind == null ? "род" : prayerKindLabel(_kind!)),
-                          avatar: Icon(
-                            _kind == null ? Icons.filter_list : Icons.check,
-                            size: 16.0,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+            FacetBar(chips: [
+              // Отбор с одним значением ничего не отбирает, а место занимает.
+              if (_facets.kinds.length > 1)
+                FacetChoice<String>(
+                  name: "род",
+                  anyLabel: "любой род",
+                  value: _kind,
+                  values: _facets.kinds,
+                  nameOf: prayerKindLabel,
+                  onPicked: (value) => setState(() => _kind = value),
                 ),
-              ),
+            ]),
             Expanded(
               child: PagedList<Prayer>(
                 resetToken: "$_query|$_kind",

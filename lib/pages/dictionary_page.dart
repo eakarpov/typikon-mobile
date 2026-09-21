@@ -1,9 +1,11 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../components/faceted_search.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/reference.dart';
+import '../components/api_error_view.dart';
 import '../components/paged_list.dart';
 import '../dto/reference.dart';
 import '../store/models/models.dart';
@@ -18,25 +20,7 @@ class DictionaryPage extends StatefulWidget {
 }
 
 class _DictionaryPageState extends State<DictionaryPage> {
-  final TextEditingController _controller = TextEditingController();
   String _query = "";
-  String _typed = "";
-  Timer? _debounce;
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onChanged(String value) {
-    setState(() => _typed = value);
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      setState(() => _query = _typed.trim());
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,16 +32,11 @@ class _DictionaryPageState extends State<DictionaryPage> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
-            child: TextField(
-              controller: _controller,
+            child: SearchQueryField(
+              hintText: "Начало слова",
               autofocus: true,
-              onChanged: _onChanged,
-              textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
-                hintText: "Начало слова",
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-              ),
+              delay: const Duration(milliseconds: 500),
+              onQuery: (query) => setState(() => _query = query),
             ),
           ),
           Expanded(
@@ -132,7 +111,7 @@ class _LexemePageState extends State<LexemePage> {
         future: lexeme,
         builder: (context, future) {
           if (future.hasError) {
-            return searchErrorView(
+            return errorViewFor(
               context,
               future.error!,
               "Не удалось открыть словарную статью.",

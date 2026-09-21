@@ -1,6 +1,7 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../components/faceted_search.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/paged_list.dart';
@@ -22,30 +23,14 @@ class AkathistsPage extends StatefulWidget {
 }
 
 class _AkathistsPageState extends State<AkathistsPage> {
-  final TextEditingController _controller = TextEditingController();
-  Timer? _debounce;
 
   String _query = "";
-  String _typed = "";
   String? _subject;
   String? _status;
 
   AkathistFacets _facets = const AkathistFacets();
 
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
 
-  void _onQueryChanged(String value) {
-    _typed = value;
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      if (mounted) setState(() => _query = _typed.trim());
-    });
-  }
 
   Future<Paged<Akathist>> _load(int offset) async {
     final page = await getAkathists(
@@ -70,55 +55,32 @@ class _AkathistsPageState extends State<AkathistsPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 4.0),
-              child: TextField(
-                controller: _controller,
-                onChanged: _onQueryChanged,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: "Кому акафист: Богородице, Николаю",
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _typed.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _controller.clear();
-                            setState(() {
-                              _typed = "";
-                              _query = "";
-                            });
-                          },
-                        ),
-                  border: const OutlineInputBorder(),
-                ),
+              child: SearchQueryField(
+                hintText: "Кому акафист: Богородице, Николаю",
+                onQuery: (query) => setState(() => _query = query),
               ),
             ),
-            if (_facets.subjectKinds.length > 1 || _facets.statuses.length > 1)
-              SizedBox(
-                height: 52.0,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                  children: [
-                    if (_facets.subjectKinds.length > 1)
-                      _choice(
-                        label: "кому",
-                        value: _subject,
-                        values: _facets.subjectKinds,
-                        nameOf: subjectKindLabel,
-                        onPicked: (value) => setState(() => _subject = value),
-                      ),
-                    if (_facets.statuses.length > 1)
-                      _choice(
-                        label: "достоинство",
-                        value: _status,
-                        values: _facets.statuses,
-                        nameOf: akathistStatusLabel,
-                        onPicked: (value) => setState(() => _status = value),
-                      ),
-                  ],
+            FacetBar(chips: [
+              // Отбор с одним значением ничего не отбирает, а место занимает.
+              if (_facets.subjectKinds.length > 1)
+                FacetChoice<String>(
+                  name: "кому",
+                  anyLabel: "любое кому",
+                  value: _subject,
+                  values: _facets.subjectKinds,
+                  nameOf: subjectKindLabel,
+                  onPicked: (value) => setState(() => _subject = value),
                 ),
-              ),
+              if (_facets.statuses.length > 1)
+                FacetChoice<String>(
+                  name: "достоинство",
+                  anyLabel: "любое достоинство",
+                  value: _status,
+                  values: _facets.statuses,
+                  nameOf: akathistStatusLabel,
+                  onPicked: (value) => setState(() => _status = value),
+                ),
+            ]),
             Expanded(
               child: PagedList<Akathist>(
                 resetToken: "$_query|$_subject|$_status",
@@ -134,28 +96,6 @@ class _AkathistsPageState extends State<AkathistsPage> {
     );
   }
 
-  Widget _choice({
-    required String label,
-    required String? value,
-    required List<String> values,
-    required String Function(String) nameOf,
-    required void Function(String?) onPicked,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
-      child: PopupMenuButton<String?>(
-        onSelected: onPicked,
-        itemBuilder: (context) => [
-          PopupMenuItem<String?>(value: null, child: Text("любое $label")),
-          ...values.map((item) => PopupMenuItem<String?>(value: item, child: Text(nameOf(item)))),
-        ],
-        child: Chip(
-          label: Text(value == null ? label : nameOf(value)),
-          avatar: Icon(value == null ? Icons.filter_list : Icons.check, size: 16.0),
-        ),
-      ),
-    );
-  }
 }
 
 class _AkathistTile extends StatelessWidget {

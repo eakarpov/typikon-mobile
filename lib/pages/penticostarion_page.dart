@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:typikon/components/api_error_view.dart';
+import 'package:typikon/components/async_view.dart';
 
 import 'package:typikon/apiMapper/collections.dart';
 import 'package:typikon/dto/penticostarion.dart';
-import "package:typikon/dto/week.dart";
 import 'package:typikon/components/week_tile.dart';
 
 String getTitle(int? value, String? type) {
@@ -33,6 +32,11 @@ class _PenticostarionPageState extends State<PenticostarionPage> {
 
   /// Повторная попытка после отказа. Прежде на её месте стоял текст
   /// исключения: прочесть его нечем, а повторить — нечем тем более.
+  Future<void> _refresh() {
+    _retry();
+    return settle(penticostarion);
+  }
+
   void _retry() {
     setState(() {
       penticostarion = getPenticostarion();
@@ -47,34 +51,22 @@ class _PenticostarionPageState extends State<PenticostarionPage> {
       ),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        child: FutureBuilder<PenticostarionCollection>(
+        child: AsyncView<PenticostarionCollection>(
           future: penticostarion,
-          builder: (context, future) {
-            if (future.hasData) {
-              List<WeekWithDays> list = future.data!.weeks;
-              return ListView.builder(
-                scrollDirection: Axis.vertical,
-                itemCount: list.length,
-                itemBuilder: (context, index) {
+          message: "Не удалось загрузить Цветную Триодь.",
+          onRetry: _retry,
+          onRefresh: _refresh,
+          isEmpty: (data) => data.weeks.isEmpty,
+          emptyMessage: "Седмиц в этом периоде нет.",
+          builder: (context, data) {
+            final list = data.weeks;
+            return ListView.builder(
+              itemCount: list.length,
+              itemBuilder: (context, index) {
                   final item = list[index];
                   // Дни грузятся по раскрытии: перечень их больше не несёт.
                   return WeekTile(week: item, title: getTitle(item.value, item.type));
-                },
-              );
-            } else if (future.hasError) {
-              return ApiErrorView(
-                error: future.error,
-                message: "Не удалось загрузить Цветную Триодь.",
-                onRetry: _retry,
-              );
-            }
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              child: const Center(child: CircularProgressIndicator()),
+              },
             );
           },
         ),

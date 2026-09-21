@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+
+import 'package:typikon/components/dossier.dart';
+import 'package:typikon/components/reading_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:typikon/apiMapper/saints.dart';
@@ -174,20 +176,9 @@ class _SaintPageState extends State<SaintPage> {
       return const _Quiet("Жития у этой памяти на dneslov.org нет.");
     }
 
-    // Шрифт чтений, а не системный: до сих пор житие было единственным местом
-    // на странице, набранным чужим.
-    final theme = MarkdownStyleSheet.fromTheme(Theme.of(context));
-    return Markdown(
-      data: life.memo!.description,
-      styleSheet: theme.copyWith(
-        p: theme.p?.copyWith(fontFamily: "OldStandard"),
-        h1: theme.h1?.copyWith(fontFamily: "OldStandard"),
-        h2: theme.h2?.copyWith(fontFamily: "OldStandard"),
-        h3: theme.h3?.copyWith(fontFamily: "OldStandard"),
-        listBullet: theme.listBullet?.copyWith(fontFamily: "OldStandard"),
-        blockquote: theme.blockquote?.copyWith(fontFamily: "OldStandard"),
-      ),
-    );
+    // Настройки чтения, а не только шрифт: размер, цвет и интервал житие
+    // брало системные, хотя это такой же текст для чтения, как прочие.
+    return ReadingMarkdown(life.memo!.description);
   }
 
   // --- Наша запись --------------------------------------------------------
@@ -214,10 +205,10 @@ class _SaintPageState extends State<SaintPage> {
       children: [
         _head(saint),
         if (saint.memoryDates.isNotEmpty)
-          _Section(
+          DossierSection(
             title: "Дни памяти",
             children: saint.memoryDates
-                .map((date) => _Line(
+                .map((date) => DossierLine(
                       title: date.civil,
                       subtitle: [
                         date.julian,
@@ -227,14 +218,14 @@ class _SaintPageState extends State<SaintPage> {
                 .toList(),
           ),
         if (saint.memories.isNotEmpty)
-          _Section(
+          DossierSection(
             // Не «дни памяти»: здесь служба, напечатанная в книге, а не число
             // в календаре, и знак службы — как раз то, чем она отличается от
             // прочих памятей того же дня.
             title: "Памяти в книгах",
             children: saint.memories.map((memory) {
               final sign = serviceSignLabel(memory.sign);
-              return _Line(
+              return DossierLine(
                 title: memory.label,
                 subtitle: [
                   if ((memory.address ?? "").isNotEmpty) memory.address!,
@@ -244,10 +235,10 @@ class _SaintPageState extends State<SaintPage> {
             }).toList(),
           ),
         if (akathists != null && akathists.isNotEmpty)
-          _Section(
+          DossierSection(
             title: "Акафисты",
             children: akathists
-                .map((akathist) => _Line(
+                .map((akathist) => DossierLine(
                       title: akathist.title ?? akathist.memory ?? "Акафист",
                       subtitle: akathist.stanzas == null ? "" : "икосов и кондаков: ${akathist.stanzas}",
                       // Вероятнее всего, это и будет главным входом в раздел:
@@ -260,19 +251,19 @@ class _SaintPageState extends State<SaintPage> {
                 .toList(),
           ),
         if (saint.dedications.isNotEmpty)
-          _Section(
+          DossierSection(
             title: "Храмы",
             children: saint.dedications
-                .map((dedication) => _Line(
+                .map((dedication) => DossierLine(
                       title: dedication.name,
                       subtitle: _temples(dedication.count),
                     ))
                 .toList(),
           ),
         if (saint.noble != null)
-          _Section(
+          DossierSection(
             title: "Родословная",
-            children: [_Line(title: saint.noble!.name ?? "Есть запись в родословной", subtitle: "")],
+            children: [DossierLine(title: saint.noble!.name ?? "Есть запись в родословной", subtitle: "")],
           ),
         if ((saint.caveat ?? "").isNotEmpty)
           Padding(
@@ -357,9 +348,9 @@ class _SaintPageState extends State<SaintPage> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       children: [
         if (saint.texts.isNotEmpty)
-          _Section(title: "Служба", children: saint.texts.map(_text).toList()),
+          DossierSection(title: "Служба", children: saint.texts.map(_text).toList()),
         if (saint.mentions.isNotEmpty)
-          _Section(title: "Упоминания", children: saint.mentions.map(_text).toList()),
+          DossierSection(title: "Упоминания", children: saint.mentions.map(_text).toList()),
       ],
     );
   }
@@ -387,66 +378,7 @@ String _temples(int count) {
   return "$count храмов";
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
 
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 4.0),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontFamily: "OldStandard",
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-          ),
-        ),
-        ...children,
-      ],
-    );
-  }
-}
-
-class _Line extends StatelessWidget {
-  const _Line({required this.title, required this.subtitle, this.onTap});
-
-  final String title;
-  final String subtitle;
-
-  /// Есть ли куда вести. Строки досье по большей части никуда не ведут —
-  /// подчёркнутая строка без перехода обещала бы страницу, которой нет.
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final body = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontFamily: "OldStandard",
-            color: onTap == null ? null : Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        if (subtitle.isNotEmpty)
-          Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    );
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 4.0),
-      child: onTap == null ? body : InkWell(onTap: onTap, child: body),
-    );
-  }
-}
 
 /// Пустой раздел словами. Пустой экран читатель прочтёт как незагрузившийся.
 class _Quiet extends StatelessWidget {

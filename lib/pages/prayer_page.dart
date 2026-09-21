@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/singing.dart';
-import '../components/paged_list.dart' show searchErrorView;
+import '../components/async_view.dart';
 import '../dto/corpus.dart';
 import '../store/models/models.dart';
 import '../utils/chant_style.dart';
@@ -32,6 +32,12 @@ class _PrayerPageState extends State<PrayerPage> {
     _load();
   }
 
+  /// То же обновление, но жестом. Ждём ответа: иначе кольцо пропадёт раньше.
+  Future<void> _refresh() {
+    setState(_load);
+    return settle(prayer);
+  }
+
   void _load() {
     prayer = getPrayer(widget.id);
   }
@@ -47,21 +53,12 @@ class _PrayerPageState extends State<PrayerPage> {
       ),
       body: Container(
         color: readingBackgroundColor(context),
-        child: FutureBuilder<PrayerDetail>(
+        child: AsyncView<PrayerDetail>(
           future: prayer,
-          builder: (context, future) {
-            if (future.hasError) {
-              return searchErrorView(
-                context,
-                future.error!,
-                "Не удалось открыть молитву.",
-                () => setState(_load),
-              );
-            }
-            if (!future.hasData) return const Center(child: CircularProgressIndicator());
-
-            return _body(context, future.data!, fontSize);
-          },
+          message: "Не удалось открыть молитву.",
+          onRetry: () => setState(_load),
+          onRefresh: _refresh,
+          builder: (context, data) => _body(context, data, fontSize),
         ),
       ),
     );

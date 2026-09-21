@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:typikon/components/dossier.dart';
+
 import '../apiMapper/pomyannik.dart';
 import '../apiMapper/session.dart';
 import '../components/api_error_view.dart';
@@ -227,11 +229,11 @@ class _Card extends StatelessWidget {
           ),
         ),
         if (memorial != null) ...[
-          const _Section("Дни поминовения"),
-          _Line("Третий день", humanDate(memorial.third)),
-          _Line("Девятый день", humanDate(memorial.ninth)),
-          _Line("Сороковой день", humanDate(memorial.fortieth)),
-          if (memorial.years > 0) _Line("Со дня преставления", years(memorial.years)),
+          const DossierSection(title: "Дни поминовения"),
+          _FactLine("Третий день", humanDate(memorial.third)),
+          _FactLine("Девятый день", humanDate(memorial.ninth)),
+          _FactLine("Сороковой день", humanDate(memorial.fortieth)),
+          if (memorial.years > 0) _FactLine("Со дня преставления", years(memorial.years)),
           Padding(
             padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 0.0),
             child: Text(
@@ -246,15 +248,15 @@ class _Card extends StatelessWidget {
           // заказа, а не со дня кончины, и заказанный на девятый день кончится
           // на сорок восьмой. Под одним заголовком с сороковым днём они слились
           // бы в одно, чем они не являются.
-          const _Section("Сорокоуст"),
-          _Line("Начат", humanDate(sorokoust.from)),
-          _Line("Оканчивается", humanDate(sorokoust.to)),
-          _Line(
+          const DossierSection(title: "Сорокоуст"),
+          _FactLine("Начат", humanDate(sorokoust.from)),
+          _FactLine("Оканчивается", humanDate(sorokoust.to)),
+          _FactLine(
             sorokoust.done ? "Окончен" : "Идёт",
             sorokoust.done ? "" : "день ${sorokoust.passed} из 40, осталось ${sorokoust.left}",
           ),
           if ((person.sorokoust?.where ?? "").isNotEmpty)
-            _Line("Где", person.sorokoust!.where!),
+            _FactLine("Где", person.sorokoust!.where!),
         ],
         // Раздел показывается, только если в нём есть чему быть. Заголовок над
         // пустотой обещает то, чего под ним нет.
@@ -262,10 +264,10 @@ class _Card extends StatelessWidget {
             (person.baptized ?? "").isNotEmpty ||
             (person.died ?? "").isNotEmpty ||
             person.nameDay != null) ...[
-          const _Section("Даты"),
-          if ((person.born ?? "").isNotEmpty) _Line("Рождение", humanDate(person.born)),
-          if ((person.baptized ?? "").isNotEmpty) _Line("Крещение", humanDate(person.baptized)),
-          if ((person.died ?? "").isNotEmpty) _Line("Преставление", humanDate(person.died)),
+          const DossierSection(title: "Даты"),
+          if ((person.born ?? "").isNotEmpty) _FactLine("Рождение", humanDate(person.born)),
+          if ((person.baptized ?? "").isNotEmpty) _FactLine("Крещение", humanDate(person.baptized)),
+          if ((person.died ?? "").isNotEmpty) _FactLine("Преставление", humanDate(person.died)),
           if (person.nameDay != null) _NameDay(nameDay: person.nameDay!),
         ],
         // Именины считаются от дня рождения: ближайшая память после него. Без
@@ -331,26 +333,12 @@ class _NameDay extends StatelessWidget {
   }
 }
 
-class _Section extends StatelessWidget {
-  const _Section(this.title);
 
-  final String title;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 4.0),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontFamily: "OldStandard",
-                color: Theme.of(context).colorScheme.primary,
-              ),
-        ),
-      );
-}
-
-class _Line extends StatelessWidget {
-  const _Line(this.title, this.value);
+/// Строка «имя — значение»: не то же, что DossierLine, где пояснение стоит под
+/// именем. Здесь два столбца, и сводить их в один виджет значило бы склеивать
+/// разное ради экономии на строчках.
+class _FactLine extends StatelessWidget {
+  const _FactLine(this.title, this.value);
 
   final String title;
   final String value;

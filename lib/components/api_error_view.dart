@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../apiMapper/singing.dart';
+import '../apiMapper/v2/errors.dart';
+
 /// Похоже ли, что запрос не дошёл до сервера, а не сервер ответил ошибкой.
 ///
 /// Таймаут сюда тоже входит: для пользователя "сеть не отвечает" и "сервер
@@ -103,4 +106,60 @@ class ApiErrorView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Короткая подсказка вместо списка — «ещё не искали», «ничего не нашлось».
+Widget searchHint(String message) => Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Text(message, textAlign: TextAlign.center),
+      ),
+    );
+
+/// Отказ, названный своим именем.
+///
+/// Заводился для поиска, теперь общий — им же пользуется [AsyncView], так что
+/// типизированные отказы второй версии API доходят до всякой страницы, а не
+/// только до выдачи поиска.
+///
+/// Четыре случая, и каждый читателю говорит разное: слишком короткий запрос —
+/// его дело поправимо; корпус не выложен — не его вина и повторять бесполезно;
+/// раздел не дан по ключу — тем более; слишком часто — надо подождать. Общее
+/// «не удалось выполнить поиск» на всех четырёх было бы неправдой в трёх, и в
+/// трёх же предлагало бы кнопку «Повторить» там, где повтор не поможет.
+Widget errorViewFor(
+  BuildContext context,
+  Object? error,
+  String fallbackMessage,
+  VoidCallback? onRetry, {
+  String? hint,
+}) {
+  if (error is SearchQueryTooShort) {
+    return searchHint("Введите хотя бы ${error.minLength} символа.");
+  }
+
+  if (error is CorpusUnavailableException) {
+    return ApiErrorView(
+      error: error,
+      message: error.message,
+      hint: "Это не поломка приложения: корпус певческих текстов выкладывается "
+          "на сервер отдельно, и сейчас его там нет. Повторять бесполезно.",
+    );
+  }
+
+  if (error is ApiUnauthorizedException) {
+    // Повторять нечего: раздел не дают, а не он сломался.
+    return ApiErrorView(error: error, message: error.message);
+  }
+
+  if (error is ApiRateLimitedException) {
+    return ApiErrorView(error: error, message: error.message, hint: error.hint, onRetry: onRetry);
+  }
+
+  return ApiErrorView(
+    error: error,
+    message: fallbackMessage,
+    hint: hint,
+    onRetry: onRetry,
+  );
 }

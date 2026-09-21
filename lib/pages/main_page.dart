@@ -19,7 +19,7 @@ import "../components/day_memories.dart";
 import 'package:typikon/store/actions/actions.dart';
 import 'package:typikon/store/models/models.dart';
 import '../utils/day_preloader.dart';
-import '../utils/day_rollover.dart';
+import '../utils/selected_day.dart';
 import '../components/trapeza_line.dart';
 import '../utils/bible_route.dart';
 import '../utils/route_observer.dart';
@@ -55,27 +55,9 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage>
-    with SingleTickerProviderStateMixin, RouteAware, WidgetsBindingObserver {
+    with SingleTickerProviderStateMixin, RouteAware, WidgetsBindingObserver, SelectedDay {
   late Future<MainPageData> data;
   late Future<Version> version;
-
-  /// За какой день сейчас загружены (или грузятся) чтения.
-  String? _loadedDateKey;
-
-  /// Какой день был сегодняшним, когда на приложение смотрели в прошлый раз.
-  DateTime _lastSeenToday = DateTime.now();
-
-  /// Выбранный день. `common.date` не бывает null — он ставится при создании
-  /// состояния, — а проверки на null стояли в шести местах и все были мертвы.
-  DateTime get _selectedDate =>
-      StoreProvider.of<AppState>(context, listen: false).state.common.date;
-
-  /// Перейти на другой день: запомнить выбор и перезагрузить чтения.
-  void _goToDay(DateTime date) {
-    StoreProvider.of<AppState>(context, listen: false)
-        .dispatch(ChangeCommonDateAction(date));
-    data = _loadDay(DateFormat('yyyy-MM-dd').format(date));
-  }
 
   /// Что ответил сервер. Нужен ящику: пункт «Обновить приложение» показывается
   /// тому, кто предложение пропустил, — а адрес выпуска называет сервер, и до
@@ -96,9 +78,6 @@ class _MainPageState extends State<MainPage>
   @override
   void initState() {
     super.initState();
-    // Главная лежит в основании стопки экранов всё время работы приложения,
-    // поэтому за сменой дня следит она (см. utils/day_rollover.dart).
-    WidgetsBinding.instance.addObserver(this);
     version = getVersion();
     // Отказ проглатываем нарочно, и без него было бы хуже: результат этого
     // будущего никто, кроме здешнего `then`, не ждёт, а необработанная ошибка
@@ -119,30 +98,9 @@ class _MainPageState extends State<MainPage>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     routeObserver.unsubscribe(this);
     if (_preloadBannerVisible) _messenger?.hideCurrentMaterialBanner();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed || !mounted) return;
-
-    final now = DateTime.now();
-    final store = StoreProvider.of<AppState>(context, listen: false);
-    final next = dateAfterResume(
-      selected: store.state.common.date,
-      lastSeenToday: _lastSeenToday,
-      now: now,
-    );
-    _lastSeenToday = now;
-    if (next == null) return;
-
-    store.dispatch(ChangeCommonDateAction(next));
-    setState(() {
-      data = _loadDay(DateFormat('yyyy-MM-dd').format(next));
-    });
   }
 
   /// Поверх главной положили другой экран.
@@ -170,23 +128,19 @@ class _MainPageState extends State<MainPage>
     _messenger = ScaffoldMessenger.of(context);
     final route = ModalRoute.of(context);
     if (route is PageRoute) routeObserver.subscribe(this, route);
-    // Зависимости меняются не только от даты: `ModalRoute.of` дёргает этот
-    // метод на каждый экран, положенный поверх главной и снятый с неё. День
-    // перезагружаем, только если он и вправду другой, — иначе возврат из текста
-    // стоил бы запроса, крутилки и потерянного места в списке.
-    final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    if (dateKey == _loadedDateKey) return;
-    data = _loadDay(dateKey);
-    // final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // var stateString = prefs.getString(APP_STATE_KEY);
-    // print(stateString);
+  }
+
+  /// Как главная грузит свой день — остальное (когда и по какому поводу) знает
+  /// примесь SelectedDay.
+  @override
+  void loadDay(DateTime day) {
+    data = _loadDay(SelectedDay.keyOf(day));
   }
 
   /// Загружает день и, если пользователь на это согласился, следом тихо
   /// докачивает его тексты, чтобы они открылись и без сети. Ошибки
   /// предзагрузки страницы не касаются.
   Future<MainPageData> _loadDay(String date) {
-    _loadedDateKey = date;
     final future = updateData(date);
     future.then((value) {
       final day = value.day;
@@ -243,42 +197,6 @@ class _MainPageState extends State<MainPage>
         ],
       ),
     );
-  }
-
-  void buildMaterialDatePicker(BuildContext context) async {
-    DateTime now = new DateTime.now();
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      locale: const Locale("ru", "RU"),
-      // initialDate: DateTime.fromMillisecondsSinceEpoch(_selectedDate.value.millisecondsSinceEpoch! as int),
-      initialDate: StoreProvider.of<AppState>(context).state.common.date,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(now.year + 5),
-      initialEntryMode: DatePickerEntryMode.calendar,
-      initialDatePickerMode: DatePickerMode.day,
-      // helpText: 'Select booking date',
-      // cancelText: 'Not now',
-      // confirmText: 'Book',
-    );
-    if (!context.mounted) return;
-    if (picked != null && picked != StoreProvider.of<AppState>(context).state.common.date) {
-    // if (picked != null && picked != _selectedDate.value) {
-      // setState(() {
-      //   _selectedDate.value = picked;
-      // });
-      StoreProvider.of<AppState>(context).dispatch(
-          ChangeCommonDateAction(picked)
-      );
-      // Через setState: без него новый день показывался лишь потому, что
-      // закрытие окна выбора дёргало didChangeDependencies.
-      setState(() {
-        data = _loadDay(DateFormat('yyyy-MM-dd').format(picked));
-      });
-    }
-  }
-
-  void _showSelectDate(BuildContext context) {
-      return buildMaterialDatePicker(context);
   }
 
   void onLoadUpdate(BuildContext context, Version remote) async {
@@ -392,7 +310,7 @@ class _MainPageState extends State<MainPage>
   Widget build(BuildContext context) {
     DateFormat format = DateFormat("dd.MM.yyyy");
     // String value = _selectedDate.isRegistered ? format.format(_selectedDate.value) : "Не задано";
-    String value = format.format(_selectedDate);
+    String value = format.format(selectedDay);
     return DefaultTabController(
         length: 3,
         child: Scaffold(
@@ -409,7 +327,7 @@ class _MainPageState extends State<MainPage>
                   color: Colors.white,
                 ),
                 onPressed: () {
-                  _showSelectDate(context);
+                  pickDay();
                   // _restorableDatePickerRouteFuture.present();
                 },
               )
@@ -425,13 +343,11 @@ class _MainPageState extends State<MainPage>
           bottomNavigationBar: new BottomNavigationBar(
               currentIndex: 0,
               onTap: (int _index) {
-                setState(() {
-                  if (_index == 0) { // День назад
-                    _goToDay(_selectedDate.subtract(const Duration(days: 1)));
-                  } else if (_index == 1) { // День вперед
-                    _goToDay(_selectedDate.add(const Duration(days: 1)));
-                  }
-                });
+                if (_index == 0) { // День назад
+                  goToDay(selectedDay.subtract(const Duration(days: 1)));
+                } else if (_index == 1) { // День вперед
+                  goToDay(selectedDay.add(const Duration(days: 1)));
+                }
               },
               items: <BottomNavigationBarItem>[
                 new BottomNavigationBarItem(
@@ -596,12 +512,7 @@ class _MainPageState extends State<MainPage>
                           ),
                         ),
                         TextButton(
-                          onPressed: () {
-                            setState(() {
-                              data = _loadDay(
-                                  DateFormat('yyyy-MM-dd').format(_selectedDate));
-                            });
-                          },
+                          onPressed: reloadSelectedDay,
                           child: Text("Повторить"),
                         ),
                       ],

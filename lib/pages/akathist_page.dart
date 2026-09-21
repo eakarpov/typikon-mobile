@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/singing.dart';
-import '../components/paged_list.dart' show searchErrorView;
+import '../components/async_view.dart';
 import '../components/table_of_contents.dart';
 import '../dto/corpus.dart';
 import '../store/models/models.dart';
@@ -35,6 +35,12 @@ class _AkathistPageState extends State<AkathistPage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  /// То же обновление, но жестом. Ждём ответа: иначе кольцо пропадёт раньше.
+  Future<void> _refresh() {
+    setState(_load);
+    return settle(akathist);
   }
 
   void _load() {
@@ -77,21 +83,12 @@ class _AkathistPageState extends State<AkathistPage> {
       ),
       body: Container(
         color: readingBackgroundColor(context),
-        child: FutureBuilder<AkathistDetail>(
+        child: AsyncView<AkathistDetail>(
           future: akathist,
-          builder: (context, future) {
-            if (future.hasError) {
-              return searchErrorView(
-                context,
-                future.error!,
-                "Не удалось открыть акафист.",
-                () => setState(_load),
-              );
-            }
-            if (!future.hasData) return const Center(child: CircularProgressIndicator());
-
-            return _body(context, future.data!, fontSize);
-          },
+          message: "Не удалось открыть акафист.",
+          onRetry: () => setState(_load),
+          onRefresh: _refresh,
+          builder: (context, data) => _body(context, data, fontSize),
         ),
       ),
     );

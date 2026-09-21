@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:typikon/apiMapper/singing.dart';
-import 'package:typikon/components/paged_list.dart';
+import 'package:typikon/components/api_error_view.dart';
 
 // Отказ певческого корпуса. Он не поломка приложения и не вина читателя: корпус
 // выкладывается на сервер отдельно от кода, и бывает заперт на время пересборки.
@@ -13,7 +13,7 @@ void main() {
   testWidgets("невыложенный корпус не предлагает повторить", (tester) async {
     await tester.pumpWidget(wrap(
       Builder(
-        builder: (context) => searchErrorView(
+        builder: (context) => errorViewFor(
           context,
           const CorpusUnavailableException("Певческий корпус сейчас недоступен."),
           "Не удалось открыть каноны.",
@@ -33,7 +33,7 @@ void main() {
   testWidgets("прочий отказ повторить предлагает", (tester) async {
     await tester.pumpWidget(wrap(
       Builder(
-        builder: (context) => searchErrorView(
+        builder: (context) => errorViewFor(
           context,
           Exception("сеть"),
           "Не удалось открыть каноны.",

@@ -1,6 +1,7 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../components/faceted_search.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/paged_list.dart';
@@ -26,11 +27,8 @@ class CanonsPage extends StatefulWidget {
 }
 
 class _CanonsPageState extends State<CanonsPage> {
-  final TextEditingController _controller = TextEditingController();
-  Timer? _debounce;
 
   String _query = "";
-  String _typed = "";
 
   String? _book;
   int? _tone;
@@ -39,20 +37,7 @@ class _CanonsPageState extends State<CanonsPage> {
 
   CanonFacets _facets = const CanonFacets();
 
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
 
-  void _onQueryChanged(String value) {
-    _typed = value;
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      if (mounted) setState(() => _query = _typed.trim());
-    });
-  }
 
   /// Всё, от чего зависит выдача. Сменилось — список начинается заново.
   String get _token => "$_query|$_book|$_tone|$_service|$_role";
@@ -83,28 +68,10 @@ class _CanonsPageState extends State<CanonsPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 4.0),
-              child: TextField(
-                controller: _controller,
-                onChanged: _onQueryChanged,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  // Имена стоят так, как их пишет книга: в родительном падеже.
-                  hintText: "Имя или творец: Николая, Дамаскина",
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _typed.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _controller.clear();
-                            setState(() {
-                              _typed = "";
-                              _query = "";
-                            });
-                          },
-                        ),
-                  border: const OutlineInputBorder(),
-                ),
+              child: SearchQueryField(
+                // Имена стоят так, как их пишет книга: в родительном падеже.
+                hintText: "Имя или творец: Николая, Дамаскина",
+                onQuery: (query) => setState(() => _query = query),
               ),
             ),
             _filters(),
@@ -128,32 +95,32 @@ class _CanonsPageState extends State<CanonsPage> {
     // ничего не отбирает, а место занимает.
     final chips = <Widget>[
       if (_facets.books.length > 1)
-        _choice<String>(
-          label: "книга",
+        FacetChoice<String>(
+          name: "книга",
           value: _book,
           values: _facets.books,
           nameOf: bookLabel,
           onPicked: (value) => setState(() => _book = value),
         ),
       if (_facets.tones.length > 1)
-        _choice<int>(
-          label: "глас",
+        FacetChoice<int>(
+          name: "глас",
           value: _tone,
           values: _facets.tones,
           nameOf: (tone) => "глас $tone",
           onPicked: (value) => setState(() => _tone = value),
         ),
       if (_facets.services.length > 1)
-        _choice<String>(
-          label: "служба",
+        FacetChoice<String>(
+          name: "служба",
           value: _service,
           values: _facets.services,
           nameOf: serviceLabel,
           onPicked: (value) => setState(() => _service = value),
         ),
       if (_facets.roles.length > 1)
-        _choice<String>(
-          label: "роль",
+        FacetChoice<String>(
+          name: "роль",
           value: _role,
           values: _facets.roles,
           nameOf: canonRoleLabel,
@@ -161,43 +128,9 @@ class _CanonsPageState extends State<CanonsPage> {
         ),
     ];
 
-    if (chips.isEmpty) return const SizedBox.shrink();
-
-    return SizedBox(
-      height: 52.0,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        children: chips,
-      ),
-    );
+    return FacetBar(chips: chips);
   }
 
-  Widget _choice<T>({
-    required String label,
-    required T? value,
-    required List<T> values,
-    required String Function(T) nameOf,
-    required void Function(T?) onPicked,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
-      child: PopupMenuButton<T?>(
-        onSelected: onPicked,
-        itemBuilder: (context) => [
-          PopupMenuItem<T?>(value: null, child: Text("любая $label")),
-          ...values.map((item) => PopupMenuItem<T?>(value: item, child: Text(nameOf(item)))),
-        ],
-        child: Chip(
-          label: Text(value == null ? label : nameOf(value)),
-          avatar: Icon(
-            value == null ? Icons.filter_list : Icons.check,
-            size: 16.0,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _CanonTile extends StatelessWidget {

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
+import '../components/async_view.dart';
+
 import '../apiMapper/singing.dart';
-import '../components/paged_list.dart';
 import '../dto/incipit.dart';
 import '../store/models/models.dart';
 import '../utils/chant_style.dart';
@@ -37,6 +38,12 @@ class _IncipitPageState extends State<IncipitPage> {
     _load();
   }
 
+  /// То же обновление, но жестом. Ждём ответа: иначе кольцо пропадёт раньше.
+  Future<void> _refresh() {
+    setState(_load);
+    return settle(detail);
+  }
+
   void _load() {
     detail = getIncipit(widget.language, widget.incipit);
   }
@@ -50,22 +57,12 @@ class _IncipitPageState extends State<IncipitPage> {
       appBar: AppBar(
         title: const Text("Зачин", style: TextStyle(fontFamily: "OldStandard")),
       ),
-      body: FutureBuilder<IncipitDetail>(
+      body: AsyncView<IncipitDetail>(
         future: detail,
-        builder: (context, future) {
-          if (future.hasError) {
-            return searchErrorView(
-              context,
-              future.error!,
-              "Не удалось открыть зачин.",
-              () => setState(_load),
-            );
-          }
-          if (!future.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return _body(context, future.data!, fontSize);
-        },
+        message: "Не удалось открыть зачин.",
+        onRetry: () => setState(_load),
+        onRefresh: _refresh,
+        builder: (context, data) => _body(context, data, fontSize),
       ),
     );
   }

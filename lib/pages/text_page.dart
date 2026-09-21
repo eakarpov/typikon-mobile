@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:file_saver_ffi/file_saver_ffi.dart';
 import 'package:flutter/material.dart';
+
+import 'package:typikon/components/reading_markdown.dart';
 import 'package:typikon/main.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -531,12 +532,11 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                         ),
                       ),
                       future.data!.newUi ? (
-                          SizedBox(
-                            height: 350.0,
-                            child: Markdown(
-                              data: content,
-                            ),
-                          )
+                          // Не Markdown в SizedBox(height: 350): страница
+                          // прокручивается сама, а окошко со своей прокруткой
+                          // посреди неё резало текст и не знало ни одной
+                          // настройки чтения.
+                          ReadingMarkdown(content, scrollable: false)
                         ) : (
                             SelectionMenu(
                               enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
