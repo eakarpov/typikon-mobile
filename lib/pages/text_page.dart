@@ -33,6 +33,7 @@ import 'package:typikon/utils/reading_style.dart';
 import 'package:typikon/store/store.dart';
 import "package:typikon/components/script_toggle.dart";
 import "package:typikon/utils/script_convert.dart";
+import "package:typikon/components/pinch_zoom.dart";
 
 class TextPage extends StatefulWidget {
   final String id;
@@ -533,7 +534,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           ),
         ],
       ),
-      body: Container(
+      body: PinchZoom(child: Container(
         color: StoreProvider.of<AppState>(context).state.settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
@@ -710,7 +711,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
               ),
             );
           },
-        )),
+        ))),
       ),
     );
   }

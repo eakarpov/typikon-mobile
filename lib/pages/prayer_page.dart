@@ -3,6 +3,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/async_view.dart';
+import '../components/pinch_zoom.dart';
 import '../components/script_toggle.dart';
 import '../components/selection_menu.dart';
 import '../dto/corpus.dart';
@@ -63,7 +64,7 @@ class _PrayerPageState extends State<PrayerPage> {
           ),
         ],
       ),
-      body: Container(
+      body: PinchZoom(child: Container(
         color: readingBackgroundColor(context),
         child: AsyncView<PrayerDetail>(
           future: prayer,
@@ -71,7 +72,7 @@ class _PrayerPageState extends State<PrayerPage> {
           onRetry: () => setState(_load),
           onRefresh: _refresh,
           builder: (context, data) => _body(context, data, fontSize),
-        ),
+        )),
       ),
     );
   }

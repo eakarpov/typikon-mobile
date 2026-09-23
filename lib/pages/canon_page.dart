@@ -3,6 +3,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/async_view.dart';
+import '../components/pinch_zoom.dart';
 import '../components/script_toggle.dart';
 import '../components/selection_menu.dart';
 import '../components/table_of_contents.dart';
@@ -94,7 +95,7 @@ class _CanonPageState extends State<CanonPage> {
           ),
         ],
       ),
-      body: Container(
+      body: PinchZoom(child: Container(
         color: readingBackgroundColor(context),
         child: AsyncView<CanonDetail>(
           future: canon,
@@ -102,7 +103,7 @@ class _CanonPageState extends State<CanonPage> {
           onRetry: () => setState(_load),
           onRefresh: _refresh,
           builder: (context, data) => _body(context, data, fontSize),
-        ),
+        )),
       ),
     );
   }

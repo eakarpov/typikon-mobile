@@ -3,6 +3,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/pericopes.dart';
 import '../components/async_view.dart';
+import '../components/pinch_zoom.dart';
 import '../components/script_toggle.dart';
 import '../components/selection_menu.dart';
 import '../components/verse_list.dart';
@@ -69,7 +70,7 @@ class _PericopePageState extends State<PericopePage> {
           ScriptToggle(source: TextScript.church, onChanged: () => setState(() {})),
         ],
       ),
-      body: Container(
+      body: PinchZoom(child: Container(
         color: settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         child: AsyncView<PericopeReading>(
           future: reading,
@@ -77,7 +78,7 @@ class _PericopePageState extends State<PericopePage> {
           onRetry: () => setState(_load),
           onRefresh: _refresh,
           builder: (context, data) => _body(context, data, settings.fontSize.toDouble()),
-        ),
+        )),
       ),
     );
   }

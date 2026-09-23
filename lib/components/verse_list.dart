@@ -5,6 +5,7 @@ import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/components/highlighted_text.dart';
 import 'package:typikon/utils/reading_style.dart';
 import 'package:typikon/utils/script_convert.dart';
+import 'package:typikon/components/pinch_zoom.dart';
 import 'package:typikon/components/script_toggle.dart';
 
 /// Рендер списка стихов Библии/зачала с надстрочным номером стиха перед
@@ -56,6 +57,8 @@ class VerseListView extends StatelessWidget {
       // Голый RichText в SelectionArea себя не записывает (см. fusion_text).
       selectionRegistrar: SelectionContainer.maybeOf(context),
       selectionColor: DefaultSelectionStyle.of(context).selectionColor,
+      // Щипок на экране чтения (см. `components/pinch_zoom.dart`).
+      textScaler: ReadingZoom.scalerOf(context),
       text: TextSpan(
         style: baseStyle,
         children: verses.expand((v) {

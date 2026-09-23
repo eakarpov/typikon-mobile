@@ -23,6 +23,7 @@ import '../utils/bible_route.dart';
 import '../utils/bible_style.dart';
 import '../utils/script_convert.dart';
 import 'package:typikon/utils/reading_style.dart';
+import '../components/pinch_zoom.dart';
 
 /// Глава Библии.
 ///
@@ -250,7 +251,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
           ),
         ],
       ),
-      body: Container(
+      body: PinchZoom(child: Container(
         color: settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         // Ширину колонки читатель выбирает сам; без выбора обёртка не делает
         // ничего — на телефоне ограничивать нечего.
@@ -263,7 +264,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
             }
             return _chapter(context, future.data!, settings.fontSize.toDouble());
           },
-        )),
+        ))),
       ),
     );
   }
