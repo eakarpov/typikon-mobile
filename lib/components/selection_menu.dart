@@ -44,6 +44,15 @@ class SelectionMenu extends StatefulWidget {
     required this.containers,
   });
 
+  /// Только ударение и системные пункты — для Библии, канонов, акафистов и
+  /// молитв. Заметки и сообщения об ошибке пишутся на тексты библиотеки по их
+  /// идентификатору, а у главы Библии и у песнопения идентификатор из другого
+  /// собрания: заметку сервер приписал бы не туда или не принял вовсе.
+  const SelectionMenu.wordsOnly({super.key, required this.child})
+      : enabled = false,
+        textId = "",
+        containers = const [];
+
   @override
   State<SelectionMenu> createState() => _SelectionMenuState();
 }

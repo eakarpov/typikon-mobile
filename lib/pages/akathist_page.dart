@@ -3,6 +3,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/async_view.dart';
+import '../components/selection_menu.dart';
 import '../components/table_of_contents.dart';
 import '../dto/corpus.dart';
 import '../store/models/models.dart';
@@ -111,46 +112,55 @@ class _AkathistPageState extends State<AkathistPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            akathist.title,
-            style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize + 2.0),
+          // Выделяются тексты, а не список молитв ниже: там переходы, и долгое
+          // нажатие на них выделяло бы подпись вместо перехода.
+          SelectionMenu.wordsOnly(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  akathist.title,
+                  style: TextStyle(fontFamily: "OldStandard", fontSize: fontSize + 2.0),
+                ),
+                if (about.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(about, style: small),
+                  ),
+                if ((akathist.memory ?? "").isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text("напечатан в службе: ${akathist.memory}", style: small),
+                  ),
+                if ((detail.sourceBook ?? "").isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text("Источник: ${detail.sourceBook}", style: small),
+                  ),
+                if ((detail.refrainIkos ?? "").isNotEmpty)
+                  _Refrain(
+                    title: "Рефрен икосов",
+                    text: detail.refrainIkos!,
+                    fontSize: fontSize,
+                  ),
+                if ((detail.refrainKontakion ?? "").isNotEmpty)
+                  _Refrain(
+                    title: "Рефрен кондаков",
+                    text: detail.refrainKontakion!,
+                    fontSize: fontSize,
+                  ),
+                const Divider(height: 32.0),
+                if (detail.stanzas.isEmpty)
+                  Text("Текста акафиста в корпусе нет.", style: small)
+                else
+                  ...detail.stanzas.map((stanza) => _Stanza(
+                        key: _keyFor(stanza.index),
+                        stanza: stanza,
+                        fontSize: fontSize,
+                      )),
+              ],
+            ),
           ),
-          if (about.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4.0),
-              child: Text(about, style: small),
-            ),
-          if ((akathist.memory ?? "").isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4.0),
-              child: Text("напечатан в службе: ${akathist.memory}", style: small),
-            ),
-          if ((detail.sourceBook ?? "").isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4.0),
-              child: Text("Источник: ${detail.sourceBook}", style: small),
-            ),
-          if ((detail.refrainIkos ?? "").isNotEmpty)
-            _Refrain(
-              title: "Рефрен икосов",
-              text: detail.refrainIkos!,
-              fontSize: fontSize,
-            ),
-          if ((detail.refrainKontakion ?? "").isNotEmpty)
-            _Refrain(
-              title: "Рефрен кондаков",
-              text: detail.refrainKontakion!,
-              fontSize: fontSize,
-            ),
-          const Divider(height: 32.0),
-          if (detail.stanzas.isEmpty)
-            Text("Текста акафиста в корпусе нет.", style: small)
-          else
-            ...detail.stanzas.map((stanza) => _Stanza(
-                  key: _keyFor(stanza.index),
-                  stanza: stanza,
-                  fontSize: fontSize,
-                )),
           if (detail.prayers.isNotEmpty) ...[
             const Divider(height: 32.0),
             Text(

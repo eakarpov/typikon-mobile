@@ -6,7 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:redux/redux.dart';
 
 import 'package:typikon/components/fusion_text.dart';
+import 'package:typikon/components/reading_markdown.dart';
 import 'package:typikon/components/selection_menu.dart';
+import 'package:typikon/components/verse_list.dart';
+import 'package:typikon/dto/pericope.dart';
 import 'package:typikon/dto/reference.dart';
 import 'package:typikon/store/index.dart';
 import 'package:typikon/store/rootReducer.dart';
@@ -199,6 +202,51 @@ void main() {
       }
       expect(find.text("Сообщить об ошибке"), findsOneWidget);
       expect(find.text("Добавить заметку"), findsOneWidget);
+    });
+  });
+
+  // Библия, каноны, акафисты, молитвы: ударение есть, заметок и сообщений об
+  // ошибке нет — они пишутся на тексты библиотеки, а не на главу или песнопение.
+  group("меню без заметок", () {
+    Future<void> pump(WidgetTester tester, Widget text) async {
+      final store = Store<AppState>(appReducer, initialState: AppState.init());
+      await tester.pumpWidget(StoreProvider<AppState>(
+        store: store,
+        child: MaterialApp(
+          home: Scaffold(body: Center(child: SelectionMenu.wordsOnly(child: text))),
+        ),
+      ));
+    }
+
+    Future<void> expectWordMenu(WidgetTester tester, Finder target) async {
+      await tester.longPress(target);
+      await tester.pumpAndSettle();
+
+      expect(find.text("Ударение и разбор"), findsOneWidget);
+      expect(find.text("Copy"), findsOneWidget);
+      expect(find.text("Сообщить об ошибке"), findsNothing);
+      expect(find.text("Добавить заметку"), findsNothing);
+    }
+
+    testWidgets("стихи Библии", (tester) async {
+      await pump(
+        tester,
+        const VerseListView(
+          verses: [PericopeVerse(chapter: 1, verse: 1, content: "Въ началѣ бѣ слово")],
+          fontSize: 18.0,
+        ),
+      );
+      await expectWordMenu(tester, find.byType(RichText).first);
+    });
+
+    testWidgets("размеченный текст", (tester) async {
+      await pump(tester, const ReadingMarkdown("Благословен **Бог** наш", scrollable: false));
+      await expectWordMenu(tester, find.byType(RichText).first);
+    });
+
+    testWidgets("строка песнопения", (tester) async {
+      await pump(tester, const Text("Радуйся, Невесто неневестная"));
+      await expectWordMenu(tester, find.text("Радуйся, Невесто неневестная"));
     });
   });
 }

@@ -536,7 +536,12 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                           // прокручивается сама, а окошко со своей прокруткой
                           // посреди неё резало текст и не знало ни одной
                           // настройки чтения.
-                          ReadingMarkdown(content, scrollable: false)
+                          // Меню — без заметок: они привязаны к номеру абзаца
+                          // по двойному переводу строки, а markdown делит текст
+                          // на абзацы по-своему, и номер разошёлся бы с экраном.
+                          SelectionMenu.wordsOnly(
+                            child: ReadingMarkdown(content, scrollable: false),
+                          )
                         ) : (
                             SelectionMenu(
                               enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,

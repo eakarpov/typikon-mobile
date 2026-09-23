@@ -3,6 +3,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/async_view.dart';
+import '../components/selection_menu.dart';
 import '../dto/corpus.dart';
 import '../store/models/models.dart';
 import '../utils/chant_style.dart';
@@ -119,15 +120,20 @@ class _PrayerPageState extends State<PrayerPage> {
         if (detail.text.isEmpty)
           Text("Текста молитвы в корпусе нет.", style: small)
         else
-          ...chantLines(detail.text).map((line) => Text(
-                line,
-                style: TextStyle(
-                  fontFamily: font,
-                  fontSize: fontSize,
-                  height: readingLineHeight(context),
-                  color: readingTextColor(context),
-                ),
-              )),
+          SelectionMenu.wordsOnly(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: chantLines(detail.text).map((line) => Text(
+                    line,
+                    style: TextStyle(
+                      fontFamily: font,
+                      fontSize: fontSize,
+                      height: readingLineHeight(context),
+                      color: readingTextColor(context),
+                    ),
+                  )).toList(),
+            ),
+          ),
         if (detail.siblings.isNotEmpty) ...[
           const Divider(height: 32.0),
           // Книга печатает молитвы вереницей, и читающий вторую обыкновенно

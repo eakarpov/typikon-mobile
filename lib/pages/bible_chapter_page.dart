@@ -9,6 +9,7 @@ import '../components/bible_edition_picker.dart';
 import '../components/bible_parallel_view.dart';
 import '../components/chapter_grid.dart';
 import '../components/pericope_block.dart';
+import '../components/selection_menu.dart';
 import '../components/verse_list.dart';
 import '../dto/bible.dart';
 import '../dto/pericope.dart';
@@ -286,16 +287,17 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (data.editions.length > 1)
-            BibleParallelView(
-              chapter: data,
-              fontSize: fontSize,
-              highlight: widget.highlight,
-              rangesLabel: _rangesLabel,
-              firstKey: _pericopeKey,
-            )
-          else
-            _single(context, data, fontSize),
+          SelectionMenu.wordsOnly(
+            child: data.editions.length > 1
+                ? BibleParallelView(
+                    chapter: data,
+                    fontSize: fontSize,
+                    highlight: widget.highlight,
+                    rangesLabel: _rangesLabel,
+                    firstKey: _pericopeKey,
+                  )
+                : _single(context, data, fontSize),
+          ),
           ..._numberingNotes(context, data),
           _placesBlock(context),
           _navigation(context),

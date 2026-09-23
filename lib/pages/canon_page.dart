@@ -3,6 +3,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/async_view.dart';
+import '../components/selection_menu.dart';
 import '../components/table_of_contents.dart';
 import '../dto/corpus.dart';
 import '../store/models/models.dart';
@@ -120,7 +121,7 @@ class _CanonPageState extends State<CanonPage> {
     // контекста — оглавление по нему молча не прокручивало (см. days_page).
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 40.0),
-      child: Column(
+      child: SelectionMenu.wordsOnly(child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
@@ -165,7 +166,7 @@ class _CanonPageState extends State<CanonPage> {
           ...detail.odes.map((ode) =>
               _Ode(ode: ode, anchorKey: _keyFor(ode.ode), fontSize: fontSize, font: font)),
         ],
-      ),
+      )),
     );
   }
 }

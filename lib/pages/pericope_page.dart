@@ -3,6 +3,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/pericopes.dart';
 import '../components/async_view.dart';
+import '../components/selection_menu.dart';
 import '../components/verse_list.dart';
 import '../dto/pericope.dart';
 import '../store/models/models.dart';
@@ -110,7 +111,9 @@ class _PericopePageState extends State<PericopePage> {
         if (data.verses.isEmpty)
           const Text("Текст этого зачала ещё не размечен.")
         else
-          VerseListView(verses: data.verses, fontSize: fontSize, fontFamily: "Monomakh"),
+          SelectionMenu.wordsOnly(
+            child: VerseListView(verses: data.verses, fontSize: fontSize, fontFamily: "Monomakh"),
+          ),
         if (entry.opensInBible)
           Padding(
             padding: const EdgeInsets.only(top: 16.0),

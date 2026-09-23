@@ -12,6 +12,7 @@ import 'package:typikon/utils/bible_route.dart';
 import 'package:typikon/utils/text.dart';
 import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/components/verse_list.dart';
+import 'package:typikon/components/selection_menu.dart';
 
 class DaysPage extends StatefulWidget {
   final String id;
@@ -167,10 +168,12 @@ class _DaysPageState extends State<DaysPage> {
             ),
             if (item.isPericope) ...[
               if (item.pericope!.verses.isNotEmpty)
-                VerseListView(
-                  verses: item.pericope!.verses,
-                  fontSize: fontSize,
-                  fontFamily: "Monomakh",
+                SelectionMenu.wordsOnly(
+                  child: VerseListView(
+                    verses: item.pericope!.verses,
+                    fontSize: fontSize,
+                    fontFamily: "Monomakh",
+                  ),
                 )
               else
                 const ReadingText(
