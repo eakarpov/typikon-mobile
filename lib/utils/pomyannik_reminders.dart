@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../apiMapper/pomyannik.dart';
+import '../dto/pomyannik.dart';
 import '../store/pomyannik_cache.dart';
 import 'pomyannik_labels.dart';
 
@@ -67,6 +68,7 @@ ReminderVerdict pomyannikVerdict({
   required String? lastNotifiedDate,
   required DateTime now,
   required bool withNames,
+  required Set<String> notified,
 }) {
   if (!enabled) return const ReminderVerdict.silent("напоминания выключены");
   if (mirror == null) return const ReminderVerdict.silent("зеркала нет");
@@ -84,7 +86,7 @@ ReminderVerdict pomyannikVerdict({
     return const ReminderVerdict.silent("сегодня уже говорили");
   }
 
-  final events = mirror.on(date);
+  final events = mirror.on(date).where((event) => speaksOf(event, notified)).toList();
   if (events.isEmpty) return const ReminderVerdict.silent("сегодня нечего сказать");
 
   // Вчерашнее не доигрываем: «вчера был сороковой день» — это напоминание,
@@ -102,12 +104,46 @@ ReminderVerdict pomyannikVerdict({
     }
   }
 
-  return ReminderVerdict.show(
-    events.length == 1
-        ? "Сегодня поминальный день"
-        : "Сегодня поминальных дней: ${events.length}",
-    "pomyannik:upcoming",
-  );
+  return ReminderVerdict.show(namelessBody(events), "pomyannik:upcoming");
+}
+
+/// Именины и дни рождения. Прочие дни — поминальные: третий, девятый,
+/// сороковой, годовщина, конец сорокоуста и общие дни поминовения.
+const Set<String> personalKinds = {"nameday", "birthday"};
+
+/// Говорить ли об этом событии.
+///
+/// Поминальные дни — всегда: ради них напоминания и включают. Именины и дни
+/// рождения — только отмеченных в карточке (см. [notifiedPersons]).
+bool speaksOf(UpcomingEvent event, Set<String> notified) {
+  if (!personalKinds.contains(event.kind)) return true;
+  final id = event.personId;
+  return id != null && notified.contains(id);
+}
+
+/// Что сказать без имён.
+///
+/// Поминальный день без имени назван словами «поминальный день», и так было с
+/// самого начала. Но именины — не поминальный день, и назвать их так значило
+/// бы напугать: человек подумает о смерти того, у кого праздник.
+String namelessBody(List<UpcomingEvent> events) {
+  final memorial = events.where((e) => !personalKinds.contains(e.kind)).length;
+  final namedays = events.where((e) => e.kind == "nameday").length;
+  final birthdays = events.where((e) => e.kind == "birthday").length;
+
+  if (namedays == 0 && birthdays == 0) {
+    return memorial == 1 ? "Сегодня поминальный день" : "Сегодня поминальных дней: $memorial";
+  }
+
+  final parts = <String>[
+    if (namedays > 0) "именины",
+    if (birthdays > 0) birthdays == 1 ? "день рождения" : "дни рождения",
+    if (memorial > 0) memorial == 1 ? "поминальный день" : "поминальные дни",
+  ];
+  final head = parts.length == 1
+      ? parts.single
+      : "${parts.sublist(0, parts.length - 1).join(", ")} и ${parts.last}";
+  return "Сегодня $head";
 }
 
 /// Обновить зеркало.
@@ -160,6 +196,7 @@ Future<void> checkPomyannikAndNotify({
     lastNotifiedDate: await lastPomyannikNotice(),
     now: at,
     withNames: await namesInReminders(),
+    notified: await notifiedPersons(),
   );
 
   if (!verdict.shows) return;

@@ -7,6 +7,8 @@ import '../apiMapper/session.dart';
 import '../components/api_error_view.dart';
 import '../components/sign_in_needed.dart';
 import '../dto/pomyannik.dart';
+import '../store/pomyannik_cache.dart';
+import '../utils/notification_permission.dart';
 import '../utils/pomyannik_labels.dart';
 
 /// Карточка лица: даты и то, что из них следует.
@@ -173,7 +175,12 @@ class _PomyannikPersonPageState extends State<PomyannikPersonPage> with WidgetsB
               }
               if (!future.hasData) return const Center(child: CircularProgressIndicator());
 
-              return _Card(card: future.data!, vocabulary: _vocabulary);
+              return _Card(
+                card: future.data!,
+                vocabulary: _vocabulary,
+                // Список позади помечает отмеченных колокольчиком.
+                onReminderChanged: () => setState(() => _changed = true),
+              );
             },
           ),
         ),
@@ -183,10 +190,11 @@ class _PomyannikPersonPageState extends State<PomyannikPersonPage> with WidgetsB
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.card, required this.vocabulary});
+  const _Card({required this.card, required this.vocabulary, required this.onReminderChanged});
 
   final PersonCard card;
   final Vocabulary vocabulary;
+  final VoidCallback onReminderChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -282,8 +290,90 @@ class _Card extends StatelessWidget {
               style: small,
             ),
           ),
+        if (!person.isDeparted) ...[
+          const DossierSection(title: "Напоминания"),
+          _PersonReminder(person: person, onChanged: onReminderChanged),
+        ],
         const SizedBox(height: 24.0),
       ],
+    );
+  }
+}
+
+/// Напоминать ли об именинах и дне рождения этого человека.
+///
+/// Только у живых. Поминальные дни усопших напоминаются все и без отметки —
+/// ради них напоминания и включают; а о здравии вписывают многих, и именины
+/// каждого из них утренним уведомлением были бы шумом (см. [notifiedPersons]).
+class _PersonReminder extends StatefulWidget {
+  const _PersonReminder({required this.person, required this.onChanged});
+
+  final Person person;
+  final VoidCallback onChanged;
+
+  @override
+  State<_PersonReminder> createState() => _PersonReminderState();
+}
+
+class _PersonReminderState extends State<_PersonReminder> {
+  bool? _on;
+  bool _remindersOn = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _read();
+  }
+
+  Future<void> _read() async {
+    final notified = await notifiedPersons();
+    final enabled = await remindersEnabled();
+    if (!mounted) return;
+    setState(() {
+      _on = notified.contains(widget.person.id);
+      _remindersOn = enabled;
+    });
+  }
+
+  Future<void> _toggle(bool value) async {
+    // Разрешение спрашиваем здесь же, если напоминания уже включены: иначе
+    // отметка стояла бы, а сказать было бы нечем.
+    if (value && _remindersOn && !await ensureNotificationPermission()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Без разрешения на уведомления напомнить нечем. "
+            "Его можно дать в настройках системы."),
+      ));
+      return;
+    }
+    await setPersonNotified(widget.person.id, value);
+    if (!mounted) return;
+    setState(() => _on = value);
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final person = widget.person;
+    final nothingToSay = person.nameDay == null && (person.born ?? "").isEmpty;
+
+    // Каждое «почему не придёт» названо словами: отметка, которая молча ничего
+    // не делает, хуже отсутствующей.
+    final String subtitle;
+    if (!_remindersOn) {
+      subtitle = "Напоминания помянника выключены в настройках — пока их не включить, "
+          "отметка ничего не даст.";
+    } else if (nothingToSay) {
+      subtitle = "В карточке нет ни дня рождения, ни именин — напоминать пока не о чем.";
+    } else {
+      subtitle = "Утром того дня, как и о поминальных днях.";
+    }
+
+    return SwitchListTile(
+      title: const Text("Напоминать об именинах и дне рождения"),
+      subtitle: Text(subtitle),
+      value: _on ?? false,
+      onChanged: _on == null ? null : _toggle,
     );
   }
 }
