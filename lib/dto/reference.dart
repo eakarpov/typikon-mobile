@@ -430,3 +430,201 @@ class Lexeme {
     );
   }
 }
+
+// --- Ударение слова ------------------------------------------------------------
+
+/// Как слово стоит под знаком в текстах собрания: одно написание и его доля.
+class AccentUsage {
+  /// Номер гласной под знаком, от нуля. По нему, а не по написанию, и
+  /// сравниваются ударения: «земля́» и «земля̀» — одно ударение под разными
+  /// знаками (вария на конце слова вместо оксии), а не два.
+  final int vowel;
+  final String spelling;
+  final int count;
+  final double share;
+
+  const AccentUsage({
+    required this.vowel,
+    required this.spelling,
+    required this.count,
+    required this.share,
+  });
+
+  factory AccentUsage.fromJson(Map<String, dynamic> json) => AccentUsage(
+        vowel: _asIntOrNull(json["vowel"]) ?? -1,
+        spelling: _asString(json["spelling"]),
+        count: _asIntOrNull(json["count"]) ?? 0,
+        share: json["share"] is num ? (json["share"] as num).toDouble() : 0.0,
+      );
+}
+
+/// Форма по словарю: написание, начальная форма и грамматический разбор.
+class WordReading {
+  final int vowel;
+  final String spelling;
+
+  /// Начальная форма — «земля́» для «зе́млю».
+  final String lexeme;
+
+  /// Разборы: одно написание бывает несколькими формами («Го́споди» — и
+  /// местный падеж, и множественное число), и сервер пишет их через `|`.
+  /// Каждый разбор — пометы кодами: `sg`, `acc`, `indic`, `2p/3p`.
+  final List<List<String>> parses;
+
+  const WordReading({
+    required this.vowel,
+    required this.spelling,
+    required this.lexeme,
+    required this.parses,
+  });
+
+  factory WordReading.fromJson(Map<String, dynamic> json) => WordReading(
+        vowel: _asIntOrNull(json["vowel"]) ?? -1,
+        spelling: _asString(json["spelling"]),
+        lexeme: _asString(json["lexeme"]),
+        parses: _asString(json["properties"])
+            .split("|")
+            .map((parse) => parse.split(",").where((code) => code.isNotEmpty).toList())
+            .where((parse) => parse.isNotEmpty)
+            .toList(),
+      );
+}
+
+/// Одно ударение слова — место знака — со всем, что о нём известно.
+class StressVariant {
+  final int vowel;
+
+  /// Написание, которым ударение показывать: самое частое в текстах, а при
+  /// равенстве — с оксией. Вария на конце слова — правило набора, а не другое
+  /// ударение, и показывать её одиноко стоящему слову незачем.
+  final String spelling;
+
+  /// Доли в чтениях и в песнопениях; `null` — в этом собрании слова под
+  /// знаком нет вовсе.
+  final double? readingsShare;
+  final double? chantsShare;
+
+  /// Сколько раз стоит в текстах обоих собраний.
+  final int count;
+
+  /// Знает ли это ударение словарь.
+  final bool inLexicon;
+
+  const StressVariant({
+    required this.vowel,
+    required this.spelling,
+    required this.readingsShare,
+    required this.chantsShare,
+    required this.count,
+    required this.inLexicon,
+  });
+}
+
+/// Ответ `/v2/accents/{word}`: где в слове ударение и что это за форма.
+///
+/// Три источника, и сводить их в один нельзя: чтения и песнопения ставят знак
+/// по-разному («спасе́» — аорист в чтениях, «спа́се» — звательный в
+/// песнопениях), а словарь знает формы, но не то, какая из них чаще.
+class WordAccents {
+  final String word;
+
+  /// Есть ли слово хоть где-нибудь: в словаре или под знаком в текстах.
+  final bool known;
+
+  /// Согласны ли тексты со словарём. `null` — сверять не с чем.
+  final bool? agree;
+
+  final List<AccentUsage> readings;
+  final List<AccentUsage> chants;
+  final List<WordReading> lexicon;
+
+  const WordAccents({
+    required this.word,
+    required this.known,
+    required this.agree,
+    required this.readings,
+    required this.chants,
+    required this.lexicon,
+  });
+
+  factory WordAccents.fromJson(Map<String, dynamic> json) {
+    List<T> rows<T>(dynamic list, T Function(Map<String, dynamic>) parse) => list is List
+        ? list.whereType<Map>().map((row) => parse(Map<String, dynamic>.from(row))).toList()
+        : const [];
+    return WordAccents(
+      word: _asString(json["word"]),
+      known: json["known"] == true,
+      agree: json["agree"] is bool ? json["agree"] as bool : null,
+      readings: rows(json["corpus"], AccentUsage.fromJson),
+      chants: rows(json["chants"], AccentUsage.fromJson),
+      lexicon: rows(json["lexicon"], WordReading.fromJson),
+    );
+  }
+
+  /// Доля ниже этой — опечатка набора или редкость, а не второе ударение.
+  /// «Зе́млю» стоит 1639 раз, «землю́» — дважды, и предлагать читателю выбор
+  /// между ними значило бы ввести его в заблуждение.
+  static const double noticeableShare = 0.1;
+
+  /// Ударения слова, самое частое первым.
+  ///
+  /// Показываются только заметные: доля в чтениях или в песнопениях не меньше
+  /// [noticeableShare]. Ударение, которое знает словарь, но которого нет в
+  /// текстах, показывается, только если текстов о слове нет вовсе: иначе
+  /// словарная редкость встала бы вровень с тем, как слово читают.
+  List<StressVariant> get stresses {
+    final vowels = <int>{
+      ...readings.map((u) => u.vowel),
+      ...chants.map((u) => u.vowel),
+      ...lexicon.map((r) => r.vowel),
+    }..remove(-1);
+    final hasUsage = readings.isNotEmpty || chants.isNotEmpty;
+
+    double? shareIn(List<AccentUsage> usages, int vowel) {
+      final matching = usages.where((u) => u.vowel == vowel);
+      if (matching.isEmpty) return null;
+      return matching.fold<double>(0, (sum, u) => sum + u.share);
+    }
+
+    String spellingFor(int vowel) {
+      final usages = [...readings, ...chants].where((u) => u.vowel == vowel).toList();
+      if (usages.isEmpty) {
+        return lexicon.firstWhere((r) => r.vowel == vowel).spelling;
+      }
+      final bySpelling = <String, int>{};
+      for (final u in usages) {
+        bySpelling[u.spelling] = (bySpelling[u.spelling] ?? 0) + u.count;
+      }
+      final ranked = bySpelling.entries.toList()
+        ..sort((a, b) {
+          final byCount = b.value.compareTo(a.value);
+          if (byCount != 0) return byCount;
+          return (b.key.contains("́") ? 1 : 0).compareTo(a.key.contains("́") ? 1 : 0);
+        });
+      return ranked.first.key;
+    }
+
+    final variants = vowels.map((vowel) {
+      final count = [...readings, ...chants]
+          .where((u) => u.vowel == vowel)
+          .fold<int>(0, (sum, u) => sum + u.count);
+      return StressVariant(
+        vowel: vowel,
+        spelling: spellingFor(vowel),
+        readingsShare: shareIn(readings, vowel),
+        chantsShare: shareIn(chants, vowel),
+        count: count,
+        inLexicon: lexicon.any((r) => r.vowel == vowel),
+      );
+    }).where((v) {
+      if (!hasUsage) return true;
+      return (v.readingsShare ?? 0) >= noticeableShare ||
+          (v.chantsShare ?? 0) >= noticeableShare;
+    }).toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
+    return variants;
+  }
+
+  /// Ударение спорно: в текстах заметно больше одного места знака.
+  bool get isDisputed => stresses.length > 1;
+}

@@ -84,3 +84,21 @@ Future<http.Response> fetchLexeme(String id) {
     },
   );
 }
+
+// --- Ударение слова -------------------------------------------------------------
+
+/// Где в слове ударение и что это за форма. Ответ — счёт по всему собранию и
+/// словарь, меняется пересчётом, а не правкой одного текста, поэтому держим
+/// неделю. Слово приходит как выделено, со знаками или без: сервер снимает их
+/// сам.
+Future<http.Response> fetchWordAccents(String word) {
+  return cachedFetch(
+    "word-accents:${word.length}:$word",
+    () => v2Get(v2Uri("/accents/${Uri.encodeComponent(word)}")),
+    ttl: const Duration(days: 7),
+    isCacheable: (body) {
+      final decoded = jsonDecode(body);
+      return decoded is Map && decoded.containsKey("known");
+    },
+  );
+}

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../utils/selected_word.dart';
 import 'report_error_sheet.dart';
+import 'word_sheet.dart';
 
 /// Один "контейнер" текста, к которому можно привязать зачало/заметку —
 /// абзац (с индексом) или стих (глава+номер). Тот же список источников,
@@ -21,12 +23,13 @@ class TextContainer {
   bool get isVerse => chapter != null && verse != null;
 }
 
-/// Оборачивает [child] в SelectionArea с кастомным меню ("Сообщить об
-/// ошибке" / "Добавить заметку") — но только когда [enabled] (вошли) и
-/// выделение целиком попадает в один из [containers]. Иначе — обычное
-/// системное меню (копировать и т.п.), выделение вне контейнера или через
-/// границу двух сразу не предлагает наши пункты (тот же принцип, что и на
-/// вебе — data-report-container не найден).
+/// Оборачивает [child] в SelectionArea и дополняет системное меню выделения.
+///
+/// Выделено одно слово — «Ударение и разбор», всякому. «Сообщить об ошибке» и
+/// «Добавить заметку» — только когда [enabled] (вошли) и выделение целиком
+/// попадает в один из [containers]: выделение вне контейнера или через границу
+/// двух сразу наших пунктов не предлагает (тот же принцип, что и на вебе —
+/// data-report-container не найден).
 class SelectionMenu extends StatefulWidget {
   final Widget child;
   final bool enabled;
@@ -86,35 +89,46 @@ class _SelectionMenuState extends State<SelectionMenu> {
         _lastSelection = content?.plainText;
       },
       contextMenuBuilder: (context, state) {
-        final rawPhrase = _lastSelection?.trim();
-        // Не вошедшему — обычное системное меню: заметки и сообщения об ошибке
-        // требуют аккаунта, а скопировать стих вправе всякий. Прежде без входа
-        // текст не выделялся вообще.
-        if (!widget.enabled || rawPhrase == null || rawPhrase.isEmpty) {
-          return AdaptiveTextSelectionToolbar.selectableRegion(selectableRegionState: state);
-        }
-        final phrase = rawPhrase;
-        final container = _matchContainer(phrase);
-        if (container == null) {
-          return AdaptiveTextSelectionToolbar.selectableRegion(selectableRegionState: state);
-        }
+        final phrase = _lastSelection?.trim() ?? "";
+        final word = selectedWord(phrase);
+        // Заметки и сообщения об ошибке требуют аккаунта, а ударение и
+        // «Копировать» — нет: прочесть слово и скопировать стих вправе всякий.
+        final container =
+            widget.enabled && phrase.isNotEmpty ? _matchContainer(phrase) : null;
+
+        // Системные пункты («Копировать», «Выделить всё») остаются при наших, а
+        // не заменяются ими: прежде вошедший, выделив абзац, скопировать его не
+        // мог — в меню были только две наши кнопки.
         return AdaptiveTextSelectionToolbar.buttonItems(
           anchors: state.contextMenuAnchors,
           buttonItems: [
-            ContextMenuButtonItem(
-              label: "Сообщить об ошибке",
-              onPressed: () {
-                state.hideToolbar();
-                _openReport(context, container, phrase);
-              },
-            ),
-            ContextMenuButtonItem(
-              label: "Добавить заметку",
-              onPressed: () {
-                state.hideToolbar();
-                _openAddNote(context, container, phrase);
-              },
-            ),
+            // Первым: долгое нажатие выделяет ровно слово, и за ним чаще всего
+            // и приходят.
+            if (word != null)
+              ContextMenuButtonItem(
+                label: "Ударение и разбор",
+                onPressed: () {
+                  state.hideToolbar();
+                  showWordSheet(context, word);
+                },
+              ),
+            ...state.contextMenuButtonItems,
+            if (container != null) ...[
+              ContextMenuButtonItem(
+                label: "Сообщить об ошибке",
+                onPressed: () {
+                  state.hideToolbar();
+                  _openReport(context, container, phrase);
+                },
+              ),
+              ContextMenuButtonItem(
+                label: "Добавить заметку",
+                onPressed: () {
+                  state.hideToolbar();
+                  _openAddNote(context, container, phrase);
+                },
+              ),
+            ],
           ],
         );
       },
