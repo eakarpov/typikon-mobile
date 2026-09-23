@@ -56,6 +56,16 @@ class ChangeShowAccentsAction {
   String toString() => 'ChangeShowAccentsAction{showAccents: $showAccents}';
 }
 
+/// Каким письмом читать церковнославянский: `source`, `civil` или `church`.
+class ChangeScriptAction {
+  final String script;
+
+  ChangeScriptAction(this.script);
+
+  @override
+  String toString() => 'ChangeScriptAction{script: $script}';
+}
+
 /// Кто шлёт напоминания помянника: `device` или `server`.
 class ChangeReminderSourceAction {
   final String reminderSource;

@@ -3,11 +3,13 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/pericopes.dart';
 import '../components/async_view.dart';
+import '../components/script_toggle.dart';
 import '../components/selection_menu.dart';
 import '../components/verse_list.dart';
 import '../dto/pericope.dart';
 import '../store/models/models.dart';
 import '../utils/bible_route.dart';
+import '../utils/script_convert.dart';
 
 /// Зачало целиком: где читается, что читается и где это в книге.
 class PericopePage extends StatefulWidget {
@@ -63,6 +65,9 @@ class _PericopePageState extends State<PericopePage> {
             style: const TextStyle(fontFamily: "OldStandard"),
           ),
         ),
+        actions: [
+          ScriptToggle(source: TextScript.church, onChanged: () => setState(() {})),
+        ],
       ),
       body: Container(
         color: settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
@@ -112,8 +117,16 @@ class _PericopePageState extends State<PericopePage> {
           const Text("Текст этого зачала ещё не размечен.")
         else
           SelectionMenu.wordsOnly(
-            child: VerseListView(verses: data.verses, fontSize: fontSize, fontFamily: "Monomakh"),
+            // Зачало всегда церковнославянское: и на запрошенном языке, и
+            // откатившись (см. `fellBack`), оно показывается изданием `cs`.
+            child: VerseListView(
+              verses: data.verses,
+              fontSize: fontSize,
+              fontFamily: "Monomakh",
+              script: TextScript.church,
+            ),
           ),
+        if (data.verses.isNotEmpty) const ScriptCaveat(source: TextScript.church),
         if (entry.opensInBible)
           Padding(
             padding: const EdgeInsets.only(top: 16.0),

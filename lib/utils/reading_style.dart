@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import 'package:typikon/store/models/models.dart';
+import 'package:typikon/utils/script_convert.dart';
 
 /// Цвет текста чтений: явный выбор пользователя, иначе — цвет из темы.
 ///
@@ -104,14 +105,20 @@ class ReadingText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Уставный текст — письмом, какое выбрал читатель (см.
+    // `utils/script_convert.dart`). Гражданский здесь не переводим: признак
+    // знает только «уставом или нет», а среди «нет» есть и русская проза.
+    final source = churchSlavonic ? TextScript.church : TextScript.other;
+    final setting = StoreProvider.of<AppState>(context).state.settings.script;
+    final style = readingTextStyle(
+      context,
+      churchSlavonic: churchSlavonic,
+      italic: italic,
+    );
     return Text(
-      text,
+      presentScript(text, source, setting),
       textAlign: readingTextAlign(context),
-      style: readingTextStyle(
-        context,
-        churchSlavonic: churchSlavonic,
-        italic: italic,
-      ),
+      style: style.copyWith(fontFamily: presentFont(style.fontFamily!, source, setting)),
     );
   }
 }

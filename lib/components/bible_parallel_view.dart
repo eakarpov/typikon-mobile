@@ -4,7 +4,9 @@ import '../dto/bible.dart';
 import '../dto/pericope.dart';
 import '../utils/bible_style.dart';
 import '../utils/reading_style.dart';
+import '../utils/script_convert.dart';
 import 'pericope_block.dart';
+import 'script_toggle.dart';
 
 /// Глава в нескольких изданиях — построчным чередованием.
 ///
@@ -180,10 +182,12 @@ class BibleParallelView extends StatelessWidget {
                     ),
                   )
                 : Text(
-                    cell.content,
+                    presentScript(
+                        cell.content, bibleScript(edition.language), readerScript(context)),
                     textAlign: TextAlign.justify,
                     style: TextStyle(
-                      fontFamily: bibleFontFamily(edition.language),
+                      fontFamily: presentFont(bibleFontFamily(edition.language),
+                          bibleScript(edition.language), readerScript(context)),
                       fontSize: fontSize,
                       color: color,
                     ),

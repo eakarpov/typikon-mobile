@@ -9,6 +9,7 @@ import '../components/bible_edition_picker.dart';
 import '../components/bible_parallel_view.dart';
 import '../components/chapter_grid.dart';
 import '../components/pericope_block.dart';
+import '../components/script_toggle.dart';
 import '../components/selection_menu.dart';
 import '../components/verse_list.dart';
 import '../dto/bible.dart';
@@ -20,6 +21,7 @@ import '../store/models/models.dart';
 import '../utils/bible_editions.dart';
 import '../utils/bible_route.dart';
 import '../utils/bible_style.dart';
+import '../utils/script_convert.dart';
 import 'package:typikon/utils/reading_style.dart';
 
 /// Глава Библии.
@@ -215,6 +217,19 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
           ),
         ),
         actions: [
+          // Кнопка есть, только когда среди изданий есть уставное: румынское
+          // или греческое переписывать нечем и незачем.
+          FutureBuilder<BibleChapter>(
+            future: chapter,
+            builder: (context, future) => ScriptToggle(
+              source: future.hasData &&
+                      future.data!.editions
+                          .any((edition) => bibleScript(edition.language) == TextScript.church)
+                  ? TextScript.church
+                  : TextScript.other,
+              onChanged: () => setState(() {}),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.layers),
             tooltip: "Издания",
@@ -298,6 +313,11 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
                   )
                 : _single(context, data, fontSize),
           ),
+          ScriptCaveat(
+            source: data.editions.any((edition) => bibleScript(edition.language) == TextScript.church)
+                ? TextScript.church
+                : TextScript.other,
+          ),
           ..._numberingNotes(context, data),
           _placesBlock(context),
           _navigation(context),
@@ -318,8 +338,11 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
       );
     }
 
+    final script = bibleScript(edition?.language);
+
     if (widget.highlight.isEmpty) {
-      return VerseListView(verses: verses, fontSize: fontSize, fontFamily: fontFamily);
+      return VerseListView(
+          verses: verses, fontSize: fontSize, fontFamily: fontFamily, script: script);
     }
 
     return Column(
@@ -332,6 +355,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
         fontFamily: fontFamily,
         rangesLabel: _rangesLabel,
         firstKey: _pericopeKey,
+        script: script,
       ),
     );
   }

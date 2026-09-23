@@ -3,12 +3,14 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/async_view.dart';
+import '../components/script_toggle.dart';
 import '../components/selection_menu.dart';
 import '../components/table_of_contents.dart';
 import '../dto/corpus.dart';
 import '../store/models/models.dart';
 import '../utils/chant_style.dart';
 import '../utils/reading_style.dart';
+import '../utils/script_convert.dart';
 import '../utils/singing_labels.dart';
 
 /// Канон целиком: песни подряд, как в книге — ирмос, затем тропари.
@@ -62,6 +64,15 @@ class _CanonPageState extends State<CanonPage> {
         actions: [
           FutureBuilder<CanonDetail>(
             future: canon,
+            builder: (context, future) => ScriptToggle(
+              source: future.hasData
+                  ? chantScript(future.data!.canon.language)
+                  : TextScript.other,
+              onChanged: () => setState(() {}),
+            ),
+          ),
+          FutureBuilder<CanonDetail>(
+            future: canon,
             builder: (context, future) {
               final odes = future.data?.odes ?? const <CanonOde>[];
               if (odes.length < 2) return const SizedBox.shrink();
@@ -98,7 +109,8 @@ class _CanonPageState extends State<CanonPage> {
 
   Widget _body(BuildContext context, CanonDetail detail, double fontSize) {
     final canon = detail.canon;
-    final font = chantFontFamily(canon.language);
+    final script = chantScript(canon.language);
+    final font = readerFont(context, chantFontFamily(canon.language), script);
     final small = Theme.of(context).textTheme.bodySmall;
 
     final address = <String>[
@@ -164,7 +176,13 @@ class _CanonPageState extends State<CanonPage> {
               child: Text("Песней этого канона в корпусе нет.", style: small),
             ),
           ...detail.odes.map((ode) =>
-              _Ode(ode: ode, anchorKey: _keyFor(ode.ode), fontSize: fontSize, font: font)),
+              _Ode(
+                  ode: ode,
+                  anchorKey: _keyFor(ode.ode),
+                  fontSize: fontSize,
+                  font: font,
+                  script: script)),
+          ScriptCaveat(source: script),
         ],
       )),
     );
@@ -177,12 +195,14 @@ class _Ode extends StatelessWidget {
     required this.anchorKey,
     required this.fontSize,
     required this.font,
+    required this.script,
   });
 
   final CanonOde ode;
   final GlobalKey anchorKey;
   final double fontSize;
   final String font;
+  final TextScript script;
 
   @override
   Widget build(BuildContext context) {
@@ -204,9 +224,15 @@ class _Ode extends StatelessWidget {
           ),
         ),
         if (ode.irmos.isNotEmpty)
-          _Group(title: "Ирмос", lines: ode.irmos, fontSize: fontSize, font: font),
+          _Group(
+              title: "Ирмос", lines: ode.irmos, fontSize: fontSize, font: font, script: script),
         if (ode.troparia.isNotEmpty)
-          _Group(title: "Тропари", lines: ode.troparia, fontSize: fontSize, font: font),
+          _Group(
+              title: "Тропари",
+              lines: ode.troparia,
+              fontSize: fontSize,
+              font: font,
+              script: script),
       ],
     );
   }
@@ -218,12 +244,14 @@ class _Group extends StatelessWidget {
     required this.lines,
     required this.fontSize,
     required this.font,
+    required this.script,
   });
 
   final String title;
   final List<CanonLine> lines;
   final double fontSize;
   final String font;
+  final TextScript script;
 
   @override
   Widget build(BuildContext context) {
@@ -232,7 +260,7 @@ class _Group extends StatelessWidget {
       children: [
         Text(title, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 4.0),
-        ...lines.map((line) => _Line(line: line, fontSize: fontSize, font: font)),
+        ...lines.map((line) => _Line(line: line, fontSize: fontSize, font: font, script: script)),
         const SizedBox(height: 8.0),
       ],
     );
@@ -240,11 +268,17 @@ class _Group extends StatelessWidget {
 }
 
 class _Line extends StatelessWidget {
-  const _Line({required this.line, required this.fontSize, required this.font});
+  const _Line({
+    required this.line,
+    required this.fontSize,
+    required this.font,
+    required this.script,
+  });
 
   final CanonLine line;
   final double fontSize;
   final String font;
+  final TextScript script;
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +313,7 @@ class _Line extends StatelessWidget {
             ),
           ] else
             // Косая черта — перевод строки: так книга размечает строки песнопения.
-            ...chantLines(line.text).map((row) => Text(
+            ...readerChantLines(context, line.text, script).map((row) => Text(
                   row,
                   style: TextStyle(
                     fontFamily: font,

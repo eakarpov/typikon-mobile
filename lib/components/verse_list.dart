@@ -4,6 +4,8 @@ import 'package:typikon/dto/calendar.dart';
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/components/highlighted_text.dart';
 import 'package:typikon/utils/reading_style.dart';
+import 'package:typikon/utils/script_convert.dart';
+import 'package:typikon/components/script_toggle.dart';
 
 /// Рендер списка стихов Библии/зачала с надстрочным номером стиха перед
 /// каждым. Простой текст без markup сносок/ссылок — в отличие от
@@ -18,6 +20,10 @@ class VerseListView extends StatelessWidget {
   final List<UserNote> notes;
   final void Function(UserNote note)? onTapNote;
 
+  /// Каким письмом набраны стихи. Показываются тем, какое выбрал читатель
+  /// (см. `utils/script_convert.dart`).
+  final TextScript script;
+
   const VerseListView({
     super.key,
     required this.verses,
@@ -25,10 +31,13 @@ class VerseListView extends StatelessWidget {
     this.fontFamily = "OldStandard",
     this.notes = const [],
     this.onTapNote,
+    this.script = TextScript.other,
   });
 
   @override
   Widget build(BuildContext context) {
+    final setting = readerScript(context);
+    final fontFamily = presentFont(this.fontFamily, script, setting);
     final baseStyle = TextStyle(
       fontFamily: fontFamily,
       fontSize: fontSize,
@@ -55,7 +64,7 @@ class VerseListView extends StatelessWidget {
           ).toList();
           return [
             TextSpan(text: "${v.verse} ", style: numberStyle),
-            ...buildHighlightedSpans("${v.content} ", baseStyle, notesForVerse, onTapNote ?? (_) {}),
+            ...buildHighlightedSpans("${presentScript(v.content, script, setting)} ", baseStyle, notesForVerse, onTapNote ?? (_) {}),
           ];
         }).toList(),
       ),
