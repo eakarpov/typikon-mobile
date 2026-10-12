@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import '../components/api_error_view.dart' show isNetworkError;
+import '../components/network_error_report.dart';
 import "../dto/text.dart";
 import "../apiMapper/common.dart";
 import "../dto/common.dart";
@@ -505,6 +506,12 @@ class _MainPageState extends State<MainPage>
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        // Без вида: разово отправляет сетевой отказ на сервер —
+                        // эту ветку ApiErrorView не рисует, экран у неё свой.
+                        NetworkErrorReport(
+                          error: future.error,
+                          context: "сеть: чтения дня",
+                        ),
                         Padding(
                           padding: EdgeInsets.all(16.0),
                           child: Column(

@@ -1,45 +1,15 @@
-import 'dart:async';
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import '../apiMapper/singing.dart';
 import '../apiMapper/v2/errors.dart';
+import '../utils/network_error_detail.dart';
+import 'network_error_report.dart';
 
-/// Похоже ли, что запрос не дошёл до сервера, а не сервер ответил ошибкой.
-///
-/// Таймаут сюда тоже входит: для пользователя "сеть не отвечает" и "сервер
-/// молчит шесть секунд" — одно и то же состояние.
-bool isNetworkError(Object? error) {
-  if (error is SocketException || error is TimeoutException || error is http.ClientException) {
-    return true;
-  }
-  final message = error.toString();
-  return message.contains('SocketException') ||
-      message.contains('TimeoutException') ||
-      message.contains('Failed host lookup');
-}
-
-/// Не удалось проверить сертификат сервера.
-///
-/// Отдельно от «нет сети», и это не придирка: при такой поломке связь у
-/// человека есть, менять ему нечего, а «Повторить» не поможет, пока не починят
-/// сервер. Сказать тут «нет соединения с интернетом» — значит отправить его
-/// чинить свой вай-фай.
-///
-/// Так выглядела выкладка на typikon.info: сервер отдавал свой сертификат без
-/// промежуточного. Android, в отличие от curl и браузера, недостающее звено
-/// сам не дозагружает, и в приложении отказывали разом все страницы. Ошибка
-/// при этом шла мимо обёрток `http` (там ловятся только `SocketException` и
-/// `HttpException`), а значит и мимо [isNetworkError], — человек видел общее
-/// «не удалось загрузить», по которому причину не угадать.
-bool isTlsError(Object? error) {
-  if (error is HandshakeException || error is TlsException) return true;
-  final message = error.toString();
-  return message.contains("HandshakeException") ||
-      message.contains("CERTIFICATE_VERIFY_FAILED");
-}
+// Опознание сетевой неудачи и разбор её причины переехали в
+// utils/network_error_detail.dart: их зовут и этот экран, и отчёт на сервер.
+// Экспорт оставлен, чтобы не менять десяток импортов по страницам и тестам.
+export '../utils/network_error_detail.dart' show isNetworkError, isTlsError;
 
 /// Причина неудачи одной строкой — для всплывающих сообщений о неудавшейся
 /// записи.
@@ -105,6 +75,9 @@ class ApiErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Ничего не рисует: разово отправляет сетевой отказ на сервер, чтобы
+            // у читателя причина не оставалась за общим «нет соединения».
+            NetworkErrorReport(error: error, context: "сеть: $message"),
             Icon(
               tls
                   ? Icons.gpp_bad_outlined
@@ -123,6 +96,18 @@ class ApiErrorView extends StatelessWidget {
               Text(
                 "Связь у вас есть — дело на стороне сервера. "
                 "Остаётся подождать и попробовать позже.",
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+            // Только в отладке и только про сеть: читателю сырое исключение
+            // ничего не говорит (см. `failureMessage`), а разработчику именно
+            // оно и нужно — на MIUI одинаковое «нет соединения» прячет и DNS, и
+            // прокси, и сертификат, и запрет доступа прошивкой.
+            if (kDebugMode && (tls || offline)) ...[
+              const SizedBox(height: 8),
+              Text(
+                "Отладка: ${describeNetworkError(error)}",
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
