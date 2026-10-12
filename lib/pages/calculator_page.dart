@@ -8,10 +8,12 @@ import 'package:typikon/dto/calendar.dart';
 import 'package:typikon/components/async_view.dart';
 import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/components/verse_list.dart';
+import 'package:typikon/components/selection_menu.dart';
 import 'package:typikon/components/day_memories.dart';
 import 'package:typikon/components/trapeza_line.dart';
 import 'package:typikon/utils/bible_route.dart';
 import 'package:typikon/utils/selected_day.dart';
+import 'package:typikon/utils/script_convert.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage(context, {super.key});
@@ -99,10 +101,13 @@ class _CalculatorPageState extends State<CalculatorPage>
           children: [
             Text(item.name, style: titleStyle),
             if (item.verses != null && item.verses!.isNotEmpty)
-              VerseListView(
-                verses: item.verses!,
-                fontSize: fontSize,
-                fontFamily: "Monomakh",
+              SelectionMenu.wordsOnly(
+                child: VerseListView(
+                  verses: item.verses!,
+                  fontSize: fontSize,
+                  fontFamily: "Monomakh",
+                  script: TextScript.church,
+                ),
               )
             else if (item.isPericope)
               const ReadingText(

@@ -321,6 +321,21 @@ class _SettingsPageState extends State<SettingsPage> {
                       "left": "По левому краю",
                     },
                   ),
+                  _Choices<String>(
+                    title: "Письмо церковнославянских текстов",
+                    hint: "Библия и часть чтений набраны уставом, каноны, акафисты и "
+                        "молитвы — гражданкой. Перевод идёт по правилам: из устава в "
+                        "гражданку — почти без потерь, только слова под титлом остаются "
+                        "как в книге; из гражданки в устав — без ятей, омег и титл, их "
+                        "по правилу не вывести.",
+                    value: viewModel.script,
+                    onPicked: viewModel.onChangeScript,
+                    options: const {
+                      "source": "Как набрано",
+                      "civil": "Гражданкой",
+                      "church": "Уставом",
+                    },
+                  ),
                   _Choices<double?>(
                     title: "Ширина колонки",
                     hint: "На телефоне разницы нет: строка и так узкая. "
@@ -544,6 +559,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     SwitchListTile(
                       title: const Text("Напоминать о поминальных днях"),
                       subtitle: const Text(
+                        "Об усопших — обо всех поминальных днях. О живых — об именинах и дне "
+                        "рождения тех, у кого это отмечено в карточке помянника.\n\n"
                         "Утром того дня, когда он приходится. Напоминание может прийти позже "
                         "или не прийти вовсе: время выбирает система, а не приложение — "
                         "поэтому полагаться на него как на единственную память не стоит.",
@@ -628,6 +645,9 @@ class SettingsViewModel {
   final double? readingMeasure;
   final Function(double?) onChangeReadingMeasure;
 
+  final String script;
+  final Function(String) onChangeScript;
+
   final String reminderSource;
 
   final VoidCallback onResetReadingColors;
@@ -654,6 +674,8 @@ class SettingsViewModel {
     this.onChangeReadingAlign = SettingsViewModel.stubString,
     this.readingMeasure,
     this.onChangeReadingMeasure = SettingsViewModel.stubMeasure,
+    this.script = "source",
+    this.onChangeScript = SettingsViewModel.stubString,
     this.reminderSource = "device",
     this.onResetReadingColors = SettingsViewModel.stubVoid,
     this.isPreloadEnabled = false,
@@ -708,6 +730,10 @@ class SettingsViewModel {
       readingMeasure: store.state.settings.readingMeasure,
       onChangeReadingMeasure: (value) {
         store.dispatch(ChangeReadingMeasureAction(value));
+      },
+      script: store.state.settings.script,
+      onChangeScript: (value) {
+        store.dispatch(ChangeScriptAction(value));
       },
       reminderSource: store.state.settings.reminderSource,
       onResetReadingColors: () {

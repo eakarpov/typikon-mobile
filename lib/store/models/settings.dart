@@ -86,6 +86,14 @@ class Settings {
   /// шесть раз.
   final List<String> bibleEditions;
 
+  /// Каким письмом читать церковнославянский: `source` — как набран,
+  /// `civil` — всё гражданкой, `church` — всё уставом (см.
+  /// `utils/script_convert.dart`).
+  ///
+  /// Настройка читателя, как и ударения: кто учится читать уставом, хочет его
+  /// везде, а кто читает с листа быстро — везде гражданку.
+  final String script;
+
   const Settings({
     this.fontSize = 16,
     this.themeMode = ThemeMode.system,
@@ -98,6 +106,7 @@ class Settings {
     this.reminderSource = "device",
     this.showAccents = false,
     this.bibleEditions = const [],
+    this.script = "source",
   });
 
   /// Ждать ли пуша с сервера.
@@ -126,6 +135,7 @@ class Settings {
     String? reminderSource,
     bool? showAccents,
     List<String>? bibleEditions,
+    String? script,
   }) {
     return Settings(
       fontSize: clampFontSize(fontSize ?? this.fontSize),
@@ -139,6 +149,7 @@ class Settings {
       reminderSource: reminderSource ?? this.reminderSource,
       showAccents: showAccents ?? this.showAccents,
       bibleEditions: bibleEditions ?? this.bibleEditions,
+      script: script ?? this.script,
     );
   }
 
@@ -154,6 +165,7 @@ class Settings {
       readingMeasure.hashCode ^
       reminderSource.hashCode ^
       showAccents.hashCode ^
+      script.hashCode ^
       Object.hashAll(bibleEditions);
 
   @override
@@ -170,6 +182,7 @@ class Settings {
               readingMeasure == other.readingMeasure &&
               reminderSource == other.reminderSource &&
               showAccents == other.showAccents &&
+              script == other.script &&
               listEquals(bibleEditions, other.bibleEditions);
 
   @override
@@ -190,6 +203,7 @@ class Settings {
       'reminderSource': reminderSource,
       'showAccents': showAccents,
       'bibleEditions': bibleEditions,
+      'script': script,
     };
   }
 
@@ -233,6 +247,8 @@ class Settings {
       bibleEditions: json["bibleEditions"] is List
           ? List<String>.from((json["bibleEditions"] as List).whereType<String>())
           : const <String>[],
+      // Ключа нет — прежняя версия: текст показывается, как набран.
+      script: json["script"] == "civil" || json["script"] == "church" ? json["script"] : "source",
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../dto/pericope.dart';
+import '../utils/script_convert.dart';
 import 'verse_list.dart';
 
 /// Зачало, подсвеченное внутри главы.
@@ -88,15 +89,19 @@ List<Widget> buildPericopeBlocks(
   required String fontFamily,
   required String rangesLabel,
   GlobalKey? firstKey,
+  TextScript script = TextScript.other,
 }) {
+  Widget plain(List<PericopeVerse> verses) =>
+      VerseListView(verses: verses, fontSize: fontSize, fontFamily: fontFamily, script: script);
+
   if (ranges.isEmpty || verses.isEmpty) {
-    return [_plain(verses, fontSize, fontFamily)];
+    return [plain(verses)];
   }
 
   final blocks = <Widget>[];
   for (final run in splitVerseRuns(verses, ranges)) {
     if (!run.inPericope) {
-      blocks.add(_plain(run.verses, fontSize, fontFamily));
+      blocks.add(plain(run.verses));
       continue;
     }
 
@@ -105,7 +110,7 @@ List<Widget> buildPericopeBlocks(
 
     blocks.add(pericopeFrame(
       context,
-      child: _plain(run.verses, fontSize, fontFamily),
+      child: plain(run.verses),
       rangesLabel: rangesLabel,
       fontSize: fontSize,
       isFirst: first,
@@ -115,9 +120,6 @@ List<Widget> buildPericopeBlocks(
   }
   return blocks;
 }
-
-Widget _plain(List<PericopeVerse> verses, double fontSize, String fontFamily) =>
-    VerseListView(verses: verses, fontSize: fontSize, fontFamily: fontFamily);
 
 class VerseRun {
   final List<PericopeVerse> verses;

@@ -31,6 +31,9 @@ import '../apiMapper/user_notes.dart';
 import "../apiMapper/dneslov/images.dart";
 import 'package:typikon/utils/reading_style.dart';
 import 'package:typikon/store/store.dart';
+import "package:typikon/components/script_toggle.dart";
+import "package:typikon/utils/script_convert.dart";
+import "package:typikon/components/pinch_zoom.dart";
 
 class TextPage extends StatefulWidget {
   final String id;
@@ -275,6 +278,34 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     });
   }
 
+  /// Письмо текста. Уставом — только отмеченные `csSource`; прочие тексты
+  /// библиотеки языка не называют, и среди них есть русские: их не переводим.
+  TextScript _scriptOf(Reading reading) =>
+      reading.csSource ? TextScript.church : TextScript.other;
+
+  /// Заметки для подсветки переведённого текста.
+  ///
+  /// Заметка хранит книжное написание, а в тексте теперь другое, и подсветка
+  /// её не нашла бы — ни ошибки, ни следа. Фраза переводится тем же правилом,
+  /// что и текст; по нажатию открывается сама заметка, а не эта копия.
+  List<UserNote> _presentedNotes(TextScript script, String setting) => _userNotes
+      .map((note) => UserNote(
+            id: note.id,
+            textId: note.textId,
+            note: note.note,
+            textName: note.textName,
+            selection: NoteSelection(
+              type: note.selection.type,
+              phrase: presentScript(note.selection.phrase, script, setting),
+              paragraphIndex: note.selection.paragraphIndex,
+              paragraph: note.selection.paragraph,
+              chapter: note.selection.chapter,
+              verse: note.selection.verse,
+              verseText: note.selection.verseText,
+            ),
+          ))
+      .toList();
+
   void _onTapUserNote(UserNote note) {
     showAddNoteSheet(
       context,
@@ -481,6 +512,13 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           ),
           FutureBuilder<Reading>(
             future: reading,
+            builder: (context, future) => ScriptToggle(
+              source: future.hasData ? _scriptOf(future.data!) : TextScript.other,
+              onChanged: () => setState(() {}),
+            ),
+          ),
+          FutureBuilder<Reading>(
+            future: reading,
             builder: (context, future) {
               if (future.hasData) {
                 return IconButton(
@@ -496,7 +534,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           ),
         ],
       ),
-      body: Container(
+      body: PinchZoom(child: Container(
         color: StoreProvider.of<AppState>(context).state.settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
@@ -514,6 +552,13 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
               String content = _showAccents && _accented != null
                   ? _accented!.content
                   : future.data!.content;
+              // Письмо — тем же приёмом, поверх ударений: подменяется та же
+              // переменная, и выгрузка в fb2 по-прежнему уносит книгу.
+              final script = _scriptOf(future.data!);
+              final setting = readerScript(context);
+              final converted = convertsScript(script, setting);
+              content = presentScript(content, script, setting);
+              final notes = converted ? _presentedNotes(script, setting) : _userNotes;
               String name = future.data!.name;
               return SingleChildScrollView(
                 controller: _scrollController,
@@ -536,10 +581,19 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                           // прокручивается сама, а окошко со своей прокруткой
                           // посреди неё резало текст и не знало ни одной
                           // настройки чтения.
-                          ReadingMarkdown(content, scrollable: false)
+                          // Меню — без заметок: они привязаны к номеру абзаца
+                          // по двойному переводу строки, а markdown делит текст
+                          // на абзацы по-своему, и номер разошёлся бы с экраном.
+                          SelectionMenu.wordsOnly(
+                            child: ReadingMarkdown(content, scrollable: false),
+                          )
                         ) : (
                             SelectionMenu(
-                              enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn,
+                              // В переведённом виде заметку и сообщение об
+                              // ошибке не заводим: они ушли бы на сервер не
+                              // книжным написанием, а нашим переводом.
+                              enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn &&
+                                  !converted,
                               textId: _realId,
                               containers: content.split("\n\n").asMap().entries.map((entry) =>
                                   TextContainer.paragraph(paragraphIndex: entry.key, text: entry.value)
@@ -549,16 +603,22 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                                     FusionTextWidgets(
                                       text: entry.value,
                                       footnotes: future.data?.footnotes??[],
-                                      fontFamily: future.data!.csSource ? "Monomakh" : "OldStandard",
-                                      notes: _userNotes.where((n) =>
+                                      fontFamily: presentFont(
+                                          future.data!.csSource ? "Monomakh" : "OldStandard",
+                                          script,
+                                          setting),
+                                      notes: notes.where((n) =>
                                           n.selection.type == 'paragraph' && n.selection.paragraphIndex == entry.key
                                       ).toList(),
-                                      onTapNote: _onTapUserNote,
+                                      onTapNote: (note) => _onTapUserNote(
+                                          _userNotes.firstWhere((n) => n.id == note.id,
+                                              orElse: () => note)),
                                     ),
                                 ).toList(),
                               ),
                             )
                         ),
+                      ScriptCaveat(source: script),
                       // Оговорка теми же словами, что на сайте. Она обязательна:
                       // без неё машинная догадка выдаётся за книгу, а решение
                       // писать эти знаки в самый корпус остаётся за хозяином.
@@ -651,7 +711,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
               ),
             );
           },
-        )),
+        ))),
       ),
     );
   }

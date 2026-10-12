@@ -9,6 +9,8 @@ import '../components/bible_edition_picker.dart';
 import '../components/bible_parallel_view.dart';
 import '../components/chapter_grid.dart';
 import '../components/pericope_block.dart';
+import '../components/script_toggle.dart';
+import '../components/selection_menu.dart';
 import '../components/verse_list.dart';
 import '../dto/bible.dart';
 import '../dto/pericope.dart';
@@ -19,7 +21,9 @@ import '../store/models/models.dart';
 import '../utils/bible_editions.dart';
 import '../utils/bible_route.dart';
 import '../utils/bible_style.dart';
+import '../utils/script_convert.dart';
 import 'package:typikon/utils/reading_style.dart';
+import '../components/pinch_zoom.dart';
 
 /// Глава Библии.
 ///
@@ -214,6 +218,19 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
           ),
         ),
         actions: [
+          // Кнопка есть, только когда среди изданий есть уставное: румынское
+          // или греческое переписывать нечем и незачем.
+          FutureBuilder<BibleChapter>(
+            future: chapter,
+            builder: (context, future) => ScriptToggle(
+              source: future.hasData &&
+                      future.data!.editions
+                          .any((edition) => bibleScript(edition.language) == TextScript.church)
+                  ? TextScript.church
+                  : TextScript.other,
+              onChanged: () => setState(() {}),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.layers),
             tooltip: "Издания",
@@ -234,7 +251,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
           ),
         ],
       ),
-      body: Container(
+      body: PinchZoom(child: Container(
         color: settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
         // Ширину колонки читатель выбирает сам; без выбора обёртка не делает
         // ничего — на телефоне ограничивать нечего.
@@ -247,7 +264,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
             }
             return _chapter(context, future.data!, settings.fontSize.toDouble());
           },
-        )),
+        ))),
       ),
     );
   }
@@ -286,16 +303,22 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (data.editions.length > 1)
-            BibleParallelView(
-              chapter: data,
-              fontSize: fontSize,
-              highlight: widget.highlight,
-              rangesLabel: _rangesLabel,
-              firstKey: _pericopeKey,
-            )
-          else
-            _single(context, data, fontSize),
+          SelectionMenu.wordsOnly(
+            child: data.editions.length > 1
+                ? BibleParallelView(
+                    chapter: data,
+                    fontSize: fontSize,
+                    highlight: widget.highlight,
+                    rangesLabel: _rangesLabel,
+                    firstKey: _pericopeKey,
+                  )
+                : _single(context, data, fontSize),
+          ),
+          ScriptCaveat(
+            source: data.editions.any((edition) => bibleScript(edition.language) == TextScript.church)
+                ? TextScript.church
+                : TextScript.other,
+          ),
           ..._numberingNotes(context, data),
           _placesBlock(context),
           _navigation(context),
@@ -316,8 +339,11 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
       );
     }
 
+    final script = bibleScript(edition?.language);
+
     if (widget.highlight.isEmpty) {
-      return VerseListView(verses: verses, fontSize: fontSize, fontFamily: fontFamily);
+      return VerseListView(
+          verses: verses, fontSize: fontSize, fontFamily: fontFamily, script: script);
     }
 
     return Column(
@@ -330,6 +356,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
         fontFamily: fontFamily,
         rangesLabel: _rangesLabel,
         firstKey: _pericopeKey,
+        script: script,
       ),
     );
   }

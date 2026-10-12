@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:typikon/dto/pomyannik.dart';
 import 'package:typikon/store/pomyannik_cache.dart';
 import 'package:typikon/utils/pomyannik_reminders.dart';
@@ -24,8 +25,13 @@ PomyannikMirror mirror({
       events: events,
     );
 
-UpcomingEvent event(String date, {String title = "Сороковой день: Николай", String? personId}) =>
-    UpcomingEvent(date: date, kind: "fortieth", title: title, personId: personId);
+UpcomingEvent event(
+  String date, {
+  String title = "Сороковой день: Николай",
+  String? personId,
+  String kind = "fortieth",
+}) =>
+    UpcomingEvent(date: date, kind: kind, title: title, personId: personId);
 
 ReminderVerdict verdict({
   bool enabled = true,
@@ -33,6 +39,7 @@ ReminderVerdict verdict({
   String? lastNotified,
   DateTime? now,
   bool withNames = false,
+  Set<String> notified = const {},
 }) =>
     pomyannikVerdict(
       enabled: enabled,
@@ -40,6 +47,7 @@ ReminderVerdict verdict({
       lastNotifiedDate: lastNotified,
       now: now ?? DateTime(2026, 9, 8, 9),
       withNames: withNames,
+      notified: notified,
     );
 
 void main() {
@@ -75,6 +83,7 @@ void main() {
         lastNotifiedDate: null,
         now: DateTime(2026, 9, 8, 9),
         withNames: false,
+        notified: const {},
       ).shows, isFalse);
     });
 
@@ -176,6 +185,92 @@ void main() {
       expect(PomyannikMirror.fromJson({"userId": "u", "fetchedAt": "мусор"}), isNull);
       expect(PomyannikMirror.fromJson({"userId": "u", "fetchedAt": "2026-09-08T09:00:00.000"}),
           isNotNull);
+    });
+  });
+
+  // О здравии вписывают многих, и именины каждого утренним уведомлением были бы
+  // шумом. Поэтому о живых — только об отмеченных в карточке; поминальные дни —
+  // обо всех, без отметки.
+  group("именины и дни рождения", () {
+    UpcomingEvent nameday(String personId, {String title = "Именины: Анна"}) =>
+        event("2026-09-08", kind: "nameday", title: title, personId: personId);
+    UpcomingEvent birthday(String personId) =>
+        event("2026-09-08", kind: "birthday", title: "День рождения: Пётр", personId: personId);
+
+    test("не отмеченного — молчим", () {
+      final said = verdict(on: mirror(events: [nameday("p1")]));
+
+      expect(said.shows, isFalse);
+      expect(said.silence, "сегодня нечего сказать");
+    });
+
+    test("отмеченного — говорим, и не «поминальный день»", () {
+      // Назвать именины поминальным днём значило бы напугать: человек подумает о
+      // смерти того, у кого праздник.
+      final said = verdict(on: mirror(events: [nameday("p1")]), notified: {"p1"});
+
+      expect(said.body, "Сегодня именины");
+    });
+
+    test("с именами — так, как их составил сервер", () {
+      final said = verdict(
+        withNames: true,
+        on: mirror(events: [nameday("p1")]),
+        notified: {"p1"},
+      );
+
+      expect(said.body, "Именины: Анна");
+      expect(said.payload, "pomyannik:p1");
+    });
+
+    test("отметка не глушит поминальные дни", () {
+      final said = verdict(
+        withNames: true,
+        on: mirror(events: [nameday("p2"), event("2026-09-08", personId: "p9")]),
+        notified: {"p1"},
+      );
+
+      expect(said.body, "Сороковой день: Николай",
+          reason: "именины не отмеченного выпали, сороковой день остался");
+    });
+
+    test("всё вместе без имён — перечнем родов", () {
+      final said = verdict(
+        on: mirror(events: [
+          nameday("p1"),
+          birthday("p2"),
+          event("2026-09-08", personId: "p9"),
+        ]),
+        notified: {"p1", "p2"},
+      );
+
+      expect(said.body, "Сегодня именины, день рождения и поминальный день");
+    });
+
+    test("общий день поминовения не требует отметки", () {
+      final said = verdict(
+        on: mirror(events: [
+          event("2026-09-08", kind: "memorial-day", title: "Димитриевская суббота"),
+        ]),
+      );
+
+      expect(said.body, "Сегодня поминальный день");
+    });
+
+    test("отметка хранится идентификатором и стирается при выходе", () async {
+      SharedPreferences.setMockInitialValues({});
+
+      await setPersonNotified("p1", true);
+      await setPersonNotified("p2", true);
+      await setPersonNotified("p2", false);
+      expect(await notifiedPersons(), {"p1"});
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList(notifiedPersonsKey), ["p1"],
+          reason: "на диске одни идентификаторы, без имён");
+
+      await clearPomyannikCache();
+      expect(await notifiedPersons(), isEmpty);
     });
   });
 }

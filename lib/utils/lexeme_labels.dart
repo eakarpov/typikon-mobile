@@ -171,3 +171,56 @@ String paradigmTitle(LexemeParadigm paradigm) {
       return title ?? paradigm.kind;
   }
 }
+
+/// Пометы разбора формы — `sg`, `acc`, `indic`, `2p/3p`.
+///
+/// Это другой словарь кодов, чем у ячеек парадигмы (`sgAcc`): ручка ударений
+/// отдаёт разбор формы помета за пометой. Совпавшие формы сервер пишет через
+/// косую — `gen/loc`, `nom/acc`, — так их и показываем: «род./мест.».
+const Map<String, String> _formCodes = {
+  "sg": "ед.",
+  "pl": "мн.",
+  "du": "дв.",
+  "m": "м.",
+  "f": "ж.",
+  "n": "ср.",
+  "nom": "им.",
+  "acc": "вин.",
+  "gen": "род.",
+  "dat": "дат.",
+  "loc": "мест.",
+  "ins": "твор.",
+  "voc": "зват.",
+  "brev": "кратк.",
+  "plen": "полн.",
+  "indic": "изъяв.",
+  "imper": "повел.",
+  "inf": "неопр.",
+  "praes": "наст.",
+  "fut": "буд.",
+  "aor": "аорист",
+  "imperf": "имперф.",
+  "perf": "перф.",
+  "praet": "прош.",
+  "partcp": "прич.",
+  "act": "действ.",
+  "pass": "страд.",
+  "comp": "сравн.",
+};
+
+/// Лицо — `2p/3p` — пишется одним числом на все лица: «2/3 л.», а не
+/// «2 л./3 л.».
+final RegExp _person = RegExp(r"^([123])p$");
+
+/// Одна помета словами. Незнакомая показывается как есть.
+String formCodeLabel(String code) {
+  final parts = code.split("/");
+  final persons = parts.map((part) => _person.firstMatch(part)?.group(1)).toList();
+  if (persons.every((person) => person != null)) {
+    return "${persons.join("/")} л.";
+  }
+  return parts.map((part) => _formCodes[part] ?? part).join("/");
+}
+
+/// Разбор формы строкой: «ед. вин.», «изъяв. аорист ед. 2/3 л.».
+String formParseLabel(List<String> codes) => codes.map(formCodeLabel).join(" ");

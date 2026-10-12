@@ -3,10 +3,14 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import '../apiMapper/singing.dart';
 import '../components/async_view.dart';
+import '../components/pinch_zoom.dart';
+import '../components/script_toggle.dart';
+import '../components/selection_menu.dart';
 import '../dto/corpus.dart';
 import '../store/models/models.dart';
 import '../utils/chant_style.dart';
 import '../utils/reading_style.dart';
+import '../utils/script_convert.dart';
 import '../utils/singing_labels.dart';
 
 /// Молитва целиком.
@@ -50,8 +54,17 @@ class _PrayerPageState extends State<PrayerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Молитва", style: TextStyle(fontFamily: "OldStandard")),
+        actions: [
+          FutureBuilder<PrayerDetail>(
+            future: prayer,
+            builder: (context, future) => ScriptToggle(
+              source: future.hasData ? chantScript(future.data!.language) : TextScript.other,
+              onChanged: () => setState(() {}),
+            ),
+          ),
+        ],
       ),
-      body: Container(
+      body: PinchZoom(child: Container(
         color: readingBackgroundColor(context),
         child: AsyncView<PrayerDetail>(
           future: prayer,
@@ -59,7 +72,7 @@ class _PrayerPageState extends State<PrayerPage> {
           onRetry: () => setState(_load),
           onRefresh: _refresh,
           builder: (context, data) => _body(context, data, fontSize),
-        ),
+        )),
       ),
     );
   }
@@ -67,7 +80,8 @@ class _PrayerPageState extends State<PrayerPage> {
   Widget _body(BuildContext context, PrayerDetail detail, double fontSize) {
     final prayer = detail.prayer;
     final small = Theme.of(context).textTheme.bodySmall;
-    final font = chantFontFamily(detail.language);
+    final script = chantScript(detail.language);
+    final font = readerFont(context, chantFontFamily(detail.language), script);
 
     final about = <String>[
       prayerKindLabel(prayer.kind),
@@ -119,15 +133,21 @@ class _PrayerPageState extends State<PrayerPage> {
         if (detail.text.isEmpty)
           Text("Текста молитвы в корпусе нет.", style: small)
         else
-          ...chantLines(detail.text).map((line) => Text(
-                line,
-                style: TextStyle(
-                  fontFamily: font,
-                  fontSize: fontSize,
-                  height: readingLineHeight(context),
-                  color: readingTextColor(context),
-                ),
-              )),
+          SelectionMenu.wordsOnly(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: readerChantLines(context, detail.text, script).map((line) => Text(
+                    line,
+                    style: TextStyle(
+                      fontFamily: font,
+                      fontSize: fontSize,
+                      height: readingLineHeight(context),
+                      color: readingTextColor(context),
+                    ),
+                  )).toList(),
+            ),
+          ),
+        if (detail.text.isNotEmpty) ScriptCaveat(source: script),
         if (detail.siblings.isNotEmpty) ...[
           const Divider(height: 32.0),
           // Книга печатает молитвы вереницей, и читающий вторую обыкновенно

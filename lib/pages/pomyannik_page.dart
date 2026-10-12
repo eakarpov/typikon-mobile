@@ -7,6 +7,7 @@ import '../components/paged_list.dart';
 import '../components/api_error_view.dart' show failureMessage;
 import '../components/sign_in_needed.dart';
 import '../dto/pomyannik.dart';
+import '../store/pomyannik_cache.dart' show notifiedPersons;
 import '../utils/pomyannik_labels.dart';
 
 /// РАЗВОРОТ ПОМЯННИКА: о здравии и о упокоении.
@@ -41,11 +42,20 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
   Object? _error;
   bool _adding = false;
 
+  /// О ком из живых напоминать — отмечено в карточке, лежит на устройстве.
+  Set<String> _notified = const {};
+
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
     _loadVocabulary();
+    _loadNotified();
+  }
+
+  Future<void> _loadNotified() async {
+    final notified = await notifiedPersons();
+    if (mounted) setState(() => _notified = notified);
   }
 
   @override
@@ -63,10 +73,14 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
     }
   }
 
-  void _reload() => setState(() {
-        _token++;
-        _error = null;
-      });
+  void _reload() {
+    setState(() {
+      _token++;
+      _error = null;
+    });
+    // Карточка могла поменять и отметку «напоминать».
+    _loadNotified();
+  }
 
   Future<void> _add(String kind) async {
     final typed = await showDialog<String>(
@@ -193,12 +207,14 @@ class _PomyannikPageState extends State<PomyannikPage> with SingleTickerProvider
                     kind: living,
                     token: _token,
                     vocabulary: _vocabulary,
+                    notified: _notified,
                     onChanged: _reload,
                   ),
                   _Column(
                     kind: departed,
                     token: _token,
                     vocabulary: _vocabulary,
+                    notified: const {},
                     onChanged: _reload,
                   ),
                 ],
@@ -213,12 +229,14 @@ class _Column extends StatelessWidget {
     required this.kind,
     required this.token,
     required this.vocabulary,
+    required this.notified,
     required this.onChanged,
   });
 
   final String kind;
   final int token;
   final Vocabulary vocabulary;
+  final Set<String> notified;
 
   /// Карточка умеет править и убирать имя. Не перечитав список после её
   /// закрытия, мы показывали бы убранное имя до следующего входа в раздел — и
@@ -235,16 +253,30 @@ class _Column extends StatelessWidget {
           : "О упокоении пока никто не вписан.",
       errorMessage: "Не удалось открыть помянник.",
       itemBuilder: (context, person) =>
-          _Row(person: person, vocabulary: vocabulary, onChanged: onChanged),
+          _Row(
+            person: person,
+            vocabulary: vocabulary,
+            notified: notified.contains(person.id),
+            onChanged: onChanged,
+          ),
     );
   }
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.person, required this.vocabulary, required this.onChanged});
+  const _Row({
+    required this.person,
+    required this.vocabulary,
+    required this.notified,
+    required this.onChanged,
+  });
 
   final Person person;
   final Vocabulary vocabulary;
+
+  /// Напоминать ли об именинах и дне рождения. Видно в списке, чтобы не
+  /// открывать каждую карточку, выясняя, о ком придёт уведомление.
+  final bool notified;
   final VoidCallback onChanged;
 
   @override
@@ -262,6 +294,14 @@ class _Row extends StatelessWidget {
       subtitle: about.isEmpty
           ? null
           : Text(about.join(", "), style: Theme.of(context).textTheme.bodySmall),
+      trailing: notified
+          ? Icon(
+              Icons.notifications_active_outlined,
+              size: 20.0,
+              semanticLabel: "напоминать об именинах и дне рождения",
+              color: Theme.of(context).colorScheme.primary,
+            )
+          : null,
       onTap: () async {
         final changed = await Navigator.pushNamed(context, "/pomyannik", arguments: person.id);
         if (changed == true) onChanged();

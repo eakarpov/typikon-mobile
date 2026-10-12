@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/footlinks.dart';
+import 'package:typikon/components/pinch_zoom.dart';
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/utils/reading_style.dart';
 
@@ -114,6 +115,8 @@ class FusionTextWidgets extends StatelessWidget {
       // заметку» и «Сообщить об ошибке» было не добраться, как и до «Копировать».
       selectionRegistrar: SelectionContainer.maybeOf(context),
       selectionColor: DefaultSelectionStyle.of(context).selectionColor,
+      // Щипок на экране чтения (см. `components/pinch_zoom.dart`).
+      textScaler: ReadingZoom.scalerOf(context),
       text: TextSpan(
         children: widgets,
       ),

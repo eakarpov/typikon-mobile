@@ -141,6 +141,7 @@ Future<void> clearPomyannikCache() async {
   try {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(lastNotifiedKey);
+    await prefs.remove(notifiedPersonsKey);
   } catch (_) {}
 }
 
@@ -162,6 +163,7 @@ bool mirrorBelongsTo(PomyannikMirror? mirror, String? userId) =>
 const String remindersEnabledKey = "pomyannikRemindersEnabled";
 const String namesInRemindersKey = "pomyannikNamesInReminders";
 const String lastNotifiedKey = "pomyannikLastNotifiedDate";
+const String notifiedPersonsKey = "pomyannikNotifiedPersons";
 
 /// По умолчанию выключено. Заводить уведомления об умерших родственниках
 /// всякому, кто вошёл в учётную запись, нельзя.
@@ -203,4 +205,33 @@ Future<String?> lastPomyannikNotice() async {
 Future<void> rememberPomyannikNotice(String date) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(lastNotifiedKey, date);
+}
+
+// --- О ком из живых напоминать ------------------------------------------------
+//
+// Именины и дни рождения — не поминальные дни. О здравии вписывают и родню, и
+// духовника, и соседа, за которого попросили помолиться; утренний перечень
+// именин всех их подряд стал бы шумом, из-за которого напоминания выключают
+// целиком, вместе с сороковым днём. Поэтому о живых говорим только о тех, кого
+// хозяин отметил сам, в карточке.
+//
+// Пометка лежит на этом устройстве, а не в помяннике на сервере: у сервера
+// такого поля нет. На диске — одни идентификаторы, без имён: по ним не узнать,
+// о ком речь. Выход из учётной записи стирает их вместе с зеркалом.
+
+Future<Set<String>> notifiedPersons() async {
+  final prefs = await SharedPreferences.getInstance();
+  return (prefs.getStringList(notifiedPersonsKey) ?? const <String>[]).toSet();
+}
+
+Future<void> setPersonNotified(String personId, bool value) async {
+  if (personId.isEmpty) return;
+  final prefs = await SharedPreferences.getInstance();
+  final ids = (prefs.getStringList(notifiedPersonsKey) ?? const <String>[]).toSet();
+  if (value) {
+    ids.add(personId);
+  } else {
+    ids.remove(personId);
+  }
+  await prefs.setStringList(notifiedPersonsKey, ids.toList()..sort());
 }
