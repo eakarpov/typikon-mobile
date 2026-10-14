@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:typikon/dto/saint.dart';
@@ -36,11 +37,6 @@ void main() {
       expect(saint.baseYearLabel, "1533");
     });
 
-    test("номер святцев достаётся из внешних ключей", () {
-      // По нему берётся житие: стороннему сайту наш слуг незнаком.
-      expect(saint.dneslovId, "2757");
-    });
-
     test("вид записи без подписи не подменяется кодом", () {
       // `Identity` — наше служебное слово, и показывать его читателю нельзя;
       // сервер это знает и подписи не даёт.
@@ -70,21 +66,37 @@ void main() {
   });
 
   group("житие", () {
-    test("слуг стороннего сайта держится отдельно от нашего", () {
-      // Наш слуг и слуг dneslov расходятся, а ссылка «открыть на dneslov»
-      // строится по их слугу — подставив наш, мы увели бы в никуда.
-      final life = SaintLife.fromJson("zaharia", jsonDecode(
-          '{"memoes": [{"title": "Заха́рия", "description": "Житие."}], "links": []}'));
+    test("контракт прокси разбирается: слуг, источник, памяти и ссылки", () {
+      final life = SaintLife.fromJson(jsonDecode(
+          File("test/fixtures/saint_life.json").readAsStringSync()));
+
+      expect(life.slug, "zaharia");
+      expect(life.source, "dneslov");
+      expect(life.memoes.length, 2);
+      expect(life.memo!.title, "Заха́рия");
+      expect(life.memo!.happenedAt, isNull);
+      expect(life.hasText, isTrue);
+      expect(life.links.single.url, "https://dneslov.org/zaharia");
+    });
+
+    test("слуг стороннего каталога держится отдельно от нашего", () {
+      // Наш слуг и слуг каталога памятей расходятся, а ссылка «открыть
+      // источник» строится по их слугу — подставив наш, мы увели бы в никуда.
+      final life = SaintLife.fromJson(jsonDecode(
+          '{"slug": "zaharia", "memoes": [{"title": "Заха́рия", "description": "Житие."}]}'));
 
       expect(life.slug, "zaharia");
       expect(life.memo!.title, "Заха́рия");
       expect(life.hasText, isTrue);
     });
 
-    test("память без жития не выдаётся за незагрузившуюся", () {
-      final empty = SaintLife.fromJson("x", jsonDecode('{"memoes": [], "links": []}'));
-      final blank = SaintLife.fromJson("x", jsonDecode(
-          '{"memoes": [{"title": "Т", "description": "   "}]}'));
+    test("память без описания — не житие, а не незагрузившийся текст", () {
+      // Сервер такие памяти опускает; если всё же пришли без описания,
+      // показывать их как текст нечего.
+      final empty = SaintLife.fromJson(jsonDecode(
+          '{"slug": "x", "source": "dneslov", "memoes": [], "links": []}'));
+      final blank = SaintLife.fromJson(jsonDecode(
+          '{"slug": "x", "memoes": [{"title": "Т"}, {"title": "Т", "description": "   "}]}'));
 
       expect(empty.hasText, isFalse);
       expect(blank.hasText, isFalse);

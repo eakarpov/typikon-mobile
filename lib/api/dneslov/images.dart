@@ -10,11 +10,3 @@ Future<http.Response> fetchDneslovImages(String dneslovId) {
     ttl: const Duration(hours: 24),
   );
 }
-
-Future<http.Response> fetchDneslovRoundels(String dneslovId) {
-  return cachedFetch(
-    'dneslov-roundels:$dneslovId',
-    () => http.get(Uri.parse('$dneslovBaseUrl/api/v1/roundels.json?m=$dneslovId')).timeout(dneslovTimeout),
-    ttl: const Duration(hours: 24),
-  );
-}

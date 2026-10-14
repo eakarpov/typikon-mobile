@@ -29,3 +29,21 @@ Future<http.Response> fetchSaintDossier(String address) {
     },
   );
 }
+
+/// Житие из каталога памятей — притягивает его наш серверный прокси.
+///
+/// Адрес принимает и слуг, и номер святцев: резолвит их сам сервер, и ходить
+/// за номером через досье, как раньше, больше не нужно. Срок кэша — месяц:
+/// житие пишется раз и надолго, а связь с каталогом не зависит от дня запроса,
+/// как у досье.
+Future<http.Response> fetchSaintLife(String address) {
+  return cachedFetch(
+    "saint-life:${address.length}:$address",
+    () => v2Get(v2Uri("/saints/dossier/${Uri.encodeComponent(address)}/life")),
+    ttl: const Duration(days: 30),
+    isCacheable: (body) {
+      final decoded = jsonDecode(body);
+      return decoded is Map && decoded.containsKey("memoes");
+    },
+  );
+}

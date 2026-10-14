@@ -4,11 +4,17 @@ class BookText {
   final String dneslovId;
   final String? textType; // don't know why this is needed
 
+  /// Оплечный образ текста. Приходит с сервером книги (вторая версия API):
+  /// абсолютный адрес cdn.dneslov.org или относительный путь `/roundels/...`,
+  /// который дополняется до полного на месте. Нет поля — рисуем значок.
+  final String? roundelUrl;
+
   const BookText({
     required this.name,
     required this.id,
     required this.dneslovId,
     required this.textType,
+    this.roundelUrl,
   });
 
   factory BookText.fromJson(Map<String, dynamic> json) {
@@ -17,6 +23,7 @@ class BookText {
       id: json["id"] ?? json["_id"] ?? "",
       dneslovId: json["dneslovId"] == null ? "" : json["dneslovId"],
       textType: json["type"] == null ? "" : json["type"],
+      roundelUrl: json["roundelUrl"],
     );
   }
 

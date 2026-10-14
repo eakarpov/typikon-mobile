@@ -6,8 +6,8 @@ import 'package:typikon/utils/signs.dart';
 
 /// Компактный информационный блок "Святые дня" по месяцеслову Типикона
 /// (коллекция signs на бекенде). Не имеет связи с текстами/святыми (id),
-/// поэтому пункты не тапаются — только ссылка "Все святые дня" на
-/// существующую страницу /dneslov/memories за подробными житиями.
+/// поэтому пункты не тапаются — только ссылка "Все святые дня" на страницу
+/// /day-saints, где святые дня из нашего каталога.
 class DayMemoriesView extends StatelessWidget {
   final DayMemories memories;
 
@@ -56,7 +56,7 @@ class DayMemoriesView extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: TextButton(
               style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
-              onPressed: () => Navigator.pushNamed(context, "/dneslov/memories"),
+              onPressed: () => Navigator.pushNamed(context, "/day-saints"),
               child: const Text("Все святые дня →"),
             ),
           ),

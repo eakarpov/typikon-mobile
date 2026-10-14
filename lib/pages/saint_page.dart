@@ -9,16 +9,27 @@ import 'package:typikon/components/api_error_view.dart';
 import 'package:typikon/dto/saint.dart';
 import 'package:typikon/utils/singing_labels.dart';
 
-/// Страница святого: наша запись и житие со стороннего сайта.
+/// Страница святого: наша запись и житие из каталога памятей.
 ///
-/// Два источника грузятся врозь и падают врозь. Житие приходит с dneslov.org,
-/// который молчит заметно чаще нас, и когда он молчит, на экране остаётся всё
-/// остальное — имя, дни памяти, службы, тексты. Поэтому и шапка берёт имя из
-/// нашей записи, а не из заголовка жития.
+/// Два источника грузятся врозь и падают врозь. Жития нет у всякой записи, и
+/// когда его нет, на экране остаётся всё остальное — имя, дни памяти, службы,
+/// тексты. Поэтому и шапка берёт имя из нашей записи, а не из заголовка жития.
 class SaintPage extends StatefulWidget {
   final String id;
 
-  const SaintPage(context, {super.key, required this.id});
+  const SaintPage(
+    context, {
+    super.key,
+    required this.id,
+    this.loadDossier = getSaintDossier,
+    this.loadLife = getSaintLife,
+  });
+
+  /// Запись каталога. Подменяется тестом, чтобы показать страницу без сети.
+  final Future<SaintDossier> Function(String address) loadDossier;
+
+  /// Житие. Подменяется тестом.
+  final Future<SaintLife> Function(String address) loadLife;
 
   @override
   State<SaintPage> createState() => _SaintPageState();
@@ -47,18 +58,15 @@ class _SaintPageState extends State<SaintPage> {
     _lifeError = null;
     _lifeLoading = true;
 
-    final dossier = getSaintDossier(widget.id);
-
-    dossier.then((value) {
+    widget.loadDossier(widget.id).then((value) {
       if (mounted) setState(() { _dossier = value; _dossierLoading = false; });
     }).catchError((Object error) {
       if (mounted) setState(() { _dossierError = error; _dossierLoading = false; });
     });
 
-    // Житие идёт своим запросом и своей веткой состояния. Досье оно дожидается
-    // только за номером святцев, и только когда адрес — наш слуг: dneslov на
-    // чужой слуг не отвечает вовсе (см. getSaintLife).
-    getSaintLife(widget.id, dossier: dossier).then((value) {
+    // Житие идёт своим запросом и своей веткой состояния. Адрес резолвит
+    // сервер — досье дожидаться не нужно.
+    widget.loadLife(widget.id).then((value) {
       if (mounted) setState(() { _life = value; _lifeLoading = false; });
     }).catchError((Object error) {
       if (mounted) setState(() { _lifeError = error; _lifeLoading = false; });
@@ -67,7 +75,7 @@ class _SaintPageState extends State<SaintPage> {
 
   void _retry() => setState(_load);
 
-  void _openLinks(List<DneslovLink> links) {
+  void _openLinks(List<SaintLifeLink> links) {
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => Padding(
@@ -107,7 +115,7 @@ class _SaintPageState extends State<SaintPage> {
   @override
   Widget build(BuildContext context) {
     final life = _life;
-    final links = life?.links ?? const <DneslovLink>[];
+    final links = life?.links ?? const <SaintLifeLink>[];
 
     return DefaultTabController(
       length: 3,
@@ -163,17 +171,14 @@ class _SaintPageState extends State<SaintPage> {
     if (_lifeLoading) return const Center(child: CircularProgressIndicator());
 
     if (_lifeError != null) {
-      return ApiErrorView(
-        error: _lifeError,
-        message: "Не удалось загрузить житие.",
-        hint: "Жития приходят со стороннего сайта dneslov.org — иногда он недоступен.",
-        onRetry: _retry,
-      );
+      // errorViewFor различает честный отказ («житие не связано с каталогом» —
+      // кнопки «Повторить» нет, говорит сам сервер) и обрыв сети.
+      return errorViewFor(context, _lifeError, "Не удалось загрузить житие.", _retry);
     }
 
     final life = _life!;
     if (!life.hasText) {
-      return const _Quiet("Жития у этой памяти на dneslov.org нет.");
+      return const _Quiet("Жития у этой памяти нет.");
     }
 
     // Настройки чтения, а не только шрифт: размер, цвет и интервал житие

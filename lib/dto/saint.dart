@@ -1,57 +1,79 @@
-// Досье святого и его житие — две разные вещи из двух разных мест.
+// Досье святого и его житие — две разные вещи из двух разных ручек.
 //
 // SaintDossier — наша запись каталога: имя, чины, дни памяти, службы, тексты.
-// SaintLife — житие со стороннего dneslov.org. Они не сведены в один объект
-// нарочно: dneslov молчит заметно чаще, чем мы, и когда он молчит, имя святого,
-// дни его памяти и тексты службы всё равно должны быть на экране.
+// SaintLife — житие из каталога памятей, притянутое нашим серверным прокси
+// (ручка `/saints/dossier/{address}/life`; источник — в поле `source`). Они не
+// сведены в один объект нарочно: жития нет у всякой записи, и когда его нет,
+// имя святого, дни его памяти и тексты службы всё равно должны быть на экране.
 
-// --- Житие с dneslov.org ------------------------------------------------------
+// --- Житие --------------------------------------------------------------
 
-class DneslovLink {
+/// Внешняя ссылка из жития — ресурс о святом на стороне источника.
+class SaintLifeLink {
   final int id;
   final String url;
 
-  const DneslovLink({required this.id, required this.url});
+  const SaintLifeLink({required this.id, required this.url});
 
-  factory DneslovLink.fromJson(Map<String, dynamic> json) => DneslovLink(
+  factory SaintLifeLink.fromJson(Map<String, dynamic> json) => SaintLifeLink(
         id: json["id"] ?? 0,
         url: json["url"] ?? "",
       );
 }
 
-class DneslovMemo {
+/// Одна память из жития. Описание у памяти может отсутствовать: сервер такие
+/// опускает, и незагрузившимся текст это считаться не должно.
+class SaintLifeMemo {
   final String title;
+
+  /// Когда жил(а) святой — словами; чаще всего неизвестно.
+  final String? happenedAt;
   final String description;
 
-  const DneslovMemo({required this.title, required this.description});
+  const SaintLifeMemo({
+    required this.title,
+    this.happenedAt,
+    this.description = "",
+  });
 
-  factory DneslovMemo.fromJson(Map<String, dynamic> json) => DneslovMemo(
+  factory SaintLifeMemo.fromJson(Map<String, dynamic> json) => SaintLifeMemo(
         title: json["title"] ?? "",
+        happenedAt: json["happenedAt"],
         description: json["description"] ?? "",
       );
 }
 
 class SaintLife {
-  /// Слуг на dneslov.org — свой, не наш: по нему открывается карточка на
-  /// стороннем сайте, и брать вместо него наш слуг нельзя, они расходятся.
+  /// Слуг карточки памяти — внешний (у каталога памятей свои адреса), наш слуг
+  /// ему не обязан совпадать. По нему открывается карточка на сайте источника.
   final String slug;
-  final List<DneslovMemo> memoes;
-  final List<DneslovLink> links;
 
-  const SaintLife({required this.slug, required this.memoes, required this.links});
+  /// Каталог, откуда житие: сегодня — всегда "dneslov", но поле в контракте,
+  /// и выводить его снаружи незачем.
+  final String source;
+  final List<SaintLifeMemo> memoes;
+  final List<SaintLifeLink> links;
 
-  DneslovMemo? get memo => memoes.isEmpty ? null : memoes.first;
+  const SaintLife({
+    required this.slug,
+    this.source = "",
+    this.memoes = const [],
+    this.links = const [],
+  });
+
+  SaintLifeMemo? get memo => memoes.isEmpty ? null : memoes.first;
 
   bool get hasText => (memo?.description ?? "").trim().isNotEmpty;
 
-  factory SaintLife.fromJson(String slug, Map<String, dynamic> json) {
+  factory SaintLife.fromJson(Map<String, dynamic> json) {
     final memoes = json["memoes"] is List ? json["memoes"] as List : const [];
     final links = json["links"] is List ? json["links"] as List : const [];
 
     return SaintLife(
-      slug: slug,
-      memoes: memoes.map((item) => DneslovMemo.fromJson(item)).toList(),
-      links: links.map((item) => DneslovLink.fromJson(item)).toList(),
+      slug: json["slug"] ?? "",
+      source: json["source"] ?? "",
+      memoes: memoes.map((item) => SaintLifeMemo.fromJson(item)).toList(),
+      links: links.map((item) => SaintLifeLink.fromJson(item)).toList(),
     );
   }
 }
@@ -217,7 +239,7 @@ class SaintDossier {
   final String? slug;
 
   /// Имя из нашей записи. Шапка страницы берёт его, а не заголовок жития:
-  /// житие приходит со стороннего сайта, и когда он молчит, имя должно остаться.
+  /// жития нет у всякой записи, и когда его нет, имя должно остаться.
   final String name;
 
   /// Прочие именования: варианты, прозвания, мирское имя при монашеском.
@@ -278,10 +300,6 @@ class SaintDossier {
     this.noble,
     this.caveat,
   });
-
-  /// Номер святцев — по нему берётся житие. Первый, если их несколько: житие у
-  /// dneslov одно на память, и выбирать из двух нам нечем.
-  String? get dneslovId => externals["dneslov"];
 
   bool get akathistsUnknown => akathists == null;
 
