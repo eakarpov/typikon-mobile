@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../api/bible.dart';
 import '../dto/bible.dart';
+import '../dto/concordance.dart';
 import 'v2/errors.dart';
 
 /// Разбор ответов Библии.
@@ -37,4 +38,12 @@ Future<BibleChapter> getBibleChapter(
     return BibleChapter.fromJson(jsonDecode(response.body));
   }
   throwV2Error(response, "Не удалось загрузить главу");
+}
+
+Future<Concordance> getConcordance(String ref) async {
+  final response = await fetchConcordance(ref);
+  if (response.statusCode == 200) {
+    return Concordance.fromJson(jsonDecode(response.body));
+  }
+  throwV2Error(response, "Не удалось узнать, в каких изданиях печатается стих");
 }

@@ -26,6 +26,7 @@ const Set<String> unlistedRoutes = <String>{
   "/days", // день из календаря
   "/reading", // текст из любого перечня
   "/pericope", // зачало из указателя
+  "/concordance", // стих в изданиях — из меню выделения в главе Библии
   "/incipit", // зачин из поиска
   "/saints", // досье из памяти
   "/pomyannik/upcoming", // из помянника
@@ -69,6 +70,22 @@ void main() {
 
     test("незнакомый маршрут честно возвращает null", () {
       expect(resolve("/такого-нет"), isNull);
+    });
+  });
+
+  group("маршруты с обязательным аргументом", () {
+    test("/concordance открывается с адресом стиха и не открывается без него",
+        () {
+      // Открывается из меню выделения стиха Библии, и аргумент несёт адрес
+      // «книга.глава.стих». Без аргумента разрешается в null, а не в пустой
+      // экран, как у '/pericope'.
+      final withArg = generateRoute(
+        const RouteSettings(name: "/concordance", arguments: "psaltir.9.13"),
+        hasSkippedUpdate: true,
+        skipUpdateWindow: (_) {},
+      );
+      expect(withArg, isNotNull);
+      expect(resolve("/concordance"), isNull);
     });
   });
 

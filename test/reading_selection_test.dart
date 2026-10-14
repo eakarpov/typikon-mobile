@@ -38,6 +38,30 @@ void main() {
     ));
   }
 
+  Future<void> pumpReadingWithShare(WidgetTester tester, {bool withShare = true}) async {
+    final store = Store<AppState>(appReducer, initialState: AppState.init());
+    await tester.pumpWidget(StoreProvider<AppState>(
+      store: store,
+      child: MaterialApp(
+        home: Scaffold(
+          body: SelectionMenu(
+            enabled: false,
+            textId: "t1",
+            containers: const [],
+            shareLinkFor: withShare ? (phrase) => "https://www.typikon.info/reading/t1" : null,
+            child: const Center(
+              child: FusionTextWidgets(
+                text: "Благословен Бог наш",
+                footnotes: [],
+                fontFamily: "OldStandard",
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
+
   for (final signedIn in [true, false]) {
     testWidgets("долгое нажатие выделяет слово (вошёл: $signedIn)", (tester) async {
       await pumpReading(tester, signedIn: signedIn);
@@ -49,4 +73,28 @@ void main() {
       expect(find.byType(AdaptiveTextSelectionToolbar), findsOneWidget);
     });
   }
+
+  group("поделиться", () {
+    testWidgets("пункт есть, когда задан shareLinkFor", (tester) async {
+      await pumpReadingWithShare(tester);
+
+      await tester.longPress(find.byType(RichText).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AdaptiveTextSelectionToolbar), findsOneWidget);
+      // Сам SharePlus не вызываем: в тесте нет канала — проверяем только, что
+      // пункт дошёл до тулбара.
+      expect(find.text("Поделиться"), findsOneWidget);
+    });
+
+    testWidgets("без shareLinkFor пункта нет", (tester) async {
+      await pumpReadingWithShare(tester, withShare: false);
+
+      await tester.longPress(find.byType(RichText).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AdaptiveTextSelectionToolbar), findsOneWidget);
+      expect(find.text("Поделиться"), findsNothing);
+    });
+  });
 }

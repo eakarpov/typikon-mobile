@@ -97,3 +97,16 @@ Future<http.Response> fetchBibleChapter(
     isCacheable: _bodyHas("verses"),
   );
 }
+
+/// Где канонический стих стоит в каждом издании собрания.
+///
+/// Соответствие нумераций меняется не чаще, чем выходит новое издание, —
+/// тридцати дней кэша здесь больше, чем достаточно.
+Future<http.Response> fetchConcordance(String ref) {
+  return cachedFetch(
+    "bible:concordance:$ref",
+    () => v2Get(v2Uri("/concordance", {"ref": ref})),
+    ttl: const Duration(days: 30),
+    isCacheable: _bodyHas("editions"),
+  );
+}

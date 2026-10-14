@@ -175,6 +175,12 @@ Widget errorViewFor(
     return ApiErrorView(error: error, message: error.message);
   }
 
+  if (error is ApiNotFoundException) {
+    // Честный ответ сервера («Такого стиха нет ни в одном издании собрания»),
+    // а не поломка: повторять нечего.
+    return ApiErrorView(error: error, message: error.message);
+  }
+
   if (error is ApiRateLimitedException) {
     return ApiErrorView(error: error, message: error.message, hint: error.hint, onRetry: onRetry);
   }

@@ -51,6 +51,10 @@
               android:resource="@style/NormalTheme"
               />
             <meta-data android:name="flutter_deeplinking_enabled" android:value="true" />
+            <!-- Ярлыки на иконке (res/xml/shortcuts.xml): система отдаёт адрес
+                 ярлыка как VIEW-интент, дальше его подхватывает тот же
+                 deeplinking, что и у ссылок сайта. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

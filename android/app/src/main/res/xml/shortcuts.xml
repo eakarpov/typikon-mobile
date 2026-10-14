@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Ярлыки на иконке. Система отдаёт адрес приложению как VIEW-интент,
+         а движок Flutter превращает путь в имя маршрута (см. lib/routes.dart),
+         поэтому цель каждого ярлыка — раздел, открывающийся БЕЗ аргумента:
+         аргументные адреса (/reading/<id>, /bible/<книга>/<глава>) сюда не
+         годятся. Хост и схема совпадают с заверяемым фильтром манифеста —
+         иначе Android не отдаст адрес приложению (см. test/deep_links_test.dart). -->
+    <shortcut
+        android:shortcutId="day_readings"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="Чтения дня">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://www.typikon.info/" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="library"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="Библиотека">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://www.typikon.info/library" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="pomyannik"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="Помянник">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://www.typikon.info/pomyannik" />
+    </shortcut>
+</shortcuts>

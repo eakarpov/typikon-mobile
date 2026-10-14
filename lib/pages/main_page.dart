@@ -22,7 +22,9 @@ import 'package:typikon/store/models/models.dart';
 import '../utils/commemorator.dart';
 import '../utils/day_preloader.dart';
 import '../utils/selected_day.dart';
+import '../components/continue_reading.dart';
 import '../components/trapeza_line.dart';
+import '../store/reading_progress.dart';
 import '../utils/bible_route.dart';
 import '../utils/route_observer.dart';
 import 'menu_entries.dart';
@@ -88,9 +90,21 @@ class _MainPageState extends State<MainPage>
   /// читатель ушёл на другой экран, не ответив.
   List<String>? _preloadTextIds;
 
+  /// Незаконченные чтения для секции «Продолжить чтение». Перечитываются при
+  /// первом показе и при возврате на главную: прогресс пишется на странице
+  /// текста, и спросить надо заново.
+  List<SavedReading> _continueReading = const [];
+
+  Future<void> _loadContinueReading() async {
+    final entries = await getAllReadingProgress();
+    if (!mounted) return;
+    setState(() => _continueReading = entries);
+  }
+
   @override
   void initState() {
     super.initState();
+    unawaited(_loadContinueReading());
     // Открыт ли приём записок — спрашивается редко и молча: см.
     // utils/commemorator.dart.
     unawaited(refreshCommemorator());
@@ -132,6 +146,7 @@ class _MainPageState extends State<MainPage>
   @override
   void didPopNext() {
     if (!mounted) return;
+    unawaited(_loadContinueReading());
     final ids = _preloadTextIds;
     if (ids == null) return;
     if (!StoreProvider.of<AppState>(context).state.settings.shouldAskAboutPreload) return;
@@ -415,6 +430,7 @@ class _MainPageState extends State<MainPage>
                       onPressed: onGoToCalculator,
                       child: Text("Собранные чтения дня наряду"),
                     ),
+                    ContinueReading(entries: _continueReading),
                     Padding(
                       padding: EdgeInsets.all(10.0),
                       child: Text(

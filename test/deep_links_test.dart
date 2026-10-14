@@ -1,14 +1,37 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:typikon/api/constants.dart';
+import 'package:typikon/routes.dart';
 
-// Ссылки сайта, открываемые приложением. Разъезд здесь молчалив вдвойне: хост
-// живёт в манифесте, а домен — в constants.dart, и сменив второй, о первом легко
-// не вспомнить. Ссылка тогда просто уходит в браузер — ни ошибки, ни жалобы.
+// Ссылки сайта, открываемые приложением. Разъезд здесь молчалив втройне: хост
+// живёт в манифесте, домен — в constants.dart, адреса ярлыков на иконке —
+// в res/xml/shortcuts.xml, и сменив одно, о прочем легко не вспомнить. Ссылка
+// тогда просто уходит в браузер — ни ошибки, ни жалобы.
 
 String _manifest() =>
     File("android/app/src/main/AndroidManifest.xml").readAsStringSync();
+
+String _shortcutsXml() =>
+    File("android/app/src/main/res/xml/shortcuts.xml").readAsStringSync();
+
+/// Адреса из ярлыков на иконке: система отдаёт их приложению тем же
+/// VIEW-интентом, что и ссылки сайта, поэтому дальше их ждёт тот же deeplinking.
+List<String> _shortcutLinks() => RegExp(r'android:data="([^"]+)"')
+    .allMatches(_shortcutsXml())
+    .map((m) => m.group(1)!)
+    .toList();
+
+/// Имя разрешается маршрутом БЕЗ аргумента. generateRoute отвечает null и на
+/// незнакомое имя, и на маршрут, чей аргумент обязателен (так ярлык попал бы
+/// на страницу «не найдено»), — ярлыку годится только разрешающееся голым.
+bool _resolves(String name) => generateRoute(
+      RouteSettings(name: name),
+      hasSkippedUpdate: true,
+      skipUpdateWindow: (_) {},
+    ) !=
+    null;
 
 /// Хосты из фильтра, который система сверяет с /.well-known/assetlinks.json.
 Set<String> _verifiedHosts(String manifest) {
@@ -66,5 +89,32 @@ void main() {
         .toSet();
 
     expect(schemes, {"http", "https"});
+  });
+
+  group("ярлыки на иконке", () {
+    test("манифест отдаёт список ярлыков лаунчеру", () {
+      final manifest = _manifest();
+      expect(manifest, contains('android:name="android.app.shortcuts"'));
+      expect(manifest, contains('android:resource="@xml/shortcuts"'));
+    });
+
+    test("каждый ярлык ведёт в раздел, открывающийся без аргумента", () {
+      final links = _shortcutLinks();
+      expect(links, isNotEmpty,
+          reason: "в shortcuts.xml не осталось ни одного ярлыка");
+
+      for (final link in links) {
+        final uri = Uri.parse(link);
+        expect(uri.host, siteHostFull,
+            reason: "хост ярлыка не совпадает с заверяемым фильтром манифеста"
+                " — система отдаст адрес браузеру, а не приложению");
+
+        // Движок превращает путь адреса в имя маршрута; пустой путь — главная.
+        final routeName = uri.path.isEmpty ? "/" : uri.path;
+        expect(_resolves(routeName), isTrue,
+            reason: "ярлык $link ведёт в $routeName, а такой маршрут"
+                " без аргумента не открывается");
+      }
+    });
   });
 }

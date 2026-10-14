@@ -25,6 +25,35 @@ import '../utils/script_convert.dart';
 import 'package:typikon/utils/reading_style.dart';
 import '../components/pinch_zoom.dart';
 
+/// Пункт «В других изданиях» для меню выделения стиха главы Библии.
+///
+/// Открывает согласование нумераций по каноническому адресу выделенного
+/// стиха (`<canonId>.<глава>.<стих>`). Вынесено из страницы, чтобы тест меню
+/// собирал пункт той же сборкой, что и глава, а не её копией.
+List<Widget> bibleVerseMenuItems(
+  BuildContext context,
+  String canonId,
+  String phrase,
+  TextContainer? container,
+) {
+  if (container == null || !container.isVerse) return const [];
+  return [
+    TextSelectionToolbarTextButton(
+      // Пункт встаёт между «Ударением и разбором» и системными кнопками;
+      // точное число кнопок в тулбаре неизвестно — берём середину.
+      padding: TextSelectionToolbarTextButton.getPadding(1, 3),
+      onPressed: () {
+        Navigator.pushNamed(
+          context,
+          "/concordance",
+          arguments: "$canonId.${container.chapter}.${container.verse}",
+        );
+      },
+      child: const Text("В других изданиях"),
+    ),
+  ];
+}
+
 /// Глава Библии.
 ///
 /// Вид переключается не тумблером, а самим выбором изданий: одно — сплошной
@@ -303,7 +332,21 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // В параллельном виде выделение сплошное — стих под ним не
+          // определить, — поэтому контейнеры и пункт «В других изданиях»
+          // есть только в одиночном виде.
           SelectionMenu.wordsOnly(
+            containers: data.editions.length > 1
+                ? const []
+                : [
+                    for (final verse in data.versesFor(0))
+                      TextContainer.verse(
+                          chapter: verse.chapter, verse: verse.verse, text: verse.content),
+                  ],
+            extraItems: data.editions.length > 1
+                ? null
+                : (phrase, container) =>
+                    bibleVerseMenuItems(context, widget.canonId, phrase, container),
             child: data.editions.length > 1
                 ? BibleParallelView(
                     chapter: data,

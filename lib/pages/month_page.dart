@@ -5,6 +5,34 @@ import 'package:intl/intl.dart';
 import 'package:typikon/apiMapper/months.dart';
 import 'package:typikon/dto/month.dart';
 
+/// Серверное имя дня в месяцеслове — «01.01»; иное — непредвиденное значение.
+final RegExp _serverDayName = RegExp(r"^\d{2}\.\d{2}$");
+
+/// Подпись дня в месяцеслове: «1 января» вместо серверного «01.01».
+///
+/// Сервер отдаёт день именем вида «dd.MM» — само по себе даты не давая: год
+/// у месяцеслова неподвижный, поэтому дата собирается из номера месяца в
+/// ответе (`monthIndex`) и места дня в списке. Год — високосный 2000, чтобы
+/// 29 февраля было легально. Имя не того вида показывается как есть: даты
+/// из него не вытащить, а выдумывать нечего. День недели не показываем:
+/// он от года зависит, а год здесь условный.
+String monthDayLabel(
+  String? name,
+  int? monthIndex,
+  int dayOfMonth,
+  String locale,
+) {
+  final serverName = name ?? "";
+  if (monthIndex == null ||
+      monthIndex < 1 ||
+      monthIndex > 12 ||
+      !_serverDayName.hasMatch(serverName)) {
+    return serverName;
+  }
+  final date = DateTime(2000, monthIndex, dayOfMonth);
+  return DateFormat("d MMMM", locale).format(date);
+}
+
 class MonthPage extends StatefulWidget {
   final String id;
 
@@ -69,18 +97,23 @@ class _MonthPageState extends State<MonthPage> {
           onRefresh: _refresh,
           isEmpty: (data) => data.days.isEmpty,
           emptyMessage: "В этом месяце нет дней с чтениями.",
-          builder: (context, data) => ListView.builder(
-            itemCount: data.days.length,
-            itemBuilder: (context, index) {
-              final item = data.days[index];
-              return ListTile(
-                title: Text(item.name ?? ""),
-                // Псевдонимом: вторая версия API спрашивает день по нему.
-                onTap: () => Navigator.pushNamed(context, "/days",
-                    arguments: item.alias ?? item.id),
-              );
-            },
-          ),
+          builder: (context, data) {
+            final locale = Localizations.localeOf(context).languageCode;
+            return ListView.builder(
+              itemCount: data.days.length,
+              itemBuilder: (context, index) {
+                final item = data.days[index];
+                return ListTile(
+                  title: Text(
+                    monthDayLabel(item.name, item.monthIndex, index + 1, locale),
+                  ),
+                  // Псевдонимом: вторая версия API спрашивает день по нему.
+                  onTap: () => Navigator.pushNamed(context, "/days",
+                      arguments: item.alias ?? item.id),
+                );
+              },
+            );
+          },
         ),
       ),
     );

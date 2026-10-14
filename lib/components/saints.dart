@@ -1,9 +1,9 @@
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/components/highlighted_text.dart';
 import 'package:typikon/utils/reading_style.dart';
+import 'package:typikon/utils/text_search.dart';
 
 List<InlineSpan> buildSaints(
   String text,
@@ -12,6 +12,8 @@ List<InlineSpan> buildSaints(
   String fontFamily, [
   List<UserNote>? notes,
   void Function(UserNote)? onTapNote,
+  List<TextRange> searchMatches = const [],
+  TextRange? activeMatch,
 ]) {
   // Опознаватель и подпись — двумя закрытыми группами; почему не жадное `(.+)`,
   // сказано в `places.dart`: метка здесь той же формы и ломалась так же.
@@ -22,20 +24,26 @@ List<InlineSpan> buildSaints(
   final widgets = <InlineSpan>[];
   int currentIndex = 0;
 
-  for (final match in matches) {
-    final beforeText = text.substring(currentIndex, match.start);
-
-    if (beforeText.isNotEmpty) {
-      final style = TextStyle(
+  TextStyle plainStyle() => TextStyle(
         fontFamily: fontFamily,
         fontSize: size,
         color: readingTextColor(context),
       );
+
+  for (final match in matches) {
+    final beforeText = text.substring(currentIndex, match.start);
+
+    if (beforeText.isNotEmpty) {
       widgets.add(
         TextSpan(
-          children: (notes != null && notes.isNotEmpty)
-              ? buildHighlightedSpans(beforeText, style, notes, onTapNote ?? (_) {})
-              : [TextSpan(text: beforeText, style: style)],
+          children: buildHighlightedSpans(
+            beforeText,
+            plainStyle(),
+            notes ?? const [],
+            onTapNote ?? (_) {},
+            searchMatches: searchMatches,
+            activeMatch: activeMatch,
+          ),
         ),
       );
     }
@@ -63,16 +71,16 @@ List<InlineSpan> buildSaints(
 
   final remainingText = text.substring(currentIndex);
   if (remainingText.isNotEmpty) {
-    final style = TextStyle(
-      fontFamily: fontFamily,
-      fontSize: size,
-      color: readingTextColor(context),
-    );
     widgets.add(
       TextSpan(
-        children: (notes != null && notes.isNotEmpty)
-            ? buildHighlightedSpans(remainingText, style, notes, onTapNote ?? (_) {})
-            : [TextSpan(text: remainingText, style: style)],
+        children: buildHighlightedSpans(
+          remainingText,
+          plainStyle(),
+          notes ?? const [],
+          onTapNote ?? (_) {},
+          searchMatches: searchMatches,
+          activeMatch: activeMatch,
+        ),
       ),
     );
   }

@@ -141,6 +141,11 @@ class DayTexts {
   final String? alias;
   final String? name;
 
+  /// Порядковый номер месяца неподвижного круга (январь — 1). Экран месяца
+  /// собирает из него и места дня в списке подпись «1 января» вместо
+  /// серверного «01.01».
+  final int? monthIndex;
+
   /// Места службы по порядку, и только непустые: сервер пустых не присылает.
   final List<DaySection> readings;
 
@@ -148,6 +153,7 @@ class DayTexts {
     required this.id,
     required this.name,
     this.alias,
+    this.monthIndex,
     this.readings = const [],
   });
 
@@ -155,6 +161,7 @@ class DayTexts {
         id: json["id"],
         alias: json["alias"],
         name: json["name"],
+        monthIndex: json["monthIndex"],
         readings: json["readings"] is List
             ? (json["readings"] as List)
                 .whereType<Map>()

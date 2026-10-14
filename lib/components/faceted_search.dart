@@ -142,17 +142,21 @@ class FacetChoice<T> extends StatelessWidget {
   /// Как назвать «не отбирать». По умолчанию — «любая <name>».
   final String? anyLabel;
 
+  /// Страж пункта «не отбирать». `PopupMenuButton` не доставляет `null` в
+  /// [onSelected]: нулевое значение неотличимо от закрытия меню без выбора.
+  static const Object _any = Object();
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
-      child: PopupMenuButton<T?>(
+      child: PopupMenuButton<Object?>(
         tooltip: name,
-        onSelected: onPicked,
+        onSelected: (picked) => onPicked(identical(picked, _any) ? null : picked as T),
         itemBuilder: (context) => [
-          PopupMenuItem<T?>(value: null, child: Text(anyLabel ?? "любая $name")),
+          PopupMenuItem<Object?>(value: _any, child: Text(anyLabel ?? "любая $name")),
           ...values.map(
-            (item) => PopupMenuItem<T?>(value: item, child: Text(nameOf(item))),
+            (item) => PopupMenuItem<Object?>(value: item, child: Text(nameOf(item))),
           ),
         ],
         child: Chip(

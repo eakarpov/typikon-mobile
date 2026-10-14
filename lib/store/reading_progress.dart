@@ -11,21 +11,41 @@ const double finishedFraction = 0.95;
 /// Below this fraction there isn't enough progress worth remembering.
 const double minMeaningfulFraction = 0.02;
 
+/// Сколько записей «продолжить чтение» показывается на главной: сверх этого
+/// список обрезается, при том что сортируется он по свежести — отрезаться
+/// могут только давно не открывавшиеся тексты.
+const int maxProgressEntries = 50;
+
 class ReadingProgress {
   final double fraction;
   final DateTime updatedAt;
 
-  ReadingProgress(this.fraction, this.updatedAt);
+  /// Имя текста для списка «продолжить чтение». `null` у записей, сохранённых
+  /// до того, как имя стали запоминать, — старая запись не хуже новой, и
+  /// ронять её из-за отсутствующего поля незачем.
+  final String? name;
+
+  ReadingProgress(this.fraction, this.updatedAt, {this.name});
 
   Map<String, dynamic> toJson() => {
     'fraction': fraction,
     'updatedAt': updatedAt.millisecondsSinceEpoch,
+    if (name != null) 'name': name,
   };
 
   static ReadingProgress fromJson(Map<String, dynamic> json) => ReadingProgress(
     (json['fraction'] as num).toDouble(),
     DateTime.fromMillisecondsSinceEpoch(json['updatedAt']),
+    name: json['name'] is String ? json['name'] as String : null,
   );
+}
+
+/// Сохранённое место одного текста: его идентификатор и сама запись.
+class SavedReading {
+  final String id;
+  final ReadingProgress progress;
+
+  const SavedReading(this.id, this.progress);
 }
 
 Future<Map<String, dynamic>> _readAll() async {
@@ -55,14 +75,42 @@ Future<ReadingProgress?> getReadingProgress(String textId) async {
   }
 }
 
-Future<void> saveReadingProgress(String textId, double fraction) async {
+/// Все сохранённые места: по убыванию updatedAt, не больше [maxProgressEntries].
+/// Безымянные (старые) записи не отбрасываются — решает показывающий экран.
+Future<List<SavedReading>> getAllReadingProgress() async {
+  final all = await _readAll();
+  final entries = <SavedReading>[];
+  for (final entry in all.entries) {
+    try {
+      entries.add(SavedReading(entry.key, ReadingProgress.fromJson(Map<String, dynamic>.from(entry.value))));
+    } catch (_) {
+      // Одна порченая запись не должна ронять список целиком.
+    }
+  }
+  entries.sort((a, b) => b.progress.updatedAt.compareTo(a.progress.updatedAt));
+  return entries.length > maxProgressEntries
+      ? entries.sublist(0, maxProgressEntries)
+      : entries;
+}
+
+Future<void> saveReadingProgress(String textId, double fraction, {String? name}) async {
   if (fraction >= finishedFraction) {
     await clearReadingProgress(textId);
     return;
   }
   if (fraction < minMeaningfulFraction) return;
   final all = await _readAll();
-  all[textId] = ReadingProgress(fraction, DateTime.now()).toJson();
+  // Имя не передали — сохранённое не затираем: прогресс пишется и на выходе,
+  // и по дебаунсу, а имя текста на странице появляется с ответом сервера,
+  // то есть ранние записи могли уйти вообще без имени.
+  final previous = all[textId];
+  final keptName = name ??
+      ((previous is Map) ? previous['name'] : null);
+  all[textId] = ReadingProgress(
+    fraction,
+    DateTime.now(),
+    name: keptName is String ? keptName : null,
+  ).toJson();
   await _writeAll(all);
 }
 

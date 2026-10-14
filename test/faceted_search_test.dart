@@ -81,4 +81,28 @@ void main() {
 
     expect(tester.getSize(find.byType(FacetBar)).height, 0);
   });
+
+  testWidgets("отбор «не отбирать» доезжает до onPicked", (tester) async {
+    // PopupMenuButton не доставляет null в onSelected: закрытие меню без
+    // выбора и выбор null-значения неотличимы. Страж в FacetChoice решает это.
+    String? picked = "прежний";
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: FacetChoice<String>(
+          name: "глас",
+          value: picked,
+          values: const ["1", "2"],
+          nameOf: (value) => "глас $value",
+          onPicked: (value) => picked = value,
+        ),
+      ),
+    ));
+
+    await tester.tap(find.byType(Chip));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("любая глас"));
+    await tester.pumpAndSettle();
+
+    expect(picked, isNull);
+  });
 }

@@ -6,6 +6,7 @@ import 'package:typikon/utils/text.dart';
 import "package:typikon/components/places.dart";
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/utils/reading_style.dart';
+import 'package:typikon/utils/text_search.dart';
 
 List<InlineSpan> buildFootlinks(
     String text,
@@ -15,6 +16,8 @@ List<InlineSpan> buildFootlinks(
     String fontFamily, [
     List<UserNote>? notes,
     void Function(UserNote)? onTapNote,
+    List<TextRange> searchMatches = const [],
+    TextRange? activeMatch,
 ]) {
   final regex = RegExp(r"\{(\d+)}");
 
@@ -43,6 +46,8 @@ List<InlineSpan> buildFootlinks(
             fontFamily,
             notes,
             onTapNote,
+            searchMatches,
+            activeMatch,
           ),
         ),
       );
@@ -109,6 +114,8 @@ List<InlineSpan> buildFootlinks(
           fontFamily,
           notes,
           onTapNote,
+          searchMatches,
+          activeMatch,
         ),
       ),
     );

@@ -13,6 +13,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import "package:typikon/components/api_error_view.dart";
 import "package:typikon/utils/fb2.dart";
+import "package:typikon/api/constants.dart";
 import "package:typikon/components/fusion_text.dart";
 import "package:typikon/components/selection_menu.dart";
 import "package:typikon/components/report_error_sheet.dart";
@@ -29,7 +30,11 @@ import '../apiMapper/places.dart';
 import '../apiMapper/reading.dart';
 import '../apiMapper/user_notes.dart';
 import "../apiMapper/dneslov/images.dart";
+import 'package:typikon/components/text_search_sheet.dart';
+import 'package:typikon/components/table_of_contents.dart';
 import 'package:typikon/utils/reading_style.dart';
+import 'package:typikon/utils/text_headings.dart';
+import 'package:typikon/utils/text_search.dart';
 import 'package:typikon/store/store.dart';
 import "package:typikon/components/script_toggle.dart";
 import "package:typikon/utils/script_convert.dart";
@@ -120,6 +125,17 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   Timer? _persistDebounce;
   bool _resumeBannerShown = false;
 
+  /// Поиск по тексту: совпадения для подсветки (индекс абзаца → диапазоны) и
+  /// номер текущего совпадения в плоском списке. Считаются по тому виду
+  /// текста, что на экране: искать «и́стину» и красить по книжному «истину»
+  /// значило бы не найти своего же совпадения.
+  Map<int, List<TextRange>> _searchMatches = const {};
+  int _searchCurrent = 0;
+
+  /// Якоря абзацев для прокрутки к совпадению поиска и к главе оглавления:
+  /// создаются лениво, по индексу абзаца (см. days_page.dart).
+  final Map<int, GlobalKey> _paragraphKeys = {};
+
   // MaterialBanner живёт в ScaffoldMessenger, а тот — выше MaterialApp, то есть
   // переживает уход со страницы: не нажав ни "Сначала", ни "Продолжить",
   // пользователь уносил баннер с собой на следующий экран. Снимаем его в
@@ -183,6 +199,12 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   /// секунды отменена, а запись на выходе молча выходила по `hasClients`.
   double? _lastFraction;
 
+  /// Имя открытого текста: для списка «продолжить чтение» на главной. Живёт
+  /// ответом сервера, а не аргументом маршрута — идентификатор зачала несёт
+  /// суффикс границ (см. utils/pericope_route.dart), и подписать им записью
+  /// прогресс нельзя.
+  String? _readingName;
+
   void _onScroll() {
     if (_scrollController.hasClients) {
       final position = _scrollController.position;
@@ -198,7 +220,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     final fraction = _lastFraction;
     // Не прокручивали — записывать нечего, и прежнюю запись не затираем.
     if (fraction == null) return;
-    saveReadingProgress(_realId, fraction);
+    saveReadingProgress(_realId, fraction, name: _readingName);
   }
 
   Future<void> _checkResumeProgress() async {
@@ -248,10 +270,88 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     _scrollController.jumpTo((fraction * maxExtent).clamp(0.0, maxExtent));
   }
 
+  /// Письмо — тем же приёмом, поверх ударений: подменяется та же
+  /// переменная, и выгрузка в fb2 по-прежнему уносит книгу.
+  String _presentedContent(Reading data) {
+    final content = _showAccents && _accented != null
+        ? _accented!.content
+        : data.content;
+    return presentScript(content, _scriptOf(data), readerScript(context));
+  }
+
+  /// Совпадение, на котором стоит листание: (индекс абзаца, диапазон).
+  (int, TextRange)? _currentSearchMatch() {
+    var index = 0;
+    for (final entry in _searchMatches.entries) {
+      for (final range in entry.value) {
+        if (index == _searchCurrent) return (entry.key, range);
+        index++;
+      }
+    }
+    return null;
+  }
+
+  void _scrollToCurrentSearchMatch() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final current = _currentSearchMatch();
+      if (current == null) return;
+      final key = _paragraphKeys.putIfAbsent(current.$1, () => GlobalKey());
+      final targetContext = key.currentContext;
+      if (targetContext != null) {
+        Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          alignment: 0.1,
+        );
+      }
+    });
+  }
+
+  /// Шторка поиска держит запрос и совпадения, страница — только подсветку:
+  /// каждое изменение приходит сюда вместе с номером текущего совпадения.
+  Future<void> _openTextSearch(List<String> paragraphs) async {
+    await showTextSearchSheet(
+      context,
+      paragraphs: paragraphs,
+      onChanged: (matches, current) {
+        if (!mounted) return;
+        setState(() {
+          _searchMatches = matches;
+          _searchCurrent = current;
+        });
+        _scrollToCurrentSearchMatch();
+      },
+    );
+    // Шторка закрыта (крестик, свайп, шаг назад) — подсветка снимается.
+    if (!mounted) return;
+    setState(() {
+      _searchMatches = const {};
+      _searchCurrent = 0;
+    });
+  }
+
+  /// Глава внутри длинного текста: оглавление из найденных заголовков.
+  void _openTableOfContents(List<String> paragraphs) {
+    final headings = findTextHeadings(paragraphs);
+    if (headings.length < 2) return;
+    showTableOfContents(
+      context,
+      headings
+          .map((heading) => TocEntry(
+                title: heading.title,
+                anchorKey: _paragraphKeys.putIfAbsent(heading.paragraphIndex, () => GlobalKey()),
+              ))
+          .toList(),
+    );
+  }
+
   void _loadReading() {
     _resumeBannerShown = false;
     reading = getText(_realId);
     reading.then((value) {
+      _readingName = value.name;
       if (value.dneslovId != null) {
         dneslovImages = fetchDneslovImagesD(value.dneslovId!);
       }
@@ -264,7 +364,9 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   }
 
   void _loadUserNotes() {
-    if (!StoreProvider.of<AppState>(context).state.auth.isSignedIn) return;
+    // listen: false — метод зовётся из initState, а подписка на наследника
+    // до конца initState запрещена: читаем стор одним разом, без зависимости.
+    if (!StoreProvider.of<AppState>(context, listen: false).state.auth.isSignedIn) return;
     getUserNotes(textId: _realId).then((notes) {
       if (!mounted) return;
       setState(() { _userNotes = notes; });
@@ -382,6 +484,10 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     Uri myUrl = Uri.parse(link);
     launchUrl(myUrl);
   }
+
+  /// Ссылка на это чтение для «Поделиться»: куда указывает адрес сайта.
+  /// Состав текста отправки (фраза плюс ссылка) собирает само меню выделения.
+  String _shareLinkFor(String phrase) => "https://$siteHostFull/reading/$_realId";
 
   Widget imageCard(value) {
     return Image(
@@ -520,6 +626,39 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           FutureBuilder<Reading>(
             future: reading,
             builder: (context, future) {
+              if (!future.hasData || future.data!.newUi) {
+                return const SizedBox.shrink();
+              }
+              final paragraphs = _presentedContent(future.data!).split("\n\n");
+              return IconButton(
+                tooltip: "Искать в тексте",
+                icon: const Icon(Icons.search),
+                onPressed: () => _openTextSearch(paragraphs),
+              );
+            },
+          ),
+          FutureBuilder<Reading>(
+            future: reading,
+            builder: (context, future) {
+              if (!future.hasData || future.data!.newUi) {
+                return const SizedBox.shrink();
+              }
+              // Оглавление имеет смысл, только когда глав в тексте больше одной:
+              // у двухсот заголовков список на весь экран, а выбирать не из чего.
+              final paragraphs = _presentedContent(future.data!).split("\n\n");
+              if (findTextHeadings(paragraphs).length < 2) {
+                return const SizedBox.shrink();
+              }
+              return IconButton(
+                tooltip: "Оглавление",
+                icon: const Icon(Icons.toc),
+                onPressed: () => _openTableOfContents(paragraphs),
+              );
+            },
+          ),
+          FutureBuilder<Reading>(
+            future: reading,
+            builder: (context, future) {
               if (future.hasData) {
                 return IconButton(
                   icon: Icon(Icons.file_download, color: Colors.white),
@@ -549,15 +688,17 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
               // выделения, и рисуемые абзацы, — одной подменой оба остаются
               // согласованными. Сам `Reading` не трогается, и потому выгрузка в
               // fb2 (`_exportFb2`) уносит книгу, а не машинные знаки.
-              String content = _showAccents && _accented != null
-                  ? _accented!.content
-                  : future.data!.content;
-              // Письмо — тем же приёмом, поверх ударений: подменяется та же
-              // переменная, и выгрузка в fb2 по-прежнему уносит книгу.
+              String content = _presentedContent(future.data!);
               final script = _scriptOf(future.data!);
               final setting = readerScript(context);
               final converted = convertsScript(script, setting);
-              content = presentScript(content, script, setting);
+              final paragraphs = content.split("\n\n");
+              // Текущее совпадение поиска подсвечивается контрастнее; прочие —
+              // обычным фоном. Заголовки глав — для оглавления внутри текста.
+              final currentSearch = _currentSearchMatch();
+              final headings = future.data!.newUi
+                  ? const <TextHeading>[]
+                  : findTextHeadings(paragraphs);
               final notes = converted ? _presentedNotes(script, setting) : _userNotes;
               String name = future.data!.name;
               return SingleChildScrollView(
@@ -585,6 +726,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                           // по двойному переводу строки, а markdown делит текст
                           // на абзацы по-своему, и номер разошёлся бы с экраном.
                           SelectionMenu.wordsOnly(
+                            shareLinkFor: _shareLinkFor,
                             child: ReadingMarkdown(content, scrollable: false),
                           )
                         ) : (
@@ -595,26 +737,43 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                               enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn &&
                                   !converted,
                               textId: _realId,
-                              containers: content.split("\n\n").asMap().entries.map((entry) =>
+                              shareLinkFor: _shareLinkFor,
+                              containers: paragraphs.asMap().entries.map((entry) =>
                                   TextContainer.paragraph(paragraphIndex: entry.key, text: entry.value)
                               ).toList(),
                               child: Column(
-                                children: content.split("\n\n").asMap().entries.map((entry) =>
-                                    FusionTextWidgets(
-                                      text: entry.value,
-                                      footnotes: future.data?.footnotes??[],
-                                      fontFamily: presentFont(
-                                          future.data!.csSource ? "Monomakh" : "OldStandard",
-                                          script,
-                                          setting),
-                                      notes: notes.where((n) =>
-                                          n.selection.type == 'paragraph' && n.selection.paragraphIndex == entry.key
-                                      ).toList(),
-                                      onTapNote: (note) => _onTapUserNote(
-                                          _userNotes.firstWhere((n) => n.id == note.id,
-                                              orElse: () => note)),
-                                    ),
-                                ).toList(),
+                                children: paragraphs.asMap().entries.map((entry) {
+                                  // Якорь нужен абзацу с заголовком главы
+                                  // (оглавление) и с совпадением поиска
+                                  // (прокрутка к нему); прочие оборачивать
+                                  // незачем.
+                                  final needsKey = headings.any((h) => h.paragraphIndex == entry.key) ||
+                                      _searchMatches.containsKey(entry.key);
+                                  final widget = FusionTextWidgets(
+                                    text: entry.value,
+                                    footnotes: future.data?.footnotes??[],
+                                    fontFamily: presentFont(
+                                        future.data!.csSource ? "Monomakh" : "OldStandard",
+                                        script,
+                                        setting),
+                                    notes: notes.where((n) =>
+                                        n.selection.type == 'paragraph' && n.selection.paragraphIndex == entry.key
+                                    ).toList(),
+                                    onTapNote: (note) => _onTapUserNote(
+                                        _userNotes.firstWhere((n) => n.id == note.id,
+                                            orElse: () => note)),
+                                    searchMatches: _searchMatches[entry.key] ?? const [],
+                                    activeMatch: currentSearch != null &&
+                                            currentSearch.$1 == entry.key
+                                        ? currentSearch.$2
+                                        : null,
+                                  );
+                                  if (!needsKey) return widget;
+                                  return Container(
+                                    key: _paragraphKeys.putIfAbsent(entry.key, () => GlobalKey()),
+                                    child: widget,
+                                  );
+                                }).toList(),
                               ),
                             )
                         ),

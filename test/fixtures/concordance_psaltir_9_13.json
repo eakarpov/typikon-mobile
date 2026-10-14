@@ -1,0 +1,115 @@
+{
+    "canonRef": "psaltir.9.13",
+    "editions": [
+        {
+            "edition": "cs-eliz",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 13
+                }
+            ]
+        },
+        {
+            "edition": "ro-1688",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 12
+                }
+            ]
+        },
+        {
+            "edition": "grc-lxx-pat",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 13
+                }
+            ]
+        },
+        {
+            "edition": "la-vulgata",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 13
+                }
+            ]
+        },
+        {
+            "edition": "ro-1914",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 13
+                }
+            ]
+        },
+        {
+            "edition": "cs-old-rite",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 13
+                }
+            ]
+        },
+        {
+            "edition": "ka-mcxeta",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 13
+                }
+            ]
+        },
+        {
+            "edition": "en-brenton-kjv",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 13
+                }
+            ]
+        },
+        {
+            "edition": "cv-ipb",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 13
+                }
+            ]
+        },
+        {
+            "edition": "cv-ipb-cu",
+            "book": "psaltir",
+            "places": [
+                {
+                    "book": "psaltir",
+                    "chapter": 9,
+                    "verse": 13
+                }
+            ]
+        }
+    ]
+}

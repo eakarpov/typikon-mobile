@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import "package:typikon/components/saints.dart";
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/utils/reading_style.dart';
+import 'package:typikon/utils/text_search.dart';
 
 List<InlineSpan> buildPlaces(
   String text,
@@ -12,6 +13,8 @@ List<InlineSpan> buildPlaces(
   String fontFamily, [
   List<UserNote>? notes,
   void Function(UserNote)? onTapNote,
+  List<TextRange> searchMatches = const [],
+  TextRange? activeMatch,
 ]) {
   // Ключ и подпись — двумя группами, и обе закрыты по построению. Прежде здесь
   // стояло жадное `(.+)`: два места в одном абзаце давали ОДНУ ссылку, чья
@@ -44,6 +47,8 @@ List<InlineSpan> buildPlaces(
             fontFamily,
             notes,
             onTapNote,
+            searchMatches,
+            activeMatch,
           ),
         ),
       );
@@ -92,6 +97,8 @@ List<InlineSpan> buildPlaces(
           fontFamily,
           notes,
           onTapNote,
+          searchMatches,
+          activeMatch,
         ),
       ),
     );

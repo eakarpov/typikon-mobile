@@ -10,6 +10,7 @@ import 'package:typikon/pages/canon_page.dart';
 import 'package:typikon/pages/canons_page.dart';
 import 'package:typikon/pages/chronology_page.dart';
 import 'package:typikon/pages/contact_page.dart';
+import 'package:typikon/pages/concordance_page.dart';
 import 'package:typikon/pages/current_day_memories_page.dart';
 import 'package:typikon/pages/days_page.dart';
 import 'package:typikon/pages/dictionary_page.dart';
@@ -47,6 +48,21 @@ import 'package:typikon/pages/triodion_page.dart';
 import 'package:typikon/utils/bible_route.dart';
 import 'package:typikon/utils/incipit_route.dart';
 
+/// Адрес входящей ссылки вида `<prefix><аргумент>` без query-части и конечного
+/// слэша: `https://www.typikon.info/reading/<id>` движок превращает в маршрут
+/// с именем `/reading/<id>`, и сюда из него извлекается `<id>`. Возвращает
+/// `null`, если после префикса ничего нет.
+String? deepLinkArgument(String name, String prefix) {
+  if (!name.startsWith(prefix)) return null;
+  var argument = name.substring(prefix.length);
+  final query = argument.indexOf("?");
+  if (query != -1) argument = argument.substring(0, query);
+  if (argument.endsWith("/")) {
+    argument = argument.substring(0, argument.length - 1);
+  }
+  return argument.isEmpty ? null : argument;
+}
+
 /// КУДА ВЕДУТ МАРШРУТЫ ПРИЛОЖЕНИЯ.
 ///
 /// Прежде этот разбор жил внутри `build` в `main.dart` — триста строк в замыкании,
@@ -67,6 +83,29 @@ Route<dynamic>? generateRoute(
   required ValueChanged<bool> skipUpdateWindow,
 }) {
   final arguments = settings.arguments;
+  final name = settings.name ?? "";
+
+  // Входящие ссылки сайта: `/reading/<id>` ведёт в тот же экран текста, что и
+  // кнопки приложения, `/bible/<книга>/<глава>` — в ту же главу Библии. Путь
+  // целиком становится именем маршрута, поэтому разбирается здесь, а дальше
+  // дело за обычными ветками `/reading` и `/bible`.
+  final readingLink = deepLinkArgument(name, "/reading/");
+  if (readingLink != null) {
+    return generateRoute(
+      RouteSettings(name: "/reading", arguments: readingLink),
+      hasSkippedUpdate: hasSkippedUpdate,
+      skipUpdateWindow: skipUpdateWindow,
+    );
+  }
+  final bibleLink = deepLinkArgument(name, "/bible/");
+  if (bibleLink != null) {
+    return generateRoute(
+      RouteSettings(name: "/bible", arguments: bibleLink),
+      hasSkippedUpdate: hasSkippedUpdate,
+      skipUpdateWindow: skipUpdateWindow,
+    );
+  }
+
   switch (settings.name) {
     // Аргумент необязателен, как у '/library': без него —
     // оглавление, с ним — глава. Разбор аргумента живёт в
@@ -119,6 +158,15 @@ Route<dynamic>? generateRoute(
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) => PericopePage(context, id: arguments),
+        );
+      }
+      return null;
+    // Где канонический стих стоит в изданиях собрания. Открывается из меню
+    // выделения стиха Библии; аргумент — адрес «книга.глава.стих».
+    case '/concordance':
+      if (arguments is String) {
+        return MaterialPageRoute(
+          builder: (context) => ConcordancePage(context, ref: arguments),
         );
       }
       return null;
@@ -355,7 +403,7 @@ Route<dynamic>? generateRoute(
           );
         },
       );
-    case "/dneslov/memories":
+    case "/day-saints":
       return MaterialPageRoute(
         builder: (context) {
           return CurrentDayMemoriesPage(context);

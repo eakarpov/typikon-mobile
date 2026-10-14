@@ -7,6 +7,7 @@ import 'package:typikon/components/footlinks.dart';
 import 'package:typikon/components/pinch_zoom.dart';
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/utils/reading_style.dart';
+import 'package:typikon/utils/text_search.dart';
 
 class FusionTextWidgets extends StatelessWidget {
   final String text;
@@ -14,6 +15,11 @@ class FusionTextWidgets extends StatelessWidget {
   final String fontFamily;
   final List<UserNote> notes;
   final void Function(UserNote)? onTapNote;
+
+  /// Диапазоны поиска по этому абзацу и текущее совпадение листания:
+  /// подсвечиваются в последнем звене цепочки строителей.
+  final List<TextRange> searchMatches;
+  final TextRange? activeMatch;
   // Киноварь — закрытой группой, а не жадным `(.+)`. Замерено по корпусу: меток
   // 871, и в 23 абзацах их по две; жадное выражение сливало такую пару в одну
   // красную строку, съедая текст между ними. Ещё у трёх меток в корпусе нет
@@ -27,6 +33,8 @@ class FusionTextWidgets extends StatelessWidget {
     required this.fontFamily,
     this.notes = const [],
     this.onTapNote,
+    this.searchMatches = const [],
+    this.activeMatch,
   }) : super(key: key);
 
   @override
@@ -57,6 +65,8 @@ class FusionTextWidgets extends StatelessWidget {
                 fontFamily,
                 notes,
                 onTapNote,
+                searchMatches,
+                activeMatch,
             ),
           ),
         );
@@ -103,6 +113,8 @@ class FusionTextWidgets extends StatelessWidget {
               fontFamily,
               notes,
               onTapNote,
+              searchMatches,
+              activeMatch,
           ),
         ),
       );

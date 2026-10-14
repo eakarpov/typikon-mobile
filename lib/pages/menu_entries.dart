@@ -107,7 +107,7 @@ const List<MenuSection> drawerSections = <MenuSection>[
   MenuSection(entries: <MenuEntry>[
     MenuEntry("Главная страница", "/"),
     MenuEntry("Чтения на календарный день", "/months"),
-    MenuEntry("Памяти на день", "/dneslov/memories"),
+    MenuEntry("Памяти на день", "/day-saints"),
     MenuEntry("Калькулятор чтений на день", "/calculator"),
   ]),
   MenuSection(title: "Круг года", entries: <MenuEntry>[
