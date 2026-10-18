@@ -31,6 +31,9 @@ const Set<String> unlistedRoutes = <String>{
   "/saints", // досье из памяти
   "/pomyannik/upcoming", // из помянника
   "/pomyannik/zapiska", // из помянника
+  "/psalter/serial", // из списка Псалтири: «Подряд»
+  "/psalter/sorokoust", // из списка Псалтири: «Сорокоуст»
+  "/posledovanie", // чтение последования — из правила дня и причастной раскладки
 };
 
 Route<dynamic>? resolve(String route) => generateRoute(
@@ -52,7 +55,7 @@ Set<String> routesInSource() {
       .toSet();
 
   // Два маршрута названы постоянными из самой описи, а не строкой.
-  names.addAll(<String>[corpusRoute, handbookRoute]);
+  names.addAll(<String>[corpusRoute, handbookRoute, practiceRoute]);
   return names;
 }
 

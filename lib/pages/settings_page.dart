@@ -1,3 +1,4 @@
+import '../utils/rule_reminders.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -61,6 +62,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // Обычными ключами хранилища, а не полем состояния: их читает фоновая задача,
   // а она живёт в отдельном изоляте, где хранилища состояния нет вовсе.
+  bool _ruleMorning = false;
+  bool _ruleEvening = false;
   bool _reminders = false;
   bool _namesInReminders = false;
 
@@ -110,10 +113,33 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadReminderSettings() async {
     final reminders = await remindersEnabled();
     final names = await namesInReminders();
+    final morning = await ruleReminderEnabled(ruleRemindMorningKey);
+    final evening = await ruleReminderEnabled(ruleRemindEveningKey);
     if (!mounted) return;
     setState(() {
+      _ruleMorning = morning;
+      _ruleEvening = evening;
       _reminders = reminders;
       _namesInReminders = names;
+    });
+  }
+
+  Future<void> _onRuleReminder(String key, bool value) async {
+    if (value && !await ensureNotificationPermission()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Разрешите уведомления в настройках системы.'),
+      ));
+      return;
+    }
+    await setRuleReminder(key, value);
+    if (!mounted) return;
+    setState(() {
+      if (key == ruleRemindMorningKey) {
+        _ruleMorning = value;
+      } else {
+        _ruleEvening = value;
+      }
     });
   }
 
@@ -549,6 +575,19 @@ class _SettingsPageState extends State<SettingsPage> {
                             child: Text(_authInProgress ? "Входим…" : "Войти через Google"),
                             onPressed: _authInProgress ? null : () => onSignIn(context),
                           ),
+                  ),
+                  const ListTile(title: Text('Напоминания правила')),
+                  SwitchListTile(
+                    title: const Text('Напоминать утром'),
+                    subtitle: const Text('С 7:00; время доставки выбирает система'),
+                    value: _ruleMorning,
+                    onChanged: (value) => _onRuleReminder(ruleRemindMorningKey, value),
+                  ),
+                  SwitchListTile(
+                    title: const Text('Напоминать вечером'),
+                    subtitle: const Text('С 21:00; время доставки выбирает система'),
+                    value: _ruleEvening,
+                    onChanged: (value) => _onRuleReminder(ruleRemindEveningKey, value),
                   ),
                   if (viewModel.isSignedIn) ...[
                     const Padding(

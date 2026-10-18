@@ -9,6 +9,7 @@ import 'package:typikon/pages/calculator_page.dart';
 import 'package:typikon/pages/canon_page.dart';
 import 'package:typikon/pages/canons_page.dart';
 import 'package:typikon/pages/chronology_page.dart';
+import 'package:typikon/pages/communion_page.dart';
 import 'package:typikon/pages/contact_page.dart';
 import 'package:typikon/pages/concordance_page.dart';
 import 'package:typikon/pages/current_day_memories_page.dart';
@@ -34,9 +35,16 @@ import 'package:typikon/pages/pomyannik_page.dart';
 import 'package:typikon/pages/pomyannik_person_page.dart';
 import 'package:typikon/pages/pomyannik_prinyatye_page.dart';
 import 'package:typikon/pages/pomyannik_upcoming_page.dart';
+import 'package:typikon/pages/posledovanie_page.dart';
 import 'package:typikon/pages/prayer_page.dart';
 import 'package:typikon/pages/prayers_page.dart';
+import 'package:typikon/pages/psalter_page.dart';
+import 'package:typikon/pages/kathisma_page.dart';
+import 'package:typikon/pages/psalter_serial_page.dart';
+import 'package:typikon/pages/psalter_sorokoust_page.dart';
 import 'package:typikon/pages/resources_page.dart';
+import 'package:typikon/pages/rule_page.dart';
+import 'package:typikon/pages/ordo_page.dart';
 import 'package:typikon/pages/saint_page.dart';
 import 'package:typikon/pages/menu_entries.dart';
 import 'package:typikon/pages/search_page.dart';
@@ -218,6 +226,77 @@ Route<dynamic>? generateRoute(
       }
       return MaterialPageRoute(
         builder: (context) => PrayersPage(context),
+      );
+    // Псалтирь: без аргумента список кафизм. Аргумент кафизмы — прежде
+    // число 1..20 (или 151 — дополнительный псалом), с поминальным режимом —
+    // строка «<число>|d»; разбор — в pages/kathisma_page.dart. «Подряд»
+    // открывается без аргумента (с закладки), с аргументом-числом — с
+    // названного псалма, строка «d»/«<псалом>|d» — поминальный режим.
+    case '/psalter':
+      return MaterialPageRoute(
+        builder: (context) => const PsalterPage(),
+      );
+    // Молитвенное правило дня и подготовка к Причащению: состав секций
+    // подбирается на самом экране, аргумент не нужен.
+    case '/ordo':
+      return MaterialPageRoute(builder: (context) => const OrdoPage());
+    case practiceRoute:
+      return MaterialPageRoute(builder: (context) => SectionPage(
+        context, title: 'Правило', entries: practiceEntries,
+      ));
+    case '/rule':
+      return MaterialPageRoute(
+        builder: (context) => RulePage(context),
+      );
+    case '/communion':
+      return MaterialPageRoute(
+        builder: (context) => CommunionPage(context,
+          initialDate: arguments is String ? DateTime.tryParse(arguments) : null,
+        ),
+      );
+    // Чтение последования молитвослова: аргумент — `<key>|<lang>|<gender>|
+    // <заголовок>`, разбор — в pages/posledovanie_page.dart.
+    case '/posledovanie':
+      if (arguments is String) {
+        final target = parsePosledovanieArgument(arguments);
+        if (target != null) {
+          return MaterialPageRoute(
+            builder: (context) => PosledovaniePage(
+              context,
+              title: target.title,
+              posledovanieKey: target.key,
+              lang: target.lang,
+              gender: target.gender,
+            ),
+          );
+        }
+      }
+      return null;
+    case '/psalter/kathisma':
+      final target = parseKathismaRouteArgument(arguments);
+      if (target != null) {
+        return MaterialPageRoute(
+          builder: (context) =>
+              KathismaPage(number: target.number, departed: target.departed),
+        );
+      }
+      return null;
+    case '/psalter/serial':
+      final target = parseSerialRouteArgument(arguments);
+      if (target != null) {
+        return MaterialPageRoute(
+          builder: (context) => PsalterSerialPage(
+            chapter: target.chapter,
+            departed: target.departed,
+          ),
+        );
+      }
+      return null;
+    // Счётчик сорокоуста: выбор лица помянника и кафизма дня по дате
+    // преставления. Открывается из списка Псалтири.
+    case '/psalter/sorokoust':
+      return MaterialPageRoute(
+        builder: (context) => const PsalterSorokoustPage(),
       );
     case '/chronology':
       return MaterialPageRoute(

@@ -32,6 +32,7 @@ class SectionPage extends StatelessWidget {
         itemBuilder: (context, index) {
           final entry = entries[index];
           return ListTile(
+            leading: entry.icon == null ? null : Icon(entry.icon),
             title: Text(entry.title),
             subtitle: entry.hint == null ? null : Text(entry.hint!),
             trailing: const Icon(Icons.chevron_right),

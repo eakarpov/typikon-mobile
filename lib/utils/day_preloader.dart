@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../apiMapper/reading.dart';
+import '../apiMapper/ordo.dart';
+import '../api/ordo.dart';
 
 /// Предварительная загрузка текстов дня.
 ///
@@ -35,6 +37,8 @@ final Set<String> _preloaded = <String>{};
 void resetPreloaderState() {
   _running = false;
   _preloaded.clear();
+  _ordoLoaded.clear();
+  _ordoRunning.clear();
 }
 
 /// [fetch] подменяется в тестах; по умолчанию это обычная загрузка текста,
@@ -72,5 +76,33 @@ Future<void> _warmOne(String id, Future<void> Function(String id) fetch) async {
     _preloaded.add(id);
   } catch (_) {
     // Нет сети или текст не отдался — не беда, откроется обычным путём.
+  }
+}
+
+/// Общие ворота предзагрузки чтений и службы дня: вызывается только при
+/// включённой пользователем загрузке. Ошибку ordo главная не показывает.
+Future<void> preloadDay(DateTime date, List<String> textIds) async {
+  await Future.wait([preloadTexts(textIds), preloadOrdo(date)]);
+}
+
+final Set<String> _ordoLoaded = <String>{};
+final Set<String> _ordoRunning = <String>{};
+Future<void> preloadOrdo(
+  DateTime date, {
+  Future<void> Function(DateTime)? fetch,
+}) async {
+  final key = ordoDayDate(date);
+  if (_ordoLoaded.contains(key) || !_ordoRunning.add(key)) return;
+  try {
+    if (fetch != null) {
+      await fetch(date);
+    } else {
+      await getOrdoServices(date);
+    }
+    _ordoLoaded.add(key);
+  } catch (_) {
+    // Можно повторить при следующем показе дня.
+  } finally {
+    _ordoRunning.remove(key);
   }
 }

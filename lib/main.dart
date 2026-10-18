@@ -21,6 +21,7 @@ import "utils/app_version.dart";
 import "utils/day_reading_reminders.dart";
 import "utils/push.dart";
 import "utils/crash_reporter.dart";
+import "utils/rule_reminders.dart";
 
 import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
@@ -203,6 +204,7 @@ Future<void> _runBackgroundChecks({Future<void> Function()? beforePomyannik}) as
     if (beforePomyannik != null) beforePomyannik,
     _checkPomyannikAndNotify,
     _checkReadingAndNotify,
+    _checkRuleReminders,
   ];
   for (final check in checks) {
     try {
@@ -316,6 +318,34 @@ Future<void> _checkReadingAndNotify() async {
           'dayReadingChannelId',
           'dayReadingChannel',
           channelDescription: 'Чтения дня утром',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: false),
+      ),
+      payload: payload,
+    );
+  });
+}
+
+/// Напоминание о молитвенном правиле.
+///
+/// Решение, говорить ли, живёт в `utils/rule_reminders.dart`: здесь только
+/// показ. Канал свой и негромкий, как у чтений дня: переключатели напоминания
+/// стоят на самом экране правила, и этот канал можно приглушить отдельно.
+Future<void> _checkRuleReminders() async {
+  await checkRuleRemindersAndNotify(show: (body, payload) async {
+    await flutterLocalNotificationsPlugin.show(
+      // Постоянный номер: второй показ за день заменяет прежнее уведомление,
+      // а не копит их стопкой.
+      902,
+      "Молитвенное правило",
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'ruleReminderChannelId',
+          'ruleReminderChannel',
+          channelDescription: 'Напоминания о молитвенном правиле',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
         ),
@@ -532,6 +562,11 @@ class MyAppState extends State<MyApp> {
         if (alias.isNotEmpty) {
           navigatorKey.currentState?.pushNamed("/days", arguments: alias);
         }
+        return;
+      }
+      // Напоминание о правиле ведёт на само правило.
+      if (payload != null && payload.startsWith("rule:")) {
+        navigatorKey.currentState?.pushNamed("/rule");
         return;
       }
       if (payload != null && payload.startsWith(wantToGetUpdate)) {

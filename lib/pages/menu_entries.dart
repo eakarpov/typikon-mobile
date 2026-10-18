@@ -18,6 +18,8 @@
 /// разъезд правил показа — нет; поэтому здесь копия состава, а не правил.
 library;
 
+import 'package:flutter/material.dart';
+
 /// Кому пункт виден.
 enum MenuVisibility {
   /// Всем.
@@ -46,12 +48,17 @@ class MenuEntry {
   /// него экраны и заведены.
   final String? hint;
 
+  /// Значок экрана-раздела. В ящике меню значков нет; на экране-разделе,
+  /// где пункты различаются пояснением, значок — на вкус: у книг он есть.
+  final IconData? icon;
+
   final MenuVisibility visibility;
 
   const MenuEntry(
     this.title,
     this.route, {
     this.hint,
+    this.icon,
     this.visibility = MenuVisibility.always,
   });
 }
@@ -66,6 +73,14 @@ class MenuSection {
 }
 
 const String corpusRoute = "/corpus";
+const String practiceRoute = "/practice";
+const List<MenuEntry> practiceEntries = <MenuEntry>[
+  MenuEntry("Правило дня", "/rule", hint: "Утренние и вечерние молитвы"),
+  MenuEntry("Псалтирь", "/psalter", hint: "По кафизмам, подряд и по усопшему"),
+  MenuEntry("Причастие", "/communion", hint: "Подготовка к Причащению"),
+  MenuEntry("Служба дня", "/ordo", hint: "Последование на выбранную дату"),
+];
+
 const String handbookRoute = "/posobiya";
 
 /// «Собрание» — то, что читают и поют.
@@ -122,6 +137,7 @@ const List<MenuSection> drawerSections = <MenuSection>[
   MenuSection(title: "Моё", entries: <MenuEntry>[
     MenuEntry("Избранное", "/favourites"),
     MenuEntry("Мои заметки", "/notes", visibility: MenuVisibility.signedIn),
+    MenuEntry("Правило", practiceRoute),
     MenuEntry("Помянник", "/pomyannik", visibility: MenuVisibility.signedIn),
     MenuEntry("Поданные записки", "/pomyannik/prinyatye",
         visibility: MenuVisibility.commemorator),
@@ -137,4 +153,5 @@ List<MenuEntry> get allMenuEntries => <MenuEntry>[
       for (final section in drawerSections) ...section.entries,
       ...corpusEntries,
       ...handbookEntries,
+      ...practiceEntries,
     ];

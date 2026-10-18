@@ -179,7 +179,7 @@ class _MainPageState extends State<MainPage>
 
       final settings = StoreProvider.of<AppState>(context).state.settings;
       if (settings.isPreloadEnabled) {
-        unawaited(preloadTexts(day.textIds));
+        unawaited(preloadDay(DateTime.parse(date), day.textIds));
         return;
       }
       // Спрашиваем не на пустом экране, а когда день уже показан: так понятно,
@@ -205,7 +205,7 @@ class _MainPageState extends State<MainPage>
     _preloadTextIds = null;
     _hidePreloadBanner();
     StoreProvider.of<AppState>(context).dispatch(ChangePreloadTextsAction(enabled));
-    if (enabled) unawaited(preloadTexts(textIds));
+    if (enabled) unawaited(preloadDay(selectedDay, textIds));
   }
 
   void _showPreloadBanner(List<String> textIds) {
