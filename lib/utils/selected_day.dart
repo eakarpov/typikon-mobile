@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:typikon/api/http_cache_version.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:intl/intl.dart';
@@ -18,12 +20,14 @@ import 'package:typikon/utils/day_rollover.dart';
 /// Страница обязана лишь сказать, как она грузит свой день ([loadDay]).
 /// Остальное — когда перезагружать, что показывать в заголовке, как спросить
 /// дату и что делать при смене суток — здесь.
-mixin SelectedDay<T extends StatefulWidget> on State<T>, WidgetsBindingObserver {
+mixin SelectedDay<T extends StatefulWidget>
+    on State<T>, WidgetsBindingObserver {
   /// День, на который уже загружено. Сверяется, чтобы не грузить одно и то же:
   /// `didChangeDependencies` зовётся на каждый экран, положенный поверх и
   /// снятый, и без сверки возврат из текста стоил бы запроса и потерянного
   /// места в списке.
   String? _loadedDayKey;
+  StreamSubscription<void>? _cacheVersionSubscription;
 
   /// Какой день был сегодняшним, когда на приложение смотрели в прошлый раз.
   DateTime _lastSeenToday = DateTime.now();
@@ -43,10 +47,14 @@ mixin SelectedDay<T extends StatefulWidget> on State<T>, WidgetsBindingObserver 
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _cacheVersionSubscription = httpCacheVersions.changes.listen((_) {
+      if (mounted) reloadSelectedDay();
+    });
   }
 
   @override
   void dispose() {
+    _cacheVersionSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -71,8 +79,10 @@ mixin SelectedDay<T extends StatefulWidget> on State<T>, WidgetsBindingObserver 
   /// Через `setState` нарочно: без него новый день показывался лишь потому, что
   /// закрытие окна выбора дёргало `didChangeDependencies`, — то есть случайно.
   void goToDay(DateTime day) {
-    StoreProvider.of<AppState>(context, listen: false)
-        .dispatch(ChangeCommonDateAction(day));
+    StoreProvider.of<AppState>(
+      context,
+      listen: false,
+    ).dispatch(ChangeCommonDateAction(day));
     _loadedDayKey = keyOf(day);
     setState(() => loadDay(day));
   }

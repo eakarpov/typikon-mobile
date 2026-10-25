@@ -18,6 +18,7 @@ import "routes.dart";
 import "components/service_mode_theme.dart";
 import "pages/not_found_page.dart";
 import "api/constants.dart";
+import "api/http_cache_version.dart";
 import "utils/app_version.dart";
 import "utils/day_reading_reminders.dart";
 import "utils/push.dart";
@@ -471,7 +472,25 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => MyAppState();
 }
 
-class MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  Timer? _cacheVersionTimer;
+
+  void _watchCacheVersion() {
+    _cacheVersionTimer?.cancel();
+    unawaited(httpCacheVersions.check(force: true));
+    _cacheVersionTimer = Timer.periodic(HttpCacheVersions.checkInterval, (_) {
+      unawaited(httpCacheVersions.check(force: true));
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _watchCacheVersion();
+    } else {
+      _cacheVersionTimer?.cancel();
+    }
+  }
   bool _hasSkippedUpdate = false;
 
   void _handleTapboxChanged(bool val) {
@@ -518,6 +537,8 @@ class MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _watchCacheVersion();
     initPlatformState();
     // Разрешения на уведомления тут нет нарочно: его спрашивают там, где
     // человек включает напоминание (см. utils/notification_permission.dart).
@@ -648,6 +669,8 @@ class MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    _cacheVersionTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     didReceiveLocalNotificationStream.close();
     selectNotificationStream.close();
     super.dispose();
