@@ -19,13 +19,17 @@ const String prayerStyleMolitvoslovShort = "molitvoslov-short";
 Future<http.Response> fetchPrayerText({
   required String forKind,
   required String gender,
+  String? style,
+  http.Client? client,
 }) {
   return v2Send(
     "GET",
     v2Uri("/prayer-text", {
       "for": forKind,
-      "style": prayerStyleMolitvoslovShort,
+      "style": style ?? prayerStyleMolitvoslovShort,
+      "lang": "cu",
       "gender": gender,
     }),
+    client: client,
   );
 }

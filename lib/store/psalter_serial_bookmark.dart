@@ -19,8 +19,9 @@ const String _prefsKey = "psalter:serial";
 class PsalterSerialBookmark {
   final int chapter;
   final int verse;
+  final DateTime? updatedAt;
 
-  const PsalterSerialBookmark(this.chapter, this.verse);
+  const PsalterSerialBookmark(this.chapter, this.verse, {this.updatedAt});
 }
 
 Future<PsalterSerialBookmark?> getPsalterSerialBookmark() async {
@@ -37,7 +38,13 @@ Future<PsalterSerialBookmark?> getPsalterSerialBookmark() async {
     if (chapter is! int || chapter < 1) return null;
     if (verse is! int || verse < 1) return null;
 
-    return PsalterSerialBookmark(chapter, verse);
+    return PsalterSerialBookmark(
+      chapter,
+      verse,
+      updatedAt: decoded['updatedAt'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(decoded['updatedAt'])
+          : null,
+    );
   } catch (_) {
     return null;
   }
@@ -47,10 +54,14 @@ Future<void> savePsalterSerialBookmark(int chapter, int verse) async {
   if (chapter < 1 || verse < 1) return;
 
   final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(_prefsKey, jsonEncode({
-    "chapter": chapter,
-    "verse": verse,
-  }));
+  await prefs.setString(
+    _prefsKey,
+    jsonEncode({
+      "chapter": chapter,
+      "verse": verse,
+      "updatedAt": DateTime.now().millisecondsSinceEpoch,
+    }),
+  );
 }
 
 Future<void> clearPsalterSerialBookmark() async {

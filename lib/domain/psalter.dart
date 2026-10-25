@@ -13,11 +13,26 @@ library;
 /// («Непорочны»); на этом её особом положении держится половина уставных
 /// правил о ней.
 const Map<int, (int, int)> kathismaRanges = <int, (int, int)>{
-  1: (1, 8), 2: (9, 16), 3: (17, 23), 4: (24, 31), 5: (32, 36),
-  6: (37, 45), 7: (46, 54), 8: (55, 63), 9: (64, 69), 10: (70, 76),
-  11: (77, 84), 12: (85, 90), 13: (91, 100), 14: (101, 104),
-  15: (105, 108), 16: (109, 117), 17: (118, 118), 18: (119, 133),
-  19: (134, 142), 20: (143, 150),
+  1: (1, 8),
+  2: (9, 16),
+  3: (17, 23),
+  4: (24, 31),
+  5: (32, 36),
+  6: (37, 45),
+  7: (46, 54),
+  8: (55, 63),
+  9: (64, 69),
+  10: (70, 76),
+  11: (77, 84),
+  12: (85, 90),
+  13: (91, 100),
+  14: (101, 104),
+  15: (105, 108),
+  16: (109, 117),
+  17: (118, 118),
+  18: (119, 133),
+  19: (134, 142),
+  20: (143, 150),
 };
 
 /// Кафизмы, которыми кончается каждая из трёх слав: номер кафизмы →
@@ -27,10 +42,24 @@ const Map<int, (int, int)> kathismaRanges = <int, (int, int)>{
 /// У 17-й кафизмы здесь записи нет: она делится не псалмами, а стихами
 /// 118-го (см. [statii17]) — единственное исключение.
 const Map<int, (int, int)> statiiRanges = <int, (int, int)>{
-  1: (3, 6), 2: (10, 13), 3: (17, 20), 4: (26, 29), 5: (33, 34),
-  6: (39, 42), 7: (48, 50), 8: (57, 60), 9: (66, 67), 10: (71, 73),
-  11: (77, 80), 12: (87, 88), 13: (93, 96), 14: (102, 103),
-  15: (105, 106), 16: (112, 115), 18: (123, 128), 19: (136, 139),
+  1: (3, 6),
+  2: (10, 13),
+  3: (17, 20),
+  4: (26, 29),
+  5: (33, 34),
+  6: (39, 42),
+  7: (48, 50),
+  8: (57, 60),
+  9: (66, 67),
+  10: (71, 73),
+  11: (77, 80),
+  12: (87, 88),
+  13: (93, 96),
+  14: (102, 103),
+  15: (105, 106),
+  16: (112, 115),
+  18: (123, 128),
+  19: (136, 139),
   20: (144, 147),
 };
 
@@ -66,12 +95,12 @@ class Statia {
   final int? lastVerse;
 
   const Statia.psalms(this.firstPsalm, this.lastPsalm)
-      : firstVerse = null,
-        lastVerse = null;
+    : firstVerse = null,
+      lastVerse = null;
 
   const Statia.verses(int psalm, this.firstVerse, this.lastVerse)
-      : firstPsalm = psalm,
-        lastPsalm = psalm;
+    : firstPsalm = psalm,
+      lastPsalm = psalm;
 
   bool get isVerseBased => firstVerse != null;
 }
@@ -120,10 +149,7 @@ List<StatiaEdge> kathismaBreakEdges(int number) {
   }
   final edges = statiiRanges[number];
   if (edges == null) return const <StatiaEdge>[];
-  return <StatiaEdge>[
-    StatiaEdge.psalm(edges.$1),
-    StatiaEdge.psalm(edges.$2),
-  ];
+  return <StatiaEdge>[StatiaEdge.psalm(edges.$1), StatiaEdge.psalm(edges.$2)];
 }
 
 /// Имя кафизмы для списка и шапки: «1-я кафизма».
@@ -135,8 +161,9 @@ String kathismaProgressId(int number) =>
     number == psalm151 ? "psalter:psalm:151" : "psalter:kathisma:$number";
 
 /// Имя записи для списка «продолжить чтение»: «Псалтирь: 1-я кафизма».
-String kathismaProgressName(int number) =>
-    number == psalm151 ? "Псалтирь: псалом 151" : "Псалтирь: ${kathismaTitle(number)}";
+String kathismaProgressName(int number) => number == psalm151
+    ? "Псалтирь: псалом 151"
+    : "Псалтирь: ${kathismaTitle(number)}";
 
 /// Прогресс чтения кафизмы долей скролла → сколько статей прочитано.
 /// Доля 0.95 и выше запись не достаёт: там прогресс стирается самим
@@ -182,6 +209,9 @@ int sorokoustKathisma(int day) => ((day - 1) % 20) + 1;
 /// Короткое окончание, которым разделитель статьи подписан у 17-й кафизмы
 /// (она делится стихами, и форма её разделителя — «Слава, и ныне»).
 const String psalmodyEnd = "Слава, и ныне:";
+
+const String psalterDoxology =
+    'Слава Отцу и Сыну и Святому Духу, и ныне и присно и во веки веков. Аминь.';
 
 /// Разделитель после статьи (славы): после него начинается следующая
 /// статья кафизмы.

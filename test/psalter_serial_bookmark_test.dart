@@ -2,12 +2,33 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:typikon/store/psalter_serial_bookmark.dart';
+import 'package:typikon/store/reading_progress.dart';
 
 // Закладка «Псалтирь подряд» — единственное, что помнит место между
 // запусками. Испортится запись — и чтение откроется на чужом псалме.
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+
+  test(
+    'закладка появляется на главной и пропадает при сбросе, включая псалом 151',
+    () async {
+      await savePsalterSerialBookmark(151, 3);
+      final entries = await getAllReadingProgress();
+      expect(entries.single.id, 'psalter:serial');
+      expect(entries.single.progress.name, contains('псалом 151, стих 3'));
+      expect((await getPsalterSerialBookmark())?.verse, 3);
+      await clearPsalterSerialBookmark();
+      expect(await getAllReadingProgress(), isEmpty);
+    },
+  );
+
+  test('прежняя закладка без времени тоже появляется на главной', () async {
+    SharedPreferences.setMockInitialValues({
+      'psalter:serial': '{"chapter":43,"verse":5}',
+    });
+    expect((await getAllReadingProgress()).single.id, 'psalter:serial');
+  });
 
   test("пока «Подряд» не открывали, закладки нет", () async {
     expect(await getPsalterSerialBookmark(), isNull);

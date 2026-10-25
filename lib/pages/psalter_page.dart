@@ -4,7 +4,8 @@ import 'package:typikon/apiMapper/ordo.dart';
 import 'package:typikon/domain/psalter.dart';
 import 'package:typikon/dto/ordo.dart';
 import 'package:typikon/pages/kathisma_page.dart' show kathismaRouteArgument;
-import 'package:typikon/pages/psalter_serial_page.dart' show serialRouteArgument;
+import 'package:typikon/pages/psalter_serial_page.dart'
+    show serialRouteArgument;
 import 'package:typikon/store/psalter_mode.dart';
 import 'package:typikon/store/reading_progress.dart';
 
@@ -66,7 +67,9 @@ class _PsalterPageState extends State<PsalterPage> {
     final found = <int, ReadingProgress>{};
     for (final entry in all) {
       if (!entry.id.startsWith("psalter:kathisma:")) continue;
-      final number = int.tryParse(entry.id.substring("psalter:kathisma:".length));
+      final number = int.tryParse(
+        entry.id.substring("psalter:kathisma:".length),
+      );
       if (number != null) found[number] = entry.progress;
     }
     if (mounted) setState(() => _progress = found);
@@ -94,10 +97,21 @@ class _PsalterPageState extends State<PsalterPage> {
     final today = _today;
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Псалтирь", style: TextStyle(fontFamily: "OldStandard")),
+        title: const Text(
+          "Псалтирь",
+          style: TextStyle(fontFamily: "OldStandard"),
+        ),
       ),
       body: ListView(
         children: <Widget>[
+          ListTile(
+            leading: const Icon(Icons.favorite_outline),
+            title: const Text("Чтение с поминовением"),
+            subtitle: const Text(
+              "Об усопших: имена на славах, тропари и молитва после кафизмы",
+            ),
+            trailing: Switch(value: _departedMode, onChanged: _setDepartedMode),
+          ),
           if (today != null && !today.isEmpty)
             ListTile(
               leading: const Icon(Icons.today),
@@ -148,15 +162,6 @@ class _PsalterPageState extends State<PsalterPage> {
               fontWeight: FontWeight.bold,
               color: primary,
             ),
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.favorite_outline),
-          title: const Text("Чтение с поминовением"),
-          subtitle: const Text("имена усопших на славах"),
-          trailing: Switch(
-            value: _departedMode,
-            onChanged: _setDepartedMode,
           ),
         ),
         ListTile(

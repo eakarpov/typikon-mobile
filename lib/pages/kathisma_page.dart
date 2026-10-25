@@ -1,3 +1,5 @@
+import '../components/kathisma_ending.dart';
+import '../dto/posledovanie.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -74,7 +76,7 @@ class _Part {
 /// дополнительный псалом (без разделителей и окончания).
 ///
 /// Поминальный режим ([departed]): после всякой славы — блок молитв с именами
-/// из помянника (об усопших после «Слава», о живых после «И ныне»). Кафизма
+/// из помянника об усопших после «Слава». Кафизма
 /// при этом читается как обычно: молитвы — прибавка, а не условие, и ни одна
 /// плашка (войти / нет сети / имена не обновлены) её не останавливает.
 ///
@@ -85,7 +87,7 @@ class _Part {
 class KathismaPage extends StatefulWidget {
   final int number;
 
-  /// Поминальное чтение: молитвы с именами усопших и живых на славах.
+  /// Поминальное чтение: молитвы с именами усопших на славах.
   final bool departed;
 
   /// Подменяется тестами; в приложении — `getBibleChapter('psaltir', n)`.
@@ -93,6 +95,7 @@ class KathismaPage extends StatefulWidget {
 
   /// Подменяется тестами; в приложении — `loadPsalterNamedPrayers`.
   final Future<PsalterNamedPrayers> Function(String gender)? prayersLoader;
+  final Future<Posledovanie> Function(int)? endingLoader;
 
   const KathismaPage({
     super.key,
@@ -100,6 +103,7 @@ class KathismaPage extends StatefulWidget {
     this.departed = false,
     this.loadChapter,
     this.prayersLoader,
+    this.endingLoader,
   });
 
   @override
@@ -150,6 +154,10 @@ class _KathismaPageState extends State<KathismaPage> {
     return loadPsalterNamedPrayers(gender: gender);
   }
 
+  void _refreshPrayers() => setState(() {
+    _prayers = _loadPrayers();
+  });
+
   List<_Part> _buildParts(int number) {
     if (number == psalm151) {
       return const <_Part>[_Part(psalm151)];
@@ -165,9 +173,11 @@ class _KathismaPageState extends State<KathismaPage> {
             breakAfter: i < statii.length - 1 ? psalmodyEnd : null,
           )
         else
-          for (var psalm = statii[i].firstPsalm;
-              psalm <= statii[i].lastPsalm;
-              psalm++)
+          for (
+            var psalm = statii[i].firstPsalm;
+            psalm <= statii[i].lastPsalm;
+            psalm++
+          )
             _Part(
               psalm,
               breakAfter: psalm == statii[i].lastPsalm && i < statii.length - 1
@@ -209,7 +219,10 @@ class _KathismaPageState extends State<KathismaPage> {
     if (_scrollController.hasClients) {
       final position = _scrollController.position;
       if (position.maxScrollExtent > 0) {
-        _lastFraction = (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0);
+        _lastFraction = (position.pixels / position.maxScrollExtent).clamp(
+          0.0,
+          1.0,
+        );
       }
     }
     _persistDebounce?.cancel();
@@ -220,7 +233,11 @@ class _KathismaPageState extends State<KathismaPage> {
     final fraction = _lastFraction;
     // Не прокручивали — записывать нечего, и прежнюю запись не затираем.
     if (fraction == null) return;
-    saveReadingProgress(_progressId, fraction, name: kathismaProgressName(widget.number));
+    saveReadingProgress(
+      _progressId,
+      fraction,
+      name: kathismaProgressName(widget.number),
+    );
   }
 
   Future<void> _checkResumeProgress() async {
@@ -243,7 +260,9 @@ class _KathismaPageState extends State<KathismaPage> {
     _bannerVisible = true;
     _messenger?.showMaterialBanner(
       MaterialBanner(
-        content: const Text("Вы уже читали эту кафизму. Продолжить с места, где остановились?"),
+        content: const Text(
+          "Вы уже читали эту кафизму. Продолжить с места, где остановились?",
+        ),
         actions: <Widget>[
           TextButton(
             onPressed: () {
@@ -279,23 +298,29 @@ class _KathismaPageState extends State<KathismaPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _isKathisma ? kathismaTitle(widget.number) : "Псалом 151 (дополнительный)",
+          _isKathisma
+              ? kathismaTitle(widget.number)
+              : "Псалом 151 (дополнительный)",
           style: const TextStyle(fontFamily: "OldStandard", fontSize: 18.0),
         ),
       ),
-      body: PinchZoom(child: Container(
-        color: readingBackgroundColor(context),
-        child: ReadingColumn(child: FutureBuilder<Map<int, BibleChapter>>(
-          future: _chapters,
-          builder: (context, future) {
-            if (future.hasError) return _error(future.error);
-            if (!future.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            return _content(context, future.data!);
-          },
-        )),
-      )),
+      body: PinchZoom(
+        child: Container(
+          color: readingBackgroundColor(context),
+          child: ReadingColumn(
+            child: FutureBuilder<Map<int, BibleChapter>>(
+              future: _chapters,
+              builder: (context, future) {
+                if (future.hasError) return _error(future.error);
+                if (!future.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return _content(context, future.data!);
+              },
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -328,8 +353,11 @@ class _KathismaPageState extends State<KathismaPage> {
     if (widget.departed) {
       return FutureBuilder<PsalterNamedPrayers>(
         future: _prayers,
-        builder: (context, snapshot) =>
-            _buildReading(context, chapters, snapshot.data),
+        builder: (context, snapshot) => _buildReading(
+          context,
+          chapters,
+          snapshot.data ?? const PsalterNamedPrayers(),
+        ),
       );
     }
     return _buildReading(context, chapters, null);
@@ -356,9 +384,11 @@ class _KathismaPageState extends State<KathismaPage> {
       var verses = chapter.versesFor(0);
       if (part.verseFrom != null || part.verseTo != null) {
         verses = verses
-            .where((v) =>
-                v.verse >= (part.verseFrom ?? 1) &&
-                v.verse <= (part.verseTo ?? 1 << 30))
+            .where(
+              (v) =>
+                  v.verse >= (part.verseFrom ?? 1) &&
+                  v.verse <= (part.verseTo ?? 1 << 30),
+            )
             .toList();
       }
       if (verses.isEmpty) continue;
@@ -379,27 +409,52 @@ class _KathismaPageState extends State<KathismaPage> {
         lastPsalmCaption = caption;
         blocks.add(caption);
       }
-      blocks.add(VerseListView(
-        verses: verses,
-        fontSize: fontSize,
-        fontFamily: fontFamily,
-        script: script,
-      ));
+      blocks.add(
+        VerseListView(
+          verses: verses,
+          fontSize: fontSize,
+          fontFamily: fontFamily,
+          script: script,
+        ),
+      );
       final breakText = part.breakAfter;
       if (breakText != null) {
-        blocks.add(_BreakLine(breakText));
+        if (prayers == null || !prayers.hasPrayers) {
+          blocks.add(_BreakLine(breakText));
+        }
         if (prayers != null) {
           // Разделитель один на обе половины («Слава, и ныне:»), поэтому обе
-          // молитвы — блоком: сначала об усопших, затем о живых. Плашку
+          // молитвы об усопших — отдельным блоком. Плашку
           // показывает только первый блок: трижды повторённая, она задушила бы
           // само чтение.
-          blocks.add(NamedPrayerBlock(prayers, showNotice: breakIndex == 0));
+          blocks.add(
+            NamedPrayerBlock(
+              prayers,
+              showNotice: breakIndex == 0,
+              onRetry: _refreshPrayers,
+            ),
+          );
           breakIndex++;
         }
       }
     }
     if (_isKathisma && blocks.isNotEmpty) {
+      if (prayers != null) {
+        blocks.add(
+          NamedPrayerBlock(
+            prayers,
+            showNotice: breakIndex == 0,
+            onRetry: _refreshPrayers,
+          ),
+        );
+      }
+      if (prayers == null || !prayers.hasPrayers) {
+        blocks.add(_BreakLine(psalterDoxology));
+      }
       blocks.add(_BreakLine(kathismaEnd));
+      blocks.add(
+        KathismaEnding(number: widget.number, loader: widget.endingLoader),
+      );
     }
 
     return SingleChildScrollView(

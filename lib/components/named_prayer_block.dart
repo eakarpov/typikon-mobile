@@ -18,27 +18,50 @@ const String namedPrayersSignInNotice =
 /// Три честных состояния, и ни одно не притворяется молитвой:
 /// не вошли — [namedPrayersSignInNotice], кафизма читается как обычная;
 /// сети нет и снимка нет — [namedPrayersUnavailableNotice]; состав протух —
-/// [namedPrayersStaleNotice] над показанным снимком. Молитвы идут двумя
-/// рядами: «О усопших:» (после «Слава») и «О живых:» (после «И ныне»).
+/// [namedPrayersStaleNotice] над показанным снимком. На славах — молитвы
+/// об усопших. Окончание кафизмы загружается отдельно из корпуса.
 class NamedPrayerBlock extends StatelessWidget {
-  const NamedPrayerBlock(this.prayers, {super.key, this.showNotice = true});
+  const NamedPrayerBlock(
+    this.prayers, {
+    super.key,
+    this.showNotice = true,
+    this.onRetry,
+  });
 
   final PsalterNamedPrayers prayers;
 
   /// Плашку показывает только первый блок на экране: повторять «имена не
   /// обновлены» после каждой из трёх слав — значит задушить этим самым славы.
   final bool showNotice;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    if (prayers.signInNeeded) {
-      return showNotice ? const _Notice(namedPrayersSignInNotice) : const SizedBox.shrink();
-    }
-    if (prayers.unavailable) {
-      return showNotice ? const _Notice(namedPrayersUnavailableNotice) : const SizedBox.shrink();
+    if (prayers.signInNeeded || prayers.unavailable || prayers.accessDenied) {
+      if (!showNotice) return const SizedBox.shrink();
+      return Column(
+        children: [
+          _Notice(
+            prayers.signInNeeded
+                ? namedPrayersSignInNotice
+                : prayers.accessDenied
+                ? 'Раздел молитв с именами недоступен. Проверьте обновление приложения.'
+                : namedPrayersUnavailableNotice,
+          ),
+          if (prayers.signInNeeded)
+            TextButton(
+              onPressed: () async {
+                await Navigator.pushNamed(context, '/settings');
+                if (context.mounted) onRetry?.call();
+              },
+              child: const Text('Войти'),
+            ),
+          if (!prayers.accessDenied && onRetry != null)
+            TextButton(onPressed: onRetry, child: const Text('Обновить имена')),
+        ],
+      );
     }
     if (!prayers.hasPrayers) return const SizedBox.shrink();
-
     final small = Theme.of(context).textTheme.bodySmall;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -50,8 +73,11 @@ class NamedPrayerBlock extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Text(namedPrayersStaleNotice, style: small),
             ),
+          const ReadingText('Слава Отцу и Сыну и Святому Духу.'),
           _Group("О усопших:", prayers.departed),
-          _Group("О живых:", prayers.living),
+          const ReadingText('И ныне и присно и во веки веков. Аминь.'),
+          if (showNotice && onRetry != null)
+            TextButton(onPressed: onRetry, child: const Text('Обновить имена')),
         ],
       ),
     );
@@ -92,10 +118,9 @@ class _Group extends StatelessWidget {
             if ((prayer.title ?? "").isNotEmpty)
               Text(
                 prayer.title!,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(fontStyle: FontStyle.italic),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
               ),
             ReadingText(prayer.text, churchSlavonic: true),
           ],

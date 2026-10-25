@@ -23,9 +23,9 @@ Future<void> pumpPsalter(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   SharedPreferences.setMockInitialValues(prefs);
-  await tester.pumpWidget(MaterialApp(
-    home: PsalterPage(todayLoader: todayLoader),
-  ));
+  await tester.pumpWidget(
+    MaterialApp(home: PsalterPage(todayLoader: todayLoader)),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -46,8 +46,11 @@ void main() {
 
     expect(find.text("Псалтирь"), findsOneWidget);
     for (final number in kathismaRanges.keys) {
-      expect(find.text(kathismaTitle(number)), findsOneWidget,
-          reason: "в списке нет ${kathismaTitle(number)}");
+      expect(
+        find.text(kathismaTitle(number)),
+        findsOneWidget,
+        reason: "в списке нет ${kathismaTitle(number)}",
+      );
     }
     expect(find.text("Псалом 151 (дополнительный)"), findsOneWidget);
     expect(find.text("Подряд"), findsOneWidget);
@@ -70,17 +73,18 @@ void main() {
     expect(find.text("прочитано статей: 2/3"), findsOneWidget);
 
     final bars = tester.widgetList<LinearProgressIndicator>(
-        find.byType(LinearProgressIndicator));
+      find.byType(LinearProgressIndicator),
+    );
     expect(bars.map((bar) => bar.value), <double>[2 / 3]);
   });
 
-  testWidgets("«сегодня» по уставу: подпись дня и метки кафизм", (tester) async {
+  testWidgets("«сегодня» по уставу: подпись дня и метки кафизм", (
+    tester,
+  ) async {
     await pumpPsalter(
       tester,
-      todayLoader: () async => const OrdoKafizmy(
-        matins: <int>[2, 3],
-        vespers: <int>[18],
-      ),
+      todayLoader: () async =>
+          const OrdoKafizmy(matins: <int>[2, 3], vespers: <int>[18]),
     );
 
     expect(find.text("Сегодня по уставу"), findsOneWidget);
@@ -92,26 +96,29 @@ void main() {
     expect(find.text("сегодня: на вечерне"), findsOneWidget);
   });
 
-  testWidgets("тап в кафизму ведёт на /psalter/kathisma с её номером",
-      (tester) async {
+  testWidgets("тап в кафизму ведёт на /psalter/kathisma с её номером", (
+    tester,
+  ) async {
     final pushed = <String>[];
     Object? kathismaArgs;
     tester.view.physicalSize = const Size(1200, 6000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    await tester.pumpWidget(MaterialApp(
-      onGenerateRoute: (settings) {
-        pushed.add(settings.name ?? "");
-        if (settings.name == "/psalter/kathisma") {
-          kathismaArgs = settings.arguments;
-        }
-        return MaterialPageRoute(
-          builder: (_) => const Scaffold(body: Text("открыто")),
-        );
-      },
-      home: PsalterPage(todayLoader: () async => null),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        onGenerateRoute: (settings) {
+          pushed.add(settings.name ?? "");
+          if (settings.name == "/psalter/kathisma") {
+            kathismaArgs = settings.arguments;
+          }
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(body: Text("открыто")),
+          );
+        },
+        home: PsalterPage(todayLoader: () async => null),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text("6-я кафизма"));
@@ -121,26 +128,29 @@ void main() {
     expect(kathismaArgs, 6);
   });
 
-  testWidgets("тап в «Подряд» ведёт на /psalter/serial без аргумента",
-      (tester) async {
+  testWidgets("тап в «Подряд» ведёт на /psalter/serial без аргумента", (
+    tester,
+  ) async {
     final pushed = <String>[];
     Object? serialArgs = "не-тронут";
     tester.view.physicalSize = const Size(1200, 6000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    await tester.pumpWidget(MaterialApp(
-      onGenerateRoute: (settings) {
-        pushed.add(settings.name ?? "");
-        if (settings.name == "/psalter/serial") {
-          serialArgs = settings.arguments;
-        }
-        return MaterialPageRoute(
-          builder: (_) => const Scaffold(body: Text("открыто")),
-        );
-      },
-      home: PsalterPage(todayLoader: () async => null),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        onGenerateRoute: (settings) {
+          pushed.add(settings.name ?? "");
+          if (settings.name == "/psalter/serial") {
+            serialArgs = settings.arguments;
+          }
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(body: Text("открыто")),
+          );
+        },
+        home: PsalterPage(todayLoader: () async => null),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text("Подряд"));
@@ -160,18 +170,21 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
       SharedPreferences.setMockInitialValues(prefs);
-      await tester.pumpWidget(MaterialApp(
-        onGenerateRoute: (settings) {
-          nav.pushed.add(settings.name ?? "");
-          nav.arguments.add(settings.arguments);
-          // Фальшивая страница со стрелкой «назад»: возвращаемся домой
-          // между переходами.
-          return MaterialPageRoute(
-            builder: (_) => Scaffold(appBar: AppBar(), body: const Text("открыто")),
-          );
-        },
-        home: PsalterPage(todayLoader: () async => null),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          onGenerateRoute: (settings) {
+            nav.pushed.add(settings.name ?? "");
+            nav.arguments.add(settings.arguments);
+            // Фальшивая страница со стрелкой «назад»: возвращаемся домой
+            // между переходами.
+            return MaterialPageRoute(
+              builder: (_) =>
+                  Scaffold(appBar: AppBar(), body: const Text("открыто")),
+            );
+          },
+          home: PsalterPage(todayLoader: () async => null),
+        ),
+      );
       await tester.pumpAndSettle();
       return nav;
     }
@@ -186,7 +199,7 @@ void main() {
 
       expect(find.text("О усопших"), findsOneWidget);
       expect(find.text("Чтение с поминовением"), findsOneWidget);
-      expect(find.text("имена усопших на славах"), findsOneWidget);
+      expect(find.textContaining("имена на славах, тропари"), findsOneWidget);
       expect(find.text("Сорокоуст"), findsOneWidget);
       expect(find.text("Неусыпаемая Псалтирь"), findsOneWidget);
       // Режим по умолчанию выключен.
@@ -194,8 +207,9 @@ void main() {
       expect(switchWidget.value, isFalse);
     });
 
-    testWidgets("режим выключен: прежние аргументы — int и null",
-        (tester) async {
+    testWidgets("режим выключен: прежние аргументы — int и null", (
+      tester,
+    ) async {
       final nav = await pumpForNav(tester);
 
       await tester.tap(find.text("6-я кафизма"));
@@ -208,8 +222,9 @@ void main() {
       expect(nav.arguments.last, isNull);
     });
 
-    testWidgets("переключатель пишет ключ и меняет аргументы на «N|d» и «d»",
-        (tester) async {
+    testWidgets("переключатель пишет ключ и меняет аргументы на «N|d» и «d»", (
+      tester,
+    ) async {
       final nav = await pumpForNav(tester);
 
       await tester.tap(find.byType(Switch));

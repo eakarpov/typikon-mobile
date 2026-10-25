@@ -1,3 +1,5 @@
+import '../components/kathisma_ending.dart';
+import '../dto/posledovanie.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -79,6 +81,7 @@ class PsalterSerialPage extends StatefulWidget {
 
   /// Подменяется тестами; в приложении — `loadPsalterNamedPrayers`.
   final Future<PsalterNamedPrayers> Function(String gender)? prayersLoader;
+  final Future<Posledovanie> Function(int)? endingLoader;
 
   const PsalterSerialPage({
     super.key,
@@ -86,6 +89,7 @@ class PsalterSerialPage extends StatefulWidget {
     this.departed = false,
     this.loadChapter,
     this.prayersLoader,
+    this.endingLoader,
   });
 
   @override
@@ -128,6 +132,10 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
     if (loader != null) return loader(gender);
     return loadPsalterNamedPrayers(gender: gender);
   }
+
+  void _refreshPrayers() => setState(() {
+    _prayers = _loadPrayers();
+  });
 
   Future<void> _init() async {
     final int target;
@@ -186,7 +194,10 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
     if (_scrollController.hasClients) {
       final position = _scrollController.position;
       if (position.maxScrollExtent > 0) {
-        _lastFraction = (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0);
+        _lastFraction = (position.pixels / position.maxScrollExtent).clamp(
+          0.0,
+          1.0,
+        );
       }
     }
     _saveDebounce?.cancel();
@@ -200,7 +211,10 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
     if (fraction == null || chapter == null || data == null) return;
     final verses = data.versesFor(0);
     if (verses.isEmpty) return;
-    final index = (fraction * (verses.length - 1)).round().clamp(0, verses.length - 1);
+    final index = (fraction * (verses.length - 1)).round().clamp(
+      0,
+      verses.length - 1,
+    );
     savePsalterSerialBookmark(chapter, verses[index].verse);
   }
 
@@ -210,7 +224,10 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
     Navigator.pushReplacementNamed(
       context,
       "/psalter/serial",
-      arguments: serialRouteArgument(chapter: chapter, departed: widget.departed),
+      arguments: serialRouteArgument(
+        chapter: chapter,
+        departed: widget.departed,
+      ),
     );
   }
 
@@ -238,8 +255,8 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
           ? const Center(child: CircularProgressIndicator())
           // После 151-го — честный финал; сам 151-й читается как все.
           : chapter > psalm151
-              ? _finale(context)
-              : _reading(context, chapter),
+          ? _finale(context)
+          : _reading(context, chapter),
     );
   }
 
@@ -273,19 +290,23 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
   }
 
   Widget _reading(BuildContext context, int chapter) {
-    return PinchZoom(child: Container(
-      color: readingBackgroundColor(context),
-      child: ReadingColumn(child: FutureBuilder<BibleChapter>(
-        future: _future,
-        builder: (context, future) {
-          if (future.hasError) return _error(future.error);
-          if (!future.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return _chapterView(context, future.data!, chapter);
-        },
-      )),
-    ));
+    return PinchZoom(
+      child: Container(
+        color: readingBackgroundColor(context),
+        child: ReadingColumn(
+          child: FutureBuilder<BibleChapter>(
+            future: _future,
+            builder: (context, future) {
+              if (future.hasError) return _error(future.error);
+              if (!future.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return _chapterView(context, future.data!, chapter);
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _error(Object? error) {
@@ -314,8 +335,12 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
     if (widget.departed) {
       return FutureBuilder<PsalterNamedPrayers>(
         future: _prayers,
-        builder: (context, snapshot) =>
-            _chapterScroll(context, data, chapter, snapshot.data),
+        builder: (context, snapshot) => _chapterScroll(
+          context,
+          data,
+          chapter,
+          snapshot.data ?? const PsalterNamedPrayers(),
+        ),
       );
     }
     return _chapterScroll(context, data, chapter, null);
@@ -333,9 +358,51 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
     final script = bibleScript(edition?.language);
     final verses = data.versesFor(0);
 
-    // Граница кафизмы — после её последнего псалма (в «подряд» кафизма
-    // не делится на славы, и молитвы встают одним блоком на границе целиком).
-    final boundary = widget.departed && endsKathisma(chapter) && prayers != null;
+    final reading = <Widget>[];
+    var from = 0;
+    var breakIndex = 0;
+    final ends = <int>{
+      if (widget.departed && prayers != null && verses.isNotEmpty)
+        for (var n = 1; n <= 20; n++)
+          for (final statia in kathismaStatii(n))
+            if (statia.lastPsalm == chapter)
+              statia.lastVerse ?? verses.last.verse,
+    };
+    void addVerses(int to) {
+      if (to <= from) return;
+      reading.add(
+        VerseListView(
+          verses: verses.sublist(from, to),
+          fontSize: settings.fontSize.toDouble(),
+          fontFamily: fontFamily,
+          script: script,
+        ),
+      );
+      from = to;
+    }
+
+    for (var i = 0; i < verses.length; i++) {
+      if (!ends.contains(verses[i].verse)) continue;
+      addVerses(i + 1);
+      reading.add(
+        NamedPrayerBlock(
+          prayers!,
+          showNotice: breakIndex++ == 0,
+          onRetry: _refreshPrayers,
+        ),
+      );
+    }
+    addVerses(verses.length);
+    if (endsKathisma(chapter)) {
+      if (prayers == null || !prayers.hasPrayers) {
+        reading.add(const ReadingText(psalterDoxology, churchSlavonic: true));
+      }
+      reading.add(const ReadingText(kathismaEnd, churchSlavonic: true));
+      final number = kathismaRanges.entries
+          .firstWhere((e) => e.value.$2 == chapter)
+          .key;
+      reading.add(KathismaEnding(number: number, loader: widget.endingLoader));
+    }
 
     return SingleChildScrollView(
       controller: _scrollController,
@@ -343,13 +410,7 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          VerseListView(
-            verses: verses,
-            fontSize: settings.fontSize.toDouble(),
-            fontFamily: fontFamily,
-            script: script,
-          ),
-          if (boundary) NamedPrayerBlock(prayers),
+          ...reading,
           ScriptCaveat(source: script),
           _nextButton(context, chapter),
         ],
@@ -366,10 +427,7 @@ class _PsalterSerialPageState extends State<PsalterSerialPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
-          TextButton(
-            onPressed: () => _openChapter(next),
-            child: Text(label),
-          ),
+          TextButton(onPressed: () => _openChapter(next), child: Text(label)),
         ],
       ),
     );

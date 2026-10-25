@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'psalter_serial_bookmark.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -82,10 +83,30 @@ Future<List<SavedReading>> getAllReadingProgress() async {
   final entries = <SavedReading>[];
   for (final entry in all.entries) {
     try {
-      entries.add(SavedReading(entry.key, ReadingProgress.fromJson(Map<String, dynamic>.from(entry.value))));
+      entries.add(
+        SavedReading(
+          entry.key,
+          ReadingProgress.fromJson(Map<String, dynamic>.from(entry.value)),
+        ),
+      );
     } catch (_) {
       // Одна порченая запись не должна ронять список целиком.
     }
+  }
+  final serial = await getPsalterSerialBookmark();
+  if (serial != null) {
+    entries.removeWhere((entry) => entry.id == 'psalter:serial');
+    entries.add(
+      SavedReading(
+        'psalter:serial',
+        ReadingProgress(
+          ((serial.chapter - 1) / 151).clamp(0.0, 1.0),
+          serial.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+          name:
+              'Псалтирь подряд: псалом ${serial.chapter}, стих ${serial.verse}',
+        ),
+      ),
+    );
   }
   entries.sort((a, b) => b.progress.updatedAt.compareTo(a.progress.updatedAt));
   return entries.length > maxProgressEntries
@@ -93,7 +114,11 @@ Future<List<SavedReading>> getAllReadingProgress() async {
       : entries;
 }
 
-Future<void> saveReadingProgress(String textId, double fraction, {String? name}) async {
+Future<void> saveReadingProgress(
+  String textId,
+  double fraction, {
+  String? name,
+}) async {
   if (fraction >= finishedFraction) {
     await clearReadingProgress(textId);
     return;
@@ -104,8 +129,7 @@ Future<void> saveReadingProgress(String textId, double fraction, {String? name})
   // и по дебаунсу, а имя текста на странице появляется с ответом сервера,
   // то есть ранние записи могли уйти вообще без имени.
   final previous = all[textId];
-  final keptName = name ??
-      ((previous is Map) ? previous['name'] : null);
+  final keptName = name ?? ((previous is Map) ? previous['name'] : null);
   all[textId] = ReadingProgress(
     fraction,
     DateTime.now(),
