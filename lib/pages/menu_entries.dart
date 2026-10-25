@@ -78,80 +78,122 @@ const List<MenuEntry> practiceEntries = <MenuEntry>[
   MenuEntry("Правило дня", "/rule", hint: "Утренние и вечерние молитвы"),
   MenuEntry("Псалтирь", "/psalter", hint: "По кафизмам, подряд и по усопшему"),
   MenuEntry("Причастие", "/communion", hint: "Подготовка к Причащению"),
-  MenuEntry("Служба дня", "/ordo", hint: "Последование на выбранную дату"),
+  MenuEntry(
+    "Служба дня",
+    "/ordo",
+    hint: "Бета · Последование на выбранную дату",
+  ),
 ];
 
 const String handbookRoute = "/posobiya";
 
 /// «Собрание» — то, что читают и поют.
 const List<MenuEntry> corpusEntries = <MenuEntry>[
-  MenuEntry("Библиотека", "/library",
-      hint: "Книги собрания целиком, по оглавлению"),
+  MenuEntry(
+    "Библиотека",
+    "/library",
+    hint: "Книги собрания целиком, по оглавлению",
+  ),
   // Библия стоит отдельно от библиотеки: у неё своя навигация по канону и
   // параллельное чтение изданий, которых у обычной книги собрания нет.
-  MenuEntry("Библия", "/bible",
-      hint: "Канон целиком: главы, издания рядом, отзвуки"),
-  MenuEntry("Зачала", "/pericopes",
-      hint: "Чтения Апостола и Евангелия по зачалам"),
+  MenuEntry(
+    "Библия",
+    "/bible",
+    hint: "Канон целиком: главы, издания рядом, отзвуки",
+  ),
+  MenuEntry(
+    "Зачала",
+    "/pericopes",
+    hint: "Чтения Апостола и Евангелия по зачалам",
+  ),
   // Каноны и акафисты — целые произведения со всеми песнями и строфами, в
   // отличие от песнопения, где единица выдачи — одна строка на своём месте
   // службы.
   MenuEntry("Каноны", "/canons", hint: "Целиком, со всеми песнями"),
   MenuEntry("Акафисты", "/akathists", hint: "Целиком, со всеми икосами"),
-  MenuEntry("Молитвы", "/prayers", hint: "При памяти, при каноне, при акафисте"),
+  MenuEntry(
+    "Молитвы",
+    "/prayers",
+    hint: "При памяти, при каноне, при акафисте",
+  ),
 ];
 
 /// «Пособия» — вспомогательное при чтении.
 const List<MenuEntry> handbookEntries = <MenuEntry>[
-  MenuEntry("Места", "/places",
-      hint: "Где было названное в Писании и чтениях"),
+  MenuEntry("Места", "/places", hint: "Где было названное в Писании и чтениях"),
   // Знаки Типикона жили седьмой строкой в списке чужих сайтов — единственная
   // внутренняя ссылка среди внешних, и найти её там было нельзя.
-  MenuEntry("Знаки Типикона", "/signs",
-      hint: "Знак службы: что и когда поётся"),
+  MenuEntry(
+    "Знаки Типикона",
+    "/signs",
+    hint: "Знак службы: что и когда поётся",
+  ),
   MenuEntry("Словарь", "/dictionary", hint: "Как прочесть и что значит слово"),
   MenuEntry("Именины", "/imeniny", hint: "По святцам — свой день"),
-  MenuEntry("Хронология", "/chronology",
-      hint: "Годы в обе стороны и разбор датировки"),
-  MenuEntry("Полезные ресурсы", "/resources",
-      hint: "Сайты, которыми пользуемся сами"),
+  MenuEntry(
+    "Хронология",
+    "/chronology",
+    hint: "Годы в обе стороны и разбор датировки",
+  ),
+  MenuEntry(
+    "Полезные ресурсы",
+    "/resources",
+    hint: "Сайты, которыми пользуемся сами",
+  ),
 ];
 
 /// Ящик меню. Всё, что не ушло в «Собрание» и «Пособия», плюс они сами.
 const List<MenuSection> drawerSections = <MenuSection>[
-  MenuSection(entries: <MenuEntry>[
-    MenuEntry("Главная страница", "/"),
-    MenuEntry("Чтения на календарный день", "/months"),
-    MenuEntry("Памяти на день", "/day-saints"),
-    MenuEntry("Калькулятор чтений на день", "/calculator"),
-  ]),
-  MenuSection(title: "Круг года", entries: <MenuEntry>[
-    MenuEntry("Триодион", "/triodion"),
-    MenuEntry("Пятидесятница", "/penticostarion"),
-    MenuEntry("Вне триодного цикла", "/outside"),
-  ]),
-  MenuSection(title: "Тексты", entries: <MenuEntry>[
-    MenuEntry("Собрание", corpusRoute),
-    MenuEntry("Пособия", handbookRoute),
-  ]),
-  MenuSection(title: "Моё", entries: <MenuEntry>[
-    MenuEntry("Избранное", "/favourites"),
-    MenuEntry("Мои заметки", "/notes", visibility: MenuVisibility.signedIn),
-    MenuEntry("Правило", practiceRoute),
-    MenuEntry("Помянник", "/pomyannik", visibility: MenuVisibility.signedIn),
-    MenuEntry("Поданные записки", "/pomyannik/prinyatye",
-        visibility: MenuVisibility.commemorator),
-  ]),
-  MenuSection(title: "Приложение", entries: <MenuEntry>[
-    MenuEntry("Настройки", "/settings"),
-    MenuEntry("Обратная связь", "/contact"),
-  ]),
+  MenuSection(
+    entries: <MenuEntry>[
+      MenuEntry("Главная страница", "/"),
+      MenuEntry("Чтения на календарный день", "/months"),
+      MenuEntry("Памяти на день", "/day-saints"),
+      MenuEntry("Калькулятор чтений на день", "/calculator"),
+    ],
+  ),
+  MenuSection(
+    title: "Круг года",
+    entries: <MenuEntry>[
+      MenuEntry("Триодион", "/triodion"),
+      MenuEntry("Пятидесятница", "/penticostarion"),
+      MenuEntry("Вне триодного цикла", "/outside"),
+    ],
+  ),
+  MenuSection(
+    title: "Тексты",
+    entries: <MenuEntry>[
+      MenuEntry("Собрание", corpusRoute),
+      MenuEntry("Пособия", handbookRoute),
+    ],
+  ),
+  MenuSection(
+    title: "Моё",
+    entries: <MenuEntry>[
+      MenuEntry("Избранное", "/favourites"),
+      MenuEntry("Мои заметки", "/notes", visibility: MenuVisibility.signedIn),
+      MenuEntry("Правило", practiceRoute),
+      MenuEntry("Помянник", "/pomyannik", visibility: MenuVisibility.signedIn),
+      MenuEntry(
+        "Поданные записки",
+        "/pomyannik/prinyatye",
+        visibility: MenuVisibility.commemorator,
+      ),
+    ],
+  ),
+  MenuSection(
+    title: "Приложение",
+    entries: <MenuEntry>[
+      MenuEntry("Настройки", "/settings"),
+      MenuEntry("Обратная связь", "/contact"),
+    ],
+  ),
 ];
 
 /// Все пункты описи разом — для теста и для сверки с маршрутами.
 List<MenuEntry> get allMenuEntries => <MenuEntry>[
-      for (final section in drawerSections) ...section.entries,
-      ...corpusEntries,
-      ...handbookEntries,
-      ...practiceEntries,
-    ];
+  for (final section in drawerSections) ...section.entries,
+  ...corpusEntries,
+  ...handbookEntries,
+  ...practiceEntries,
+];

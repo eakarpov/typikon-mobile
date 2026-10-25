@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'cached_fetch.dart';
+import 'client.dart';
+import 'constants.dart';
+import '../domain/ordo_package.dart';
 import 'v2/request.dart';
 
 /// Уставный день из раздела ordo: какие кафизмы читаются на дату.
@@ -22,7 +25,7 @@ Future<http.Response> fetchOrdoDay(DateTime date) {
   final day = ordoDayDate(date);
   return cachedFetch(
     "ordo:day:$day",
-    () => v2Get(v2Uri("/ordo/day", {"date": day})),
+    () => v2Get(v2Uri("/ordo/day", {"date": day}), retryAnonymously: false),
     ttl: const Duration(hours: 6),
     isCacheable: _isValidDay,
   );
@@ -42,21 +45,36 @@ bool _isValidDay(String body) {
   return !decoded.containsKey("error");
 }
 
-/// JSON-проекция дневного .ordo-пакета. Тела уже привязаны сервером.
-Future<http.Response> fetchOrdoServices(DateTime date) => cachedFetch(
-  'ordo:services:${ordoDayDate(date)}',
-  () => v2Get(
-    v2Uri('/ordo/services', {
-      'date': ordoDayDate(date),
-      'lang': 'cu',
-      'psalms': '1',
-    }),
-    retryAnonymously: false,
-  ),
-  isCacheable: (body) {
-    final value = jsonDecode(body);
-    return value is Map &&
-        value['services'] is List &&
-        !value.containsKey('error');
-  },
-);
+/// Публичная выгрузка дневного .ordo, та же, что скачивается на сайте.
+/// Этот маршрут специально открыт посетителю и отдаёт только свободные тела.
+/// Ключ API и личная сессия для скачивания файла не требуются.
+Future<http.Response> fetchOrdoServices(
+  DateTime date, {
+  http.Client? client,
+}) async {
+  // Общий дисковый кэш хранит строки: бинарный пакет оборачиваем в base64.
+  final response = await cachedFetch(
+    'ordo:package:v1:${ordoDayDate(date)}',
+    () async {
+      final response = await (client ?? apiClient)
+          .get(
+            Uri.parse(
+              '$apiBaseUrl/api/ordo/package',
+            ).replace(queryParameters: {'date': ordoDayDate(date)}),
+          )
+          .timeout(const Duration(seconds: 60));
+      if (response.statusCode != 200) return response;
+      return http.Response(base64Encode(response.bodyBytes), 200);
+    },
+    isCacheable: (body) {
+      OrdoPackage.decode(base64Decode(body));
+      return true;
+    },
+  );
+  if (response.statusCode != 200) return response;
+  return http.Response.bytes(
+    base64Decode(response.body),
+    200,
+    headers: {'content-type': 'application/vnd.ordo+zip'},
+  );
+}

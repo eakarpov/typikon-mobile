@@ -55,7 +55,7 @@ class ApiRateLimitedException implements Exception {
   /// Вторая строка для экрана — только когда есть что объяснить.
   String? get hint => anonymous
       ? 'Запрос ушёл без ключа доступа: без него сервер отпускает 60 запросов в '
-          'час на один адрес сети — один на всех, кто в этой сети сидит.'
+            'час на один адрес сети — один на всех, кто в этой сети сидит.'
       : null;
 
   @override
@@ -83,6 +83,13 @@ class ApiNotFoundException implements Exception {
 
   final String message;
 
+  @override
+  String toString() => message;
+}
+
+class ApiUnavailableException implements Exception {
+  const ApiUnavailableException(this.message);
+  final String message;
   @override
   String toString() => message;
 }

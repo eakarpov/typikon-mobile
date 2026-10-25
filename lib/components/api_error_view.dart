@@ -29,7 +29,10 @@ String failureMessage(Object? error, String what) {
   // Отказы второй версии API несут собственное сообщение сервера, написанное
   // по-русски и для человека, — его и показываем. А приставку «Exception:»,
   // какую печатает голый Exception, срезаем: это слово из отладки.
-  final message = error.toString().replaceFirst(RegExp(r"^Exception:\s*"), "").trim();
+  final message = error
+      .toString()
+      .replaceFirst(RegExp(r"^Exception:\s*"), "")
+      .trim();
   if (message.isEmpty || message.length > 200) return what;
 
   return message;
@@ -88,7 +91,9 @@ class ApiErrorView extends StatelessWidget {
             Text(
               tls
                   ? "Не удалось установить защищённое соединение с сервером."
-                  : (offline ? (offlineMessage ?? "Нет соединения с интернетом.") : message),
+                  : (offline
+                        ? (offlineMessage ?? "Нет соединения с интернетом.")
+                        : message),
               textAlign: TextAlign.center,
             ),
             if (tls) ...[
@@ -133,11 +138,11 @@ class ApiErrorView extends StatelessWidget {
 
 /// Короткая подсказка вместо списка — «ещё не искали», «ничего не нашлось».
 Widget searchHint(String message) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Text(message, textAlign: TextAlign.center),
-      ),
-    );
+  child: Padding(
+    padding: const EdgeInsets.all(24.0),
+    child: Text(message, textAlign: TextAlign.center),
+  ),
+);
 
 /// Отказ, названный своим именем.
 ///
@@ -165,7 +170,8 @@ Widget errorViewFor(
     return ApiErrorView(
       error: error,
       message: error.message,
-      hint: "Это не поломка приложения: корпус певческих текстов выкладывается "
+      hint:
+          "Это не поломка приложения: корпус певческих текстов выкладывается "
           "на сервер отдельно, и сейчас его там нет. Повторять бесполезно.",
     );
   }
@@ -175,6 +181,10 @@ Widget errorViewFor(
     return ApiErrorView(error: error, message: error.message);
   }
 
+  if (error is ApiUnavailableException) {
+    return ApiErrorView(error: error, message: error.message, onRetry: onRetry);
+  }
+
   if (error is ApiNotFoundException) {
     // Честный ответ сервера («Такого стиха нет ни в одном издании собрания»),
     // а не поломка: повторять нечего.
@@ -182,7 +192,12 @@ Widget errorViewFor(
   }
 
   if (error is ApiRateLimitedException) {
-    return ApiErrorView(error: error, message: error.message, hint: error.hint, onRetry: onRetry);
+    return ApiErrorView(
+      error: error,
+      message: error.message,
+      hint: error.hint,
+      onRetry: onRetry,
+    );
   }
 
   return ApiErrorView(

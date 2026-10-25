@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:archive/archive.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:http/http.dart' as http;
 import 'package:typikon/apiMapper/ordo.dart';
 import 'package:typikon/api/cached_fetch.dart';
@@ -25,7 +28,7 @@ void main() {
           isA<ApiUnauthorizedException>().having(
             (e) => e.message,
             'message',
-            contains('Обновите'),
+            contains('.ordo'),
           ),
         ),
       );
@@ -140,6 +143,51 @@ void main() {
   testWidgets('пустой день обозначен явно', (tester) async {
     await pump(tester, (_) async => const OrdoServices([]));
     expect(find.text('На эту дату службы не собраны.'), findsOneWidget);
+  });
+  testWidgets('скачанный .ordo открывается при недоступной серверной сборке', (
+    tester,
+  ) async {
+    final archive = Archive();
+    final parts = {
+      'manifest.json': {
+        'format': 'posledovanie',
+        'spec_version': '1.0',
+        'scope': {'date': '2026-10-25'},
+      },
+      'ordo.json': {
+        'label': 'Из файла',
+        'steps': [
+          {'text': 'Текст скачанного последования'},
+        ],
+      },
+    };
+    for (final entry in parts.entries) {
+      final bytes = utf8.encode(jsonEncode(entry.value));
+      archive.addFile(ArchiveFile(entry.key, bytes.length, bytes));
+    }
+    await tester.pumpWidget(
+      StoreProvider<AppState>(
+        store: Store<AppState>(appReducer, initialState: AppState.init()),
+        child: MaterialApp(
+          home: OrdoPage(
+            loader: (_) async =>
+                throw const ApiUnavailableException('Сборка недоступна'),
+            pickPackage: () async => XFile.fromData(
+              Uint8List.fromList(ZipEncoder().encode(archive)),
+              name: 'day.ordo',
+                  path: 'day.ordo',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Сборка недоступна'), findsOneWidget);
+    await tester.tap(find.byTooltip('Открыть .ordo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Из файла'), findsOneWidget);
+    expect(find.text('Текст скачанного последования'), findsOneWidget);
+    expect(find.text('day.ordo · 2026-10-25'), findsOneWidget);
   });
   testWidgets('после ошибки загрузку можно повторить', (tester) async {
     var attempts = 0;

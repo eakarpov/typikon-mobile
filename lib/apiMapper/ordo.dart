@@ -4,7 +4,9 @@ import 'package:http/http.dart' as http;
 import '../api/ordo.dart';
 import '../dto/ordo.dart';
 import '../dto/ordo_services.dart';
+import '../domain/ordo_package.dart';
 import 'v2/errors.dart';
+import 'ordo_scripture.dart';
 
 /// Кафизмы уставного дня («сегодня по уставу»).
 ///
@@ -31,13 +33,39 @@ Future<OrdoServices> getOrdoServices(
   final response = await (fetch ?? fetchOrdoServices)(date);
   if (response.statusCode == 401 || response.statusCode == 403) {
     throw const ApiUnauthorizedException(
-      'Раздел «Служба дня» недоступен. Обновите приложение.',
+      'Сервер отказал в загрузке последования. Попробуйте позже или откройте файл .ordo.',
     );
   }
   if (response.statusCode != 200) {
+    if (response.statusCode == 503) {
+      throw const ApiUnavailableException(
+        'Серверная сборка последований временно недоступна. '
+        'Повторите позже или откройте скачанный файл .ordo.',
+      );
+    }
     throwV2Error(response, 'Не удалось открыть службу дня');
+  }
+  if (response.bodyBytes.length >= 2 &&
+      response.bodyBytes[0] == 0x50 &&
+      response.bodyBytes[1] == 0x4b) {
+    return (await resolveOrdoScripture(
+      OrdoPackage.decode(response.bodyBytes),
+    )).reading;
   }
   return OrdoServices.fromJson(
     jsonDecode(response.body) as Map<String, dynamic>,
   );
+}
+
+Future<int?> getOrdoTone(DateTime date) async {
+  try {
+    final response = await fetchOrdoDay(date);
+    if (response.statusCode != 200) return null;
+    final value = jsonDecode(response.body);
+    final raw = value is Map ? value['tone'] : null;
+    final tone = raw is int ? raw : int.tryParse('$raw');
+    return tone != null && tone >= 1 && tone <= 8 ? tone : null;
+  } catch (_) {
+    return null;
+  }
 }

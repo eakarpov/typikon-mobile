@@ -1,4 +1,4 @@
-/// Линейное чтение JSON-проекции пакета /ordo/services.
+/// Линейное чтение служб, полученных из пакета .ordo.
 /// Порядок и повторы сохраняются; роли, positions и тетради не выводятся.
 class OrdoSection {
   final String title;
@@ -55,6 +55,9 @@ class OrdoService {
           add(text);
         } else {
           add(ordoAbsentText(item['absent']));
+          if (item['absent'] == 'external') {
+            add(item['cite'] ?? item['address']);
+          }
         }
       }
       final repeats = step['repeat_count'];
