@@ -9,12 +9,9 @@ import 'package:typikon/store/models/models.dart';
 import 'package:typikon/components/async_view.dart';
 import 'package:typikon/utils/selected_day.dart';
 
-/// Святые выбранного дня из нашего каталога.
-///
-/// Покрытие связей памятей с каталогом ещё маленькое (88 из 653), поэтому
-/// пустой день — честное состояние, а не отказ: страница объясняет это и даёт
-/// выход на dneslov.org. Старого стиля страница не знает: дату по юлианскому
-/// календарю накладывает сервер.
+/// Полный календарь Днеслова и собственные дополнения через серверный кэш.
+/// Без внешнего снимка сервер помечает неполную выдачу, и страница называет её.
+/// Гражданская дата уходит на сервер; старый стиль рассчитывается там.
 class CurrentDayMemoriesPage extends StatefulWidget {
   const CurrentDayMemoriesPage(
     context, {
@@ -73,18 +70,28 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage>
         message: "Не удалось загрузить святых дня.",
         onRetry: reloadSelectedDay,
         onRefresh: _refresh,
-        builder: (context, data) => data.saints.isEmpty
+        builder: (context, data) => data.saints.isEmpty && !data.partial
             ? _empty(context)
             : ListView.builder(
-                itemCount: data.saints.length,
+                itemCount: data.saints.length + (data.partial ? 1 : 0),
                 itemBuilder: (context, index) {
-                  final saint = data.saints[index];
+                  if (data.partial && index == 0) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'Днеслов сейчас недоступен, сохранённого списка на эту дату пока нет. Показана только наша коллекция.',
+                      ),
+                    );
+                  }
+                  final saint = data.saints[index - (data.partial ? 1 : 0)];
                   return ListTile(
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      "/saints",
-                      arguments: saint.slug,
-                    ),
+                    onTap: saint.slug.isEmpty
+                        ? null
+                        : () => Navigator.pushNamed(
+                            context,
+                            "/saints",
+                            arguments: saint.slug,
+                          ),
                     leading: saint.roundelUrl != null
                         ? ClipOval(
                             child: Image.network(
@@ -124,15 +131,14 @@ class _CurrentDayMemoriesPageState extends State<CurrentDayMemoriesPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    "В нашем каталоге пока нет связанных святых на этот день.",
+                    "На эту дату в объединённом календаре пока нет памятей.",
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Каталог молод и растёт: связи памятей со святыми выверены "
-                    "у 88 из 653 записей. Пустой день здесь — обычное дело, "
-                    "а не поломка.",
+                    "Список объединяет Днеслов и наш каталог. Если ожидаемой памяти "
+                    "нет, проверьте сведения у источника.",
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),

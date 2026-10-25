@@ -4,6 +4,7 @@ import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/components/highlighted_text.dart';
 import 'package:typikon/utils/reading_style.dart';
 import 'package:typikon/utils/text_search.dart';
+import '../utils/service_night_palette.dart';
 
 List<InlineSpan> buildSaints(
   String text,
@@ -43,6 +44,7 @@ List<InlineSpan> buildSaints(
             onTapNote ?? (_) {},
             searchMatches: searchMatches,
             activeMatch: activeMatch,
+            nightPalette: ServiceNightPalette.isActive(context),
           ),
         ),
       );
@@ -60,7 +62,7 @@ List<InlineSpan> buildSaints(
           style: TextStyle(
             fontFamily: fontFamily,
             fontSize: size,
-            color: Colors.blue,
+            color: ServiceNightPalette.isActive(context) ? readingLinkColor(context) : Colors.blue,
           ),
         ),
       );
@@ -80,6 +82,7 @@ List<InlineSpan> buildSaints(
           onTapNote ?? (_) {},
           searchMatches: searchMatches,
           activeMatch: activeMatch,
+            nightPalette: ServiceNightPalette.isActive(context),
         ),
       ),
     );

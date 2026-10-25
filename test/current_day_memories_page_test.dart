@@ -12,14 +12,17 @@ import 'package:typikon/store/rootReducer.dart';
 /// без сети: элементы — кругляш (если сервер прислал) и имя, переход в досье
 /// по слугу. Пустой день честно объясняет себя сам, отказ — «Повторить».
 
-const _saints = DaySaints(date: "2026-01-16", saints: [
-  DaySaint(
-    slug: "ioann-predtecha",
-    name: "Иоа́нн Предте́ча",
-    roundelUrl: "https://cdn.dneslov.org/roundels/1/x.webp",
-  ),
-  DaySaint(slug: "savva-osvyashchennyi", name: "Са́вва О Свяще́нный"),
-]);
+const _saints = DaySaints(
+  date: "2026-01-16",
+  saints: [
+    DaySaint(
+      slug: "ioann-predtecha",
+      name: "Иоа́нн Предте́ча",
+      roundelUrl: "https://cdn.dneslov.org/roundels/1/x.webp",
+    ),
+    DaySaint(slug: "savva-osvyashchennyi", name: "Са́вва О Свяще́нный"),
+  ],
+);
 
 void main() {
   Future<Store<AppState>> pump(
@@ -28,17 +31,21 @@ void main() {
     Route<dynamic>? Function(RouteSettings settings)? onGenerateRoute,
   }) async {
     final store = Store<AppState>(appReducer, initialState: AppState.init());
-    await tester.pumpWidget(StoreProvider<AppState>(
-      store: store,
-      child: MaterialApp(
-        home: CurrentDayMemoriesPage(null, loadSaints: loadSaints),
-        onGenerateRoute: onGenerateRoute,
+    await tester.pumpWidget(
+      StoreProvider<AppState>(
+        store: store,
+        child: MaterialApp(
+          home: CurrentDayMemoriesPage(null, loadSaints: loadSaints),
+          onGenerateRoute: onGenerateRoute,
+        ),
       ),
-    ));
+    );
     return store;
   }
 
-  testWidgets("список: имя, кругляш у кого есть, переход по слугу", (tester) async {
+  testWidgets("список: имя, кругляш у кого есть, переход по слугу", (
+    tester,
+  ) async {
     final asked = <String>[];
     Route<dynamic>? pushed;
     await pump(
@@ -70,7 +77,10 @@ void main() {
     // Кругляш есть у одного. Image.network сам запросит образ — сеть в тесте
     // не отвечает, и виджет честно схлопывается, не роняя страницу.
     final image = tester.widget<Image>(find.byType(Image));
-    expect((image.image as NetworkImage).url, "https://cdn.dneslov.org/roundels/1/x.webp");
+    expect(
+      (image.image as NetworkImage).url,
+      "https://cdn.dneslov.org/roundels/1/x.webp",
+    );
 
     await tester.tap(find.text("Иоа́нн Предте́ча"));
     await tester.pumpAndSettle();
@@ -79,7 +89,25 @@ void main() {
     expect(find.text("Досье"), findsOneWidget);
   });
 
-  testWidgets("пустой день объясняет себя и даёт выход на dneslov", (tester) async {
+  testWidgets('без кэша Днеслова неполный день обозначается явно', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      loadSaints: (_) async =>
+          const DaySaints(date: '2026-10-25', partial: true),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Днеслов сейчас недоступен'), findsOneWidget);
+    expect(
+      find.textContaining('в объединённом календаре пока нет'),
+      findsNothing,
+    );
+  });
+
+  testWidgets("пустой день объясняет себя и даёт выход на dneslov", (
+    tester,
+  ) async {
     await pump(
       tester,
       loadSaints: (_) async => const DaySaints(date: "2026-01-16", saints: []),
@@ -87,15 +115,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text("В нашем каталоге пока нет связанных святых на этот день."),
+      find.text("На эту дату в объединённом календаре пока нет памятей."),
       findsOneWidget,
     );
     // Пояснение не обещает лишнего и не выдаёт неполноту за поломку.
-    expect(find.textContaining("88 из 653"), findsOneWidget);
+    expect(find.textContaining("объединяет Днеслов"), findsOneWidget);
     expect(find.text("Открыть dneslov.org"), findsOneWidget);
   });
 
-  testWidgets("отказ сети — «Повторить», и повтор заново зовёт загрузку", (tester) async {
+  testWidgets("отказ сети — «Повторить», и повтор заново зовёт загрузку", (
+    tester,
+  ) async {
     var attempts = 0;
     await pump(
       tester,
