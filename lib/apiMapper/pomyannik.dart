@@ -36,7 +36,9 @@ Future<List<MemorialDay>> getMemorialDays(int year) async {
   final response = await api.fetchMemorialDays(year);
   if (response.statusCode == 200) {
     final days = jsonDecode(response.body)["days"];
-    return days is List ? days.map((e) => MemorialDay.fromJson(e)).toList() : <MemorialDay>[];
+    return days is List
+        ? days.map((e) => MemorialDay.fromJson(e)).toList()
+        : <MemorialDay>[];
   }
   throwV2Error(response, "Не удалось загрузить поминальные дни");
 }
@@ -56,7 +58,9 @@ Future<NameCheck?> getNameCheck(String query) async {
 }
 
 Future<Paged<Person>> getPersons({String? kind, int offset = 0}) async {
-  final response = await withSession(() => api.fetchPersons(kind: kind, offset: offset));
+  final response = await withSession(
+    () => api.fetchPersons(kind: kind, offset: offset),
+  );
   if (response.statusCode == 200) {
     return Paged.fromJson<Person>(jsonDecode(response.body), Person.fromJson);
   }
@@ -80,13 +84,17 @@ Future<List<Person>> addPersons(List<Map<String, dynamic>> persons) async {
   final response = await withSession(() => api.createPersons(persons));
   if (response.statusCode == 201) {
     final items = jsonDecode(response.body)["items"];
-    return items is List ? items.map((e) => Person.fromJson(e)).toList() : <Person>[];
+    return items is List
+        ? items.map((e) => Person.fromJson(e)).toList()
+        : <Person>[];
   }
   throwV2Error(response, "Не удалось записать имя");
 }
 
 Future<Person> savePerson(Person person) async {
-  final response = await withSession(() => api.savePerson(person.id, person.toInput()));
+  final response = await withSession(
+    () => api.savePerson(person.id, person.toInput()),
+  );
   if (response.statusCode == 200) {
     return Person.fromJson(jsonDecode(response.body)["person"] ?? const {});
   }
@@ -100,7 +108,9 @@ Future<void> removePerson(String id) async {
 }
 
 Future<Upcoming> getUpcoming({required String from, int days = 60}) async {
-  final response = await withSession(() => api.fetchUpcoming(from: from, days: days));
+  final response = await withSession(
+    () => api.fetchUpcoming(from: from, days: days),
+  );
   if (response.statusCode == 200) {
     return Upcoming.fromJson(jsonDecode(response.body));
   }
@@ -129,8 +139,9 @@ Future<Zapiska> sendNote(
   String? code,
   String? slug,
 }) async {
-  final response =
-      await withSession(() => api.sendNote(kind, personIds, code: code, slug: slug));
+  final response = await withSession(
+    () => api.sendNote(kind, personIds, code: code, slug: slug),
+  );
   if (response.statusCode == 201) {
     return Zapiska.fromJson(jsonDecode(response.body)["note"] ?? const {});
   }
@@ -153,7 +164,9 @@ Future<Paged<Zapiska>> getSentNotes({int offset = 0}) async {
 /// [ApiUnauthorizedException] с его же словами. Пустым списком подменять нельзя:
 /// пустой значил бы «вам никто не подавал», а правды в этом нет.
 Future<Prinyatye> getReceivedNotes({int offset = 0}) async {
-  final response = await withSession(() => api.fetchReceivedNotes(offset: offset));
+  final response = await withSession(
+    () => api.fetchReceivedNotes(offset: offset),
+  );
   if (response.statusCode == 200) {
     return Prinyatye.fromJson(jsonDecode(response.body));
   }
@@ -173,10 +186,15 @@ Future<void> markNote(String id, String mark) async {
 /// Возвращает `false` вместо броска: привязка устройства — не то, ради чего
 /// стоит показывать окно с ошибкой. Не вышло — напоминания просто останутся за
 /// приложением, а следующий запуск попробует снова.
-Future<bool> registerDevice(String token, String timeZone, {int? readingHour}) async {
+Future<bool> registerDevice(
+  String token,
+  String timeZone, {
+  int? readingHour,
+}) async {
   try {
     final response = await withSession(
-        () => api.registerDevice(token, timeZone, readingHour: readingHour));
+      () => api.registerDevice(token, timeZone, readingHour: readingHour),
+    );
     return response.statusCode == 200;
   } catch (_) {
     return false;
@@ -187,9 +205,11 @@ Future<bool> registerDevice(String token, String timeZone, {int? readingHour}) a
 ///
 /// Тоже молча. Хуже всего было бы помешать выходу из учётной записи из-за
 /// неудавшегося сетевого запроса.
-Future<bool> forgetDevice(String token) async {
+Future<bool> forgetDevice(String token, {bool refreshSession = true}) async {
   try {
-    final response = await withSession(() => api.forgetDevice(token));
+    final response = refreshSession
+        ? await withSession(() => api.forgetDevice(token))
+        : await api.forgetDevice(token);
     return response.statusCode == 200;
   } catch (_) {
     return false;

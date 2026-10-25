@@ -34,15 +34,13 @@ void main() {
   test("401 без возможности продлить — SessionExpiredException", () async {
     var calls = 0;
 
-    expect(
-      () => withSession(() async {
+    await expectLater(
+      withSession(() async {
         calls++;
         return http.Response('', 401);
-      }),
+      }, readCookie: () async => null),
       throwsA(isA<SessionExpiredException>()),
     );
-
-    await Future<void>.delayed(Duration.zero);
     expect(calls, 1, reason: "повторять запрос без новой сессии бессмысленно");
   });
 }

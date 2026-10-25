@@ -40,12 +40,12 @@ Future<String> _deviceId() async {
   return 'unknown-device';
 }
 
-String? _extractSessionCookie(String? setCookieHeader) {
-  if (setCookieHeader == null) return null;
-  final firstCookie = setCookieHeader.split(';').first.trim();
-  final eqIndex = firstCookie.indexOf('=');
-  if (eqIndex == -1 || !firstCookie.startsWith('session=')) return null;
-  return firstCookie.substring(eqIndex + 1);
+/// Set-Cookie может содержать несколько куков; session не обязана быть первой.
+String? extractSessionCookie(String? header) {
+  if (header == null) return null;
+  return RegExp(
+    r'(?:^|[,;]\s*)session=([^;,\s]+)',
+  ).firstMatch(header)?.group(1);
 }
 
 Future<bool>? _refreshInFlight;
@@ -68,12 +68,17 @@ Future<bool> refreshSessionSilently() {
 
 Future<bool> _doRefreshSession() async {
   try {
+    if (_signInInFlight != null) {
+      await _signInInFlight;
+      return true;
+    }
+    if (await getSessionCookie() == null) return false;
     await _ensureGoogleSignInInitialized();
     // На вебе (FedCM) метод может вернуть null вместо Future — тогда молчаливое
     // продление недоступно и остаётся только обычный вход.
     final attempt = GoogleSignIn.instance.attemptLightweightAuthentication();
     if (attempt == null) return false;
-    final account = await attempt;
+    final account = await attempt.timeout(apiTimeout);
     if (account == null) return false;
 
     final idToken = account.authentication.idToken;
@@ -87,7 +92,7 @@ Future<bool> _doRefreshSession() async {
     );
     if (response.statusCode != 200) return false;
 
-    final cookie = _extractSessionCookie(response.headers['set-cookie']);
+    final cookie = extractSessionCookie(response.headers['set-cookie']);
     if (cookie == null) return false;
     await saveSessionCookie(cookie);
     return true;
@@ -125,7 +130,11 @@ Future<void> forgetSession() async {
   appStore?.dispatch(SignOutAction());
 }
 
-Future<void> signInWithGoogle(Store<AppState> store) async {
+Future<void>? _signInInFlight;
+Future<void> signInWithGoogle(Store<AppState> store) => _signInInFlight ??=
+    _doSignInWithGoogle(store).whenComplete(() => _signInInFlight = null);
+
+Future<void> _doSignInWithGoogle(Store<AppState> store) async {
   await _ensureGoogleSignInInitialized();
   final account = await GoogleSignIn.instance.authenticate();
   final idToken = account.authentication.idToken;
@@ -143,17 +152,20 @@ Future<void> signInWithGoogle(Store<AppState> store) async {
     throw Exception('Ошибка входа (${response.statusCode})');
   }
 
-  final cookie = _extractSessionCookie(response.headers['set-cookie']);
-  if (cookie != null) {
-    await saveSessionCookie(cookie);
+  final cookie = extractSessionCookie(response.headers['set-cookie']);
+  if (cookie == null) {
+    throw Exception('Сервер не сохранил сессию входа. Повторите позже.');
   }
+  await saveSessionCookie(cookie);
 
   final body = jsonDecode(response.body) as Map<String, dynamic>;
-  store.dispatch(SignInSuccessAction(
-    userId: body['userId'] ?? account.id,
-    email: account.email,
-    name: account.displayName,
-  ));
+  store.dispatch(
+    SignInSuccessAction(
+      userId: body['userId'] ?? account.id,
+      email: account.email,
+      name: account.displayName,
+    ),
+  );
 }
 
 Future<void> signOut(Store<AppState> store) async {

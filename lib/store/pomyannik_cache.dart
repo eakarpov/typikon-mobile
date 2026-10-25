@@ -142,6 +142,7 @@ Future<void> clearPomyannikCache() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(lastNotifiedKey);
     await prefs.remove(notifiedPersonsKey);
+    await prefs.remove("psalter_named_prayers");
   } catch (_) {}
 }
 

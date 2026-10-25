@@ -1,6 +1,8 @@
 import 'package:http/http.dart' as http;
 
 import 'auth.dart';
+import '../store/auth_token.dart';
+import '../api/v2/error_body.dart';
 
 /// Защищённый запрос вернул 401, и продлить сессию молча не удалось —
 /// пользователю нужно войти заново. Отдельный тип, чтобы страницы могли
@@ -24,19 +26,43 @@ class SessionExpiredException implements Exception {
 /// [send] вызывается заново целиком, а не переиспользует готовый запрос:
 /// заголовок с cookie собирается внутри `api/*`, и повторный вызов подхватит
 /// уже новую сессию.
-Future<http.Response> withSession(Future<http.Response> Function() send) async {
-  final response = await send();
-  if (response.statusCode != 401) return response;
-
-  final refreshed = await refreshSessionSilently();
-  if (!refreshed) {
-    await forgetSession();
-    throw const SessionExpiredException();
+Future<http.Response> withSession(
+  Future<http.Response> Function() send, {
+  Future<String?> Function()? readCookie,
+  Future<bool> Function()? refresh,
+  Future<void> Function()? forget,
+}) async {
+  final read = readCookie ?? getSessionCookie;
+  Future<String?> cookie() async {
+    try {
+      return await read();
+    } catch (_) {
+      return null;
+    }
   }
 
+  final originalCookie = await cookie();
+  final response = await send();
+  bool sessionRefused(http.Response value) =>
+      value.statusCode == 401 &&
+      (v2ErrorCode(value) == null || v2ErrorCode(value) == 'session_required');
+  // Отказ ключа/раздела не имеет отношения к Google-аккаунту.
+  if (!sessionRefused(response)) return response;
+  if (originalCookie == null || originalCookie.isEmpty) {
+    throw const SessionExpiredException();
+  }
+  final current = await cookie();
+  final alreadyRefreshed = current != null && current != originalCookie;
+  final refreshed =
+      alreadyRefreshed || await (refresh ?? refreshSessionSilently)();
+  if (!refreshed) {
+    if (await cookie() == originalCookie) await (forget ?? forgetSession)();
+    throw const SessionExpiredException();
+  }
+  final retriedCookie = await cookie();
   final retried = await send();
-  if (retried.statusCode == 401) {
-    await forgetSession();
+  if (sessionRefused(retried)) {
+    if (await cookie() == retriedCookie) await (forget ?? forgetSession)();
     throw const SessionExpiredException();
   }
   return retried;

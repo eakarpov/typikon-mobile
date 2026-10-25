@@ -91,8 +91,9 @@ Future<void> disablePush() async {
   final token = _token ?? await readPushToken();
   if (token == null || token.isEmpty) return;
 
-  await pomyannik.forgetDevice(token);
+  // Выход не должен заново входить ради отвязки устройства.
   _token = null;
+  await pomyannik.forgetDevice(token, refreshSession: false);
 }
 
 /// Часовой пояс устройства в записи IANA.
