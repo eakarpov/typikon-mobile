@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_day_readings">Чтения дня</string>
+    <string name="shortcut_library">Библиотека</string>
+    <string name="shortcut_pomyannik">Помянник</string>
+</resources>

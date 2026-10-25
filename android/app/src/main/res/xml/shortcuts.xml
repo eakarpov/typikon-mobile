@@ -10,7 +10,7 @@
         android:shortcutId="day_readings"
         android:enabled="true"
         android:icon="@mipmap/ic_launcher"
-        android:shortcutShortLabel="Чтения дня">
+        android:shortcutShortLabel="@string/shortcut_day_readings">
         <intent
             android:action="android.intent.action.VIEW"
             android:data="https://www.typikon.info/" />
@@ -19,7 +19,7 @@
         android:shortcutId="library"
         android:enabled="true"
         android:icon="@mipmap/ic_launcher"
-        android:shortcutShortLabel="Библиотека">
+        android:shortcutShortLabel="@string/shortcut_library">
         <intent
             android:action="android.intent.action.VIEW"
             android:data="https://www.typikon.info/library" />
@@ -28,7 +28,7 @@
         android:shortcutId="pomyannik"
         android:enabled="true"
         android:icon="@mipmap/ic_launcher"
-        android:shortcutShortLabel="Помянник">
+        android:shortcutShortLabel="@string/shortcut_pomyannik">
         <intent
             android:action="android.intent.action.VIEW"
             android:data="https://www.typikon.info/pomyannik" />
