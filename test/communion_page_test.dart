@@ -1,185 +1,204 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:typikon/pages/communion_page.dart';
-
-// Подготовка к Причащению: раскладка вечеров от сегодня до дня включительно,
-// каноны по кругу из трёх, отметки «прочитано» и прогресс.
+import 'package:typikon/pages/posledovanie_page.dart';
+import 'package:typikon/dto/posledovanie.dart';
 
 Future<void> pumpCommunion(
   WidgetTester tester, {
   required DateTime today,
   DateTime? initialDate,
-  Map<String, Object> prefs = const <String, Object>{},
-  void Function(String name, Object? arguments)? onPush,
+  Map<String, Object> prefs = const {},
+  void Function(String, Object?)? onPush,
 }) async {
   tester.view.physicalSize = const Size(1200, 10000);
-  tester.view.devicePixelRatio = 1.0;
+  tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   SharedPreferences.setMockInitialValues(prefs);
-  await tester.pumpWidget(MaterialApp(
-    onGenerateRoute: onPush == null
-        ? null
-        : (settings) {
-            onPush(settings.name ?? "", settings.arguments);
-            return MaterialPageRoute(
-              builder: (_) => Scaffold(
-                appBar: AppBar(),
-                body: const Text("открыто"),
-              ),
-            );
-          },
-    home: CommunionPage(
-      null,
-      today: today,
-      initialDate: initialDate,
-      trapeza: (_) => const SizedBox.shrink(),
+  await tester.pumpWidget(
+    MaterialApp(
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('ru'), Locale('en')],
+      onGenerateRoute: onPush == null
+          ? null
+          : (settings) {
+              onPush(settings.name!, settings.arguments);
+              return MaterialPageRoute(
+                builder: (_) =>
+                    Scaffold(appBar: AppBar(), body: const Text('открыто')),
+              );
+            },
+      home: CommunionPage(
+        null,
+        today: today,
+        initialDate: initialDate,
+        trapeza: (_) => const SizedBox.shrink(),
+      ),
     ),
-  ));
+  );
   await tester.pumpAndSettle();
 }
 
 void main() {
   final today = DateTime(2026, 10, 14);
-
-  testWidgets("раскладка: вечера от сегодня до дня включительно, день несёт "
-      "благодарственные", (tester) async {
-    await pumpCommunion(
-      tester,
-      today: today,
-      initialDate: DateTime(2026, 10, 16),
-    );
-
-    expect(find.text("Причастие"), findsOneWidget);
-    expect(find.text("День причащения"), findsOneWidget);
-    expect(find.text("16 октября 2026"), findsOneWidget);
-
-    // Вечера 14, 15 и 16 — включительно.
-    expect(find.text("Сегодня вечером"), findsOneWidget);
-    expect(find.text("Вечер · 15 октября 2026"), findsOneWidget);
-    expect(find.text("Вечер · 16 октября 2026"), findsOneWidget);
-    expect(find.text("Вечер · 17 октября 2026"), findsNothing);
-
-    expect(find.text("Канон молебный"), findsNWidgets(3));
-    expect(find.text("Молитвы ко Причащению"), findsNWidgets(3));
-    expect(find.text("Причащение · 16 октября 2026"), findsOneWidget);
-    expect(find.text("Благодарственные молитвы"), findsOneWidget);
-    expect(find.text("после Святого Причащения"), findsOneWidget);
+  testWidgets('сначала нужен явный выбор даты', (tester) async {
+    await pumpCommunion(tester, today: today);
+    expect(find.text('Выбрать день причащения'), findsOneWidget);
+    expect(find.byType(Checkbox), findsNothing);
+    await tester.tap(find.text('Выбрать день причащения'));
+    await tester.pumpAndSettle();
+    tester
+        .widget<CalendarDatePicker>(find.byType(CalendarDatePicker))
+        .onDateChanged(DateTime(2026, 10, 20));
+    await tester.pump();
+    await tester.tap(find.byType(TextButton).last);
+    await tester.pumpAndSettle();
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('communion_plan_date'), '2026-10-20');
+    expect(prefs.getString('communion_plan_start'), '2026-10-17');
+    expect(prefs.getBool('communion_remind'), false);
   });
-
-  testWidgets("каноны идут по кругу: покаянный, Богородице, Ангелу, снова "
-      "покаянный", (tester) async {
+  for (final gap in [0, 3, 15, 40]) {
+    testWidgets(
+      'через $gap дней: только три канона, последование, молитвы и благодарственные',
+      (tester) async {
+        final date = today.add(Duration(days: gap));
+        await pumpCommunion(tester, today: today, initialDate: date);
+        for (final title in [
+          'Канон покаянный',
+          'Канон Богородице',
+          'Канон Ангелу хранителю',
+          'Последование ко Причащению',
+          'Молитвы ко Причащению',
+          'Благодарственные молитвы',
+        ]) {
+          expect(find.text(title), findsOneWidget);
+        }
+        expect(find.byType(Checkbox), findsNWidgets(6));
+        expect(find.textContaining('Пост ·'), findsNWidgets(3));
+        expect(find.textContaining('вечером'), findsNothing);
+      },
+    );
+  }
+  testWidgets(
+    'чтения ведут к канонам и к непересекающимся частям последования',
+    (tester) async {
+      final routes = <(String, Object?)>[];
+      await pumpCommunion(
+        tester,
+        today: today,
+        initialDate: DateTime(2026, 10, 17),
+        onPush: (route, args) => routes.add((route, args)),
+      );
+      for (final title in [
+        'Канон покаянный',
+        'Канон Богородице',
+        'Канон Ангелу хранителю',
+        'Последование ко Причащению',
+        'Молитвы ко Причащению',
+        'Благодарственные молитвы',
+      ]) {
+        await tester.tap(find.text(title));
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+      }
+      expect(routes.take(3).map((r) => r.$2), communionCanons.map((c) => c.$1));
+      expect(
+        parsePosledovanieArgument(routes[3].$2 as String)?.part,
+        PosledovaniePart.beforeCommunion,
+      );
+      expect(
+        parsePosledovanieArgument(routes[4].$2 as String)?.part,
+        PosledovaniePart.communionPrayers,
+      );
+    },
+  );
+  test('граница молитв работает для уставного и гражданского слоёв', () {
+    for (final label in [
+      'Моли́тва 1-я, свт. Васи́лия',
+      'Мл҃тва а҃, ст҃а́гѡ васі́лїа',
+    ]) {
+      final rows = [
+        const PosledovanieRow(text: 'Последование'),
+        PosledovanieRow(label: label, text: 'Первая молитва'),
+        const PosledovanieRow(text: 'Вторая молитва'),
+      ];
+      expect(
+        communionRows(
+          rows,
+          PosledovaniePart.beforeCommunion,
+        ).map((r) => r.text),
+        ['Последование'],
+      );
+      expect(
+        communionRows(
+          rows,
+          PosledovaniePart.communionPrayers,
+        ).map((r) => r.text),
+        ['Первая молитва', 'Вторая молитва'],
+      );
+    }
+    expect(
+      () => communionRows([], PosledovaniePart.beforeCommunion),
+      throwsFormatException,
+    );
+  });
+  testWidgets('старые отметки мигрируют, новый список хранится один раз', (
+    tester,
+  ) async {
     await pumpCommunion(
       tester,
       today: today,
       initialDate: DateTime(2026, 10, 17),
+      prefs: {
+        'communion_done:2026-10-17:evening0:canon': true,
+        'communion_done:2026-10-17:evening1:posledovanie': true,
+      },
     );
-
-    final tiles = tester.widgetList<ListTile>(find.byType(ListTile));
-    final canonNames = tiles
-        .where((tile) =>
-            tile.title is Text && (tile.title as Text).data == "Канон молебный")
-        .map((tile) => (tile.subtitle as Text).data)
-        .toList();
-    expect(canonNames, <String?>[
-      "Канон покаянный",
-      "Канон Богородице",
-      "Канон Ангелу хранителю",
-      "Канон покаянный",
-    ]);
+    expect(find.text('прочитано: 3/6'), findsOneWidget);
+    final boxes = find.byType(Checkbox);
+    for (var i = 0; i < 6; i++) {
+      if (tester.widget<Checkbox>(boxes.at(i)).value != true) {
+        await tester.tap(boxes.at(i));
+        await tester.pumpAndSettle();
+      }
+    }
+    expect(find.text('прочитано: 6/6'), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    final saved =
+        jsonDecode(prefs.getString('reading_progress') ?? '{}') as Map;
+    expect(saved.containsKey('communion:2026-10-17'), false);
+    await tester.tap(boxes.first);
+    await tester.pumpAndSettle();
+    expect(prefs.getBool('communion_done:2026-10-17:canon:0'), false);
   });
-
-    testWidgets("тапы ведут: канон — в карточку, молитвы — в последование",
-      (tester) async {
-    final pushes = <(String, Object?)>[];
+  testWidgets('старое уведомление не меняет действующий план', (tester) async {
     await pumpCommunion(
       tester,
       today: today,
       initialDate: DateTime(2026, 10, 15),
-      onPush: (name, arguments) => pushes.add((name, arguments)),
-    );
-
-    // После каждого тапа возвращаемся: pushed-маршрут накрывает страницу,
-    // и без возврата следующий тап не найдёт бывшие виджеты.
-    Future<void> tapAndBack(Finder finder) async {
-      await tester.tap(finder);
-      await tester.pumpAndSettle();
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-    }
-
-    await tapAndBack(find.text("Канон молебный").first);
-    await tapAndBack(find.text("Молитвы ко Причащению").first);
-    await tapAndBack(find.text("Благодарственные молитвы"));
-
-    expect(pushes, <(String, Object?)>[
-      ("/canons", "molebny-kanon-pokayanny"),
-      ("/posledovanie", "ko-prichashcheniyu|cu|m|Молитвы ко Причащению"),
-      ("/posledovanie", "blagodarstvennye|cu|m|Благодарственные молитвы"),
-    ]);
-  });
-
-  testWidgets("галочки пишут communion_done и прогресс; всё прочитано — "
-      "запись стёрта", (tester) async {
-    await pumpCommunion(
-      tester,
-      today: today,
-      initialDate: DateTime(2026, 10, 15), // 2 вечера × 2 + благодарственные
-    );
-
-    final boxes = find.byType(Checkbox);
-    expect(boxes, findsNWidgets(5));
-
-    for (var i = 0; i < 4; i++) {
-      await tester.tap(boxes.at(i));
-      await tester.pumpAndSettle();
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool("communion_done:2026-10-15:evening0:canon"), isTrue);
-    expect(
-        prefs.getBool("communion_done:2026-10-15:evening0:posledovanie"),
-        isTrue);
-    expect(prefs.getBool("communion_done:2026-10-15:day:blagodarstvennye"),
-        isNull);
-
-    final progress = prefs.getString("reading_progress");
-    expect(progress, isNotNull);
-    final saved = Map<String, dynamic>.from(
-        jsonDecode(progress!) as Map<String, dynamic>);
-    expect(saved["communion:2026-10-15"]["fraction"], closeTo(4 / 5, 0.001));
-    expect(saved["communion:2026-10-15"]["name"], "Причастие: 15 октября 2026");
-
-    // Последняя галочка: 1.0 — стор сам стирает запись.
-    await tester.tap(boxes.at(4));
-    await tester.pumpAndSettle();
-    final prefsAfter = await SharedPreferences.getInstance();
-    final cleared = prefsAfter.getString("reading_progress");
-    expect(
-        cleared == null ||
-            !jsonDecode(cleared).containsKey("communion:2026-10-15"),
-        isTrue);
-    expect(find.text("прочитано: 5/5"), findsOneWidget);
-  });
-
-  testWidgets("сохранённые галочки показаны", (tester) async {
-    await pumpCommunion(
-      tester,
-      today: today,
-      initialDate: DateTime(2026, 10, 14),
-      prefs: const <String, Object>{
-        "communion_done:2026-10-14:evening0:posledovanie": true,
+      prefs: {
+        'communion_plan_start': '2026-10-14',
+        'communion_plan_date': '2026-10-18',
+        'communion_remind': true,
       },
     );
-
-    final checked = tester
-        .widgetList<Checkbox>(find.byType(Checkbox))
-        .map((checkbox) => checkbox.value)
-        .toList();
-    expect(checked, <bool?>[false, true, false]);
-    expect(find.text("прочитано: 1/3"), findsOneWidget);
+    expect(find.text('18 октября 2026'), findsOneWidget);
+    expect(
+      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      true,
+    );
+    await tester.tap(find.text('День причащения'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(TextButton).last);
+    await tester.pumpAndSettle();
+    expect(
+      (await SharedPreferences.getInstance()).getBool('communion_remind'),
+      true,
+    );
   });
 }

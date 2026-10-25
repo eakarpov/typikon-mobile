@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../components/trapeza_line.dart';
 import '../store/reading_progress.dart';
+import '../store/communion_plan.dart';
+import '../utils/notification_permission.dart';
 import '../store/rule_marks.dart';
 import 'posledovanie_page.dart';
 
-/// Молебные каноны подготовки, в том порядке, в каком их читают по вечерам:
-/// покаянный, Богородице, Ангелу хранителю — и сначала круга.
+/// Три канона подготовки — каждый читается один раз.
 const List<(String, String)> communionCanons = <(String, String)>[
   ("molebny-kanon-pokayanny", "Канон покаянный"),
   ("molebny-kanon-bogorodice", "Канон Богородице"),
@@ -45,20 +46,8 @@ class CommunionItem {
   });
 }
 
-/// Подготовка к Причащению: день выбран — и вечера от сегодня до него
-/// расставлены.
-///
-/// **Каждый вечер — канон по кругу и молитвы ко Причащению целиком.** Раскладки
-/// «по частям» не выдумываем: последование ко Причащению — келейное чтение,
-/// и читают его целиком, накануне и в сам день до Литургии. Поэтому вечера идут
-/// включительно: последний вечер — это и утро дня причащения, до службы.
-///
-/// **День причащения** несёт благодарственные молитвы — читаются после
-/// Причащения, — и строку трапезы этого дня: пост дня Х уходит вместе с
-/// подготовкой.
-///
-/// Отметки «прочитано» живут обычными ключами `communion_done:<дата>:<пункт>`,
-/// а доля закрытого — в общем прогрессе чтения под именем «Причастие: <дата>».
+/// Один список подготовки независимо от расстояния до выбранной даты.
+/// Пост — три предшествующих дня; чтения не размножаются по дням.
 class CommunionPage extends StatefulWidget {
   /// «Сегодня». Подменяется тестами; в приложении — настоящее утро.
   final DateTime? today;
@@ -71,7 +60,7 @@ class CommunionPage extends StatefulWidget {
   final Widget Function(DateTime date)? trapeza;
 
   const CommunionPage(
-    context, {
+    BuildContext? context, {
     super.key,
     this.today,
     this.initialDate,
@@ -85,6 +74,8 @@ class CommunionPage extends StatefulWidget {
 class _CommunionPageState extends State<CommunionPage> {
   late final DateTime _today;
   late DateTime _chosen;
+  bool _hasPlan = false;
+  bool _remind = false;
 
   String _gender = "m";
 
@@ -100,73 +91,120 @@ class _CommunionPageState extends State<CommunionPage> {
     super.initState();
     _today = _dateOnly(widget.today ?? DateTime.now());
     _chosen = _dateOnly(widget.initialDate ?? _today);
-    _loadPrefs();
+    _restorePlan();
+  }
+
+  Future<void> _restorePlan() async {
+    var plan = await getCommunionPlan();
+    // Старое уведомление не должно перезаписывать уже выбранный новый план.
+    if (widget.initialDate != null && plan == null) {
+      plan = CommunionPlan(communionPreparationStart(_chosen), _chosen);
+      await saveCommunionPlan(plan);
+    }
+    final remind = await communionReminderEnabled();
+    if (!mounted) return;
+    setState(() {
+      if (plan != null) {
+        _chosen = plan.date;
+        _hasPlan = true;
+      }
+      _remind = remind;
+    });
+    await _loadPrefs();
   }
 
   Future<void> _loadPrefs() async {
-    final results = await Future.wait<Object>(<Future<Object>>[
-      ruleGender(),
-      marksWithPrefix("communion_done:${dayKey(_chosen)}:"),
-    ]);
-    if (!mounted) return;
+    final date = dayKey(_chosen);
+    final gender = await ruleGender();
+    await migrateCommunionMarks(date);
+    final marks = await marksWithPrefix('communion_done:$date:');
+    if (!mounted || dayKey(_chosen) != date) return;
     setState(() {
-      _gender = results[0] as String;
-      _marks = results[1] as Map<String, bool>;
+      _gender = gender;
+      _marks = marks;
     });
+  }
+
+  Future<void> _setReminder(bool value) async {
+    if (value && !await ensureNotificationPermission()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Разрешите уведомления в настройках системы.'),
+        ),
+      );
+      return;
+    }
+    await setCommunionReminder(value);
+    if (mounted) setState(() => _remind = value);
   }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _chosen,
+      initialDate: _chosen.isBefore(_today) ? _today : _chosen,
       firstDate: _today,
       lastDate: _today.add(const Duration(days: communionHorizonDays)),
       locale: const Locale("ru"),
     );
     if (picked == null || !mounted) return;
-    setState(() => _chosen = _dateOnly(picked));
+    if (_hasPlan && _dateOnly(picked) == _chosen) return;
+    final plan = CommunionPlan(
+      communionPreparationStart(picked),
+      _dateOnly(picked),
+    );
+    await saveCommunionPlan(plan);
+    if (!mounted) return;
+    setState(() {
+      _chosen = plan.date;
+      _hasPlan = true;
+      _remind = false;
+    });
     unawaited(_loadPrefs());
   }
 
-  /// Раскладка целиком: вечера от сегодня до дня причащения включительно,
-  /// затем сам день. Тот же порядок собирает прогресс — один источник.
-  List<CommunionItem> _items() {
-    final items = <CommunionItem>[];
-    final evenings = _chosen.difference(_today).inDays;
-    for (var i = 0; i <= evenings; i++) {
-      final canon = communionCanons[i % communionCanons.length];
-      items.add(CommunionItem(
-        id: "evening$i:canon",
-        title: "Канон молебный",
-        subtitle: canon.$2,
-        route: "/canons",
-        arguments: canon.$1,
-      ));
-      items.add(CommunionItem(
-        id: "evening$i:posledovanie",
-        title: koPrichashcheniyuTitle,
-        subtitle: _gender == "f" ? "в женском роде" : null,
-        route: "/posledovanie",
-        arguments: posledovanieRouteArgument(
-          koPrichashcheniyuKey,
-          koPrichashcheniyuTitle,
-          gender: _gender,
-        ),
-      ));
-    }
-    items.add(CommunionItem(
-      id: "day:blagodarstvennye",
+  List<CommunionItem> _items() => [
+    for (var i = 0; i < communionCanons.length; i++)
+      CommunionItem(
+        id: 'canon:$i',
+        title: communionCanons[i].$2,
+        route: '/canons',
+        arguments: communionCanons[i].$1,
+      ),
+    CommunionItem(
+      id: 'service',
+      title: 'Последование ко Причащению',
+      route: '/posledovanie',
+      arguments: posledovanieRouteArgument(
+        koPrichashcheniyuKey,
+        'Последование ко Причащению',
+        gender: _gender,
+        part: PosledovaniePart.beforeCommunion,
+      ),
+    ),
+    CommunionItem(
+      id: 'prayers',
+      title: koPrichashcheniyuTitle,
+      route: '/posledovanie',
+      arguments: posledovanieRouteArgument(
+        koPrichashcheniyuKey,
+        koPrichashcheniyuTitle,
+        gender: _gender,
+        part: PosledovaniePart.communionPrayers,
+      ),
+    ),
+    CommunionItem(
+      id: 'day:blagodarstvennye',
       title: blagodarstvennyeTitle,
-      subtitle: "после Святого Причащения",
-      route: "/posledovanie",
+      subtitle: 'после Святого Причащения',
+      route: '/posledovanie',
       arguments: posledovanieRouteArgument(
         blagodarstvennyeKey,
         blagodarstvennyeTitle,
         gender: _gender,
       ),
-    ));
-    return items;
-  }
+    ),
+  ];
 
   Widget _itemTile(CommunionItem item) {
     final done = _marks[item.id] == true;
@@ -181,10 +219,10 @@ class _CommunionPageState extends State<CommunionPage> {
       onTap: item.route == null
           ? null
           : () => Navigator.pushNamed(
-                context,
-                item.route!,
-                arguments: item.arguments,
-              ),
+              context,
+              item.route!,
+              arguments: item.arguments,
+            ),
     );
   }
 
@@ -194,43 +232,70 @@ class _CommunionPageState extends State<CommunionPage> {
     if (!mounted) return;
     setState(() => _marks = <String, bool>{..._marks, item.id: done});
     final total = _currentItems.length;
-    final doneCount =
-        _currentItems.where((i) => _marks[i.id] == true).length;
+    final doneCount = _currentItems.where((i) => _marks[i.id] == true).length;
     // 1.0 — край: стор сам стирает запись. Так и надо: подготовка закрыта
     // галочками, а не дочитана наполовину.
-    unawaited(saveReadingProgress(
-      "communion:$date",
-      total == 0 ? 0 : doneCount / total,
-      name: "Причастие: ${dayLabel(_chosen)}",
-    ));
+    unawaited(
+      saveReadingProgress(
+        "communion:$date",
+        total == 0 ? 0 : doneCount / total,
+        name: "Причастие: ${dayLabel(_chosen)}",
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_hasPlan) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Причастие')),
+        body: ListView(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.event),
+              title: const Text('Выбрать день причащения'),
+              subtitle: const Text(
+                'Выберите дату, чтобы составить подготовку. '
+                'Напоминания включаются отдельно.',
+              ),
+              onTap: _pickDate,
+            ),
+          ],
+        ),
+      );
+    }
     final items = _items();
     _currentItems = items;
     final doneCount = items.where((i) => _marks[i.id] == true).length;
 
     final groups = <Widget>[
       _DateTile(date: _chosen, onTap: _pickDate),
+      const _GroupHeader('Три дня поста'),
+      for (var i = 3; i >= 1; i--) ...[
+        ListTile(
+          title: Text(
+            'Пост · ${dayLabel(DateTime(_chosen.year, _chosen.month, _chosen.day - i))}',
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: (widget.trapeza ?? (date) => TrapezaLine(date: date))(
+            DateTime(_chosen.year, _chosen.month, _chosen.day - i),
+          ),
+        ),
+      ],
+      const _GroupHeader('До Причащения · прочитать один раз'),
+      for (final item in items.take(5)) _itemTile(item),
+      const _GroupHeader('После Причащения'),
+      _itemTile(items.last),
     ];
-    final evenings = _chosen.difference(_today).inDays;
-    for (var i = 0; i <= evenings; i++) {
-      final date = _today.add(Duration(days: i));
-      groups.add(_GroupHeader(
-        i == 0 ? "Сегодня вечером" : "Вечер · ${dayLabel(date)}",
-      ));
-      final canonItem = items[i * 2];
-      final posledovanieItem = items[i * 2 + 1];
-      groups.add(_itemTile(canonItem));
-      groups.add(_itemTile(posledovanieItem));
-    }
-    groups.add(_GroupHeader("Причащение · ${dayLabel(_chosen)}"));
-    groups.add(_itemTile(items.last));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Причастие", style: TextStyle(fontFamily: "OldStandard")),
+        title: const Text(
+          "Причастие",
+          style: TextStyle(fontFamily: "OldStandard"),
+        ),
       ),
       body: ListView(
         children: <Widget>[
@@ -247,11 +312,21 @@ class _CommunionPageState extends State<CommunionPage> {
               ],
             ),
           ),
-          ...groups,
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: (widget.trapeza ?? (date) => TrapezaLine(date: date))(_chosen),
+          SwitchListTile(
+            title: const Text('Напоминать о подготовке'),
+            subtitle: Text(
+              !_hasPlan
+                  ? 'Сначала выберите день причащения'
+                  : !_chosen.isAfter(_today)
+                  ? 'Дни подготовки завершены'
+                  : 'С 21:00 в три дня подготовки. Время доставки выбирает система.',
+            ),
+            value: _remind,
+            onChanged: _hasPlan && _chosen.isAfter(_today)
+                ? _setReminder
+                : null,
           ),
+          ...groups,
           const SizedBox(height: 24.0),
         ],
       ),
@@ -289,8 +364,8 @@ class _GroupHeader extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }

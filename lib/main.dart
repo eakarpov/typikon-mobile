@@ -23,6 +23,7 @@ import "utils/day_reading_reminders.dart";
 import "utils/push.dart";
 import "utils/crash_reporter.dart";
 import "utils/rule_reminders.dart";
+import "utils/communion_reminders.dart";
 
 import "package:typikon/apiMapper/version.dart";
 import "package:typikon/apiMapper/reading.dart";
@@ -206,6 +207,7 @@ Future<void> _runBackgroundChecks({Future<void> Function()? beforePomyannik}) as
     _checkPomyannikAndNotify,
     _checkReadingAndNotify,
     _checkRuleReminders,
+    _checkCommunionReminders,
   ];
   for (final check in checks) {
     try {
@@ -353,6 +355,23 @@ Future<void> _checkRuleReminders() async {
         iOS: DarwinNotificationDetails(presentSound: false),
       ),
       payload: payload,
+    );
+  });
+}
+
+Future<void> _checkCommunionReminders() async {
+  await checkCommunionRemindersAndNotify(show: (body, payload) async {
+    await flutterLocalNotificationsPlugin.show(
+      903, 'Подготовка к Причащению', body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'communionReminderChannelId', 'Подготовка к Причащению',
+          channelDescription: 'Вечерние напоминания подготовки',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: false),
+      ), payload: payload,
     );
   });
 }
@@ -563,6 +582,11 @@ class MyAppState extends State<MyApp> {
         if (alias.isNotEmpty) {
           navigatorKey.currentState?.pushNamed("/days", arguments: alias);
         }
+        return;
+      }
+      if (payload != null && payload.startsWith('communion:')) {
+        navigatorKey.currentState?.pushNamed('/communion',
+          arguments: payload.substring('communion:'.length));
         return;
       }
       // Напоминание о правиле ведёт на само правило.

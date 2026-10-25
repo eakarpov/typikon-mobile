@@ -267,6 +267,7 @@ Route<dynamic>? generateRoute(
               posledovanieKey: target.key,
               lang: target.lang,
               gender: target.gender,
+              part: target.part,
             ),
           );
         }

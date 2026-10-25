@@ -328,3 +328,18 @@ class _Line extends StatelessWidget {
     );
   }
 }
+
+/// Канон внутри последования — те же строки и песни, без вложенной прокрутки.
+class EmbeddedCanon extends StatelessWidget {
+  const EmbeddedCanon(this.detail, {super.key});
+  final CanonDetail detail;
+  @override
+  Widget build(BuildContext context) {
+    final script = chantScript(detail.canon.language);
+    final font = readerFont(context, chantFontFamily(detail.canon.language), script);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (final ode in detail.odes) _Ode(ode: ode, anchorKey: GlobalKey(),
+        fontSize: readingFontSize(context), font: font, script: script),
+    ]);
+  }
+}
