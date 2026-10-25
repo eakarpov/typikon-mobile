@@ -22,8 +22,19 @@ String dayKey(DateTime date) {
 }
 
 const List<String> _monthsGenitive = <String>[
-  "", "января", "февраля", "марта", "апреля", "мая", "июня",
-  "июля", "августа", "сентября", "октября", "ноября", "декабря",
+  "",
+  "января",
+  "февраля",
+  "марта",
+  "апреля",
+  "мая",
+  "июня",
+  "июля",
+  "августа",
+  "сентября",
+  "октября",
+  "ноября",
+  "декабря",
 ];
 
 /// Дата для человека: «14 октября 2026». Имена месяцев — родительный падеж,
@@ -49,7 +60,11 @@ Future<bool> isRuleSectionDone(String date, String sectionId) async {
   return prefs.getBool("$_ruleDonePrefix$date:$sectionId") ?? false;
 }
 
-Future<void> setRuleSectionDone(String date, String sectionId, bool done) async {
+Future<void> setRuleSectionDone(
+  String date,
+  String sectionId,
+  bool done,
+) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setBool("$_ruleDonePrefix$date:$sectionId", done);
 }
@@ -76,4 +91,16 @@ Future<bool> isCommunionItemDone(String date, String itemId) async {
 Future<void> setCommunionItemDone(String date, String itemId, bool done) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setBool("$_communionDonePrefix$date:$itemId", done);
+}
+
+Future<bool> ruleUsesHorologion(bool morning) async =>
+    (await SharedPreferences.getInstance()).getBool(
+      morning ? 'rule_morning_horologion' : 'rule_evening_horologion',
+    ) ??
+    false;
+Future<void> setRuleHorologion(bool morning, bool value) async {
+  await (await SharedPreferences.getInstance()).setBool(
+    morning ? 'rule_morning_horologion' : 'rule_evening_horologion',
+    value,
+  );
 }

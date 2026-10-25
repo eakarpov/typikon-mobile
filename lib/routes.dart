@@ -44,6 +44,7 @@ import 'package:typikon/pages/psalter_serial_page.dart';
 import 'package:typikon/pages/psalter_sorokoust_page.dart';
 import 'package:typikon/pages/resources_page.dart';
 import 'package:typikon/pages/rule_page.dart';
+import 'package:typikon/pages/rule_office_page.dart';
 import 'package:typikon/pages/ordo_page.dart';
 import 'package:typikon/pages/saint_page.dart';
 import 'package:typikon/pages/menu_entries.dart';
@@ -244,6 +245,9 @@ Route<dynamic>? generateRoute(
       return MaterialPageRoute(builder: (context) => SectionPage(
         context, title: 'Правило', entries: practiceEntries,
       ));
+    case '/rule/office':
+      if (arguments is! RuleOfficeTarget) return null;
+      return MaterialPageRoute(builder: (_) => RuleOfficePage(target: arguments));
     case '/rule':
       return MaterialPageRoute(
         builder: (context) => RulePage(context),
