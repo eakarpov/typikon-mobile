@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import "routes.dart";
+import "components/service_mode_theme.dart";
 import "pages/not_found_page.dart";
 import "api/constants.dart";
 import "utils/app_version.dart";
@@ -638,6 +639,7 @@ class MyAppState extends State<MyApp> {
                 navigatorKey: navigatorKey,
                 navigatorObservers: [routeObserver],
                 title: 'Typikon',
+                builder: (context, child) => ServiceModeTheme(child: child ?? const SizedBox.shrink()),
                 localizationsDelegates: [
                   GlobalMaterialLocalizations.delegate,
                   GlobalWidgetsLocalizations.delegate,

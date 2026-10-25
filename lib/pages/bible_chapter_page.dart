@@ -281,7 +281,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
         ],
       ),
       body: PinchZoom(child: Container(
-        color: settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+        color: readingBackgroundColor(context),
         // Ширину колонки читатель выбирает сам; без выбора обёртка не делает
         // ничего — на телефоне ограничивать нечего.
         child: ReadingColumn(child: FutureBuilder<BibleChapter>(

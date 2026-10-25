@@ -1,3 +1,4 @@
+import '../utils/service_mode.dart';
 import '../utils/rule_reminders.dart';
 import 'dart:async';
 
@@ -44,6 +45,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadReminderSettings();
     _loadSubscription();
     _loadReadingHour();
+    serviceMode.load();
   }
 
   void onPress() {
@@ -280,6 +282,33 @@ class _SettingsPageState extends State<SettingsPage> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  ValueListenableBuilder<bool>(
+                    valueListenable: serviceMode,
+                    builder: (context, enabled, _) => SwitchListTile(
+                      title: const Text('Режим «На службе»'),
+                      subtitle: const Text('Экран не гаснет во время чтения. '
+                        'В меню и при сворачивании действует обычное гашение.'),
+                      value: enabled,
+                      onChanged: serviceMode.setEnabled,
+                    ),
+                  ),
+                  AnimatedBuilder(
+                    animation: serviceMode,
+                    builder: (context, _) => Column(children: [
+                      SwitchListTile(
+                        title: const Text('Ночная палитра на службе'),
+                        subtitle: const Text('Красный текст на чёрном фоне'),
+                        value: serviceMode.nightPalette,
+                        onChanged: serviceMode.value ? serviceMode.setNightPalette : null,
+                      ),
+                      SwitchListTile(
+                        title: const Text('Листать касанием по краям'),
+                        subtitle: const Text('Справа — вперёд, слева — назад'),
+                        value: serviceMode.edgePaging,
+                        onChanged: serviceMode.value ? serviceMode.setEdgePaging : null,
+                      ),
+                    ]),
+                  ),
                   Padding(
                     padding: EdgeInsets.only(top: 20, left: 16, right: 16),
                     child: Text("Тема оформления", style: TextStyle(fontWeight: FontWeight.bold)),

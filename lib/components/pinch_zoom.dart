@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 import '../store/models/models.dart';
+import 'service_reading_scope.dart';
 
 /// Размер текста щипком — на время экрана.
 ///
@@ -65,8 +66,10 @@ class _PinchZoomState extends State<PinchZoom> {
 
     // Кегль — в пределах, что и у ползунка настроек: мельче не прочесть,
     // крупнее не помещается строка.
-    final scale = (_startScale * _distance / start)
-        .clamp(minFontSize / fontSize, maxFontSize / fontSize);
+    final scale = (_startScale * _distance / start).clamp(
+      minFontSize / fontSize,
+      maxFontSize / fontSize,
+    );
     if ((scale - _scale).abs() > 0.01) setState(() => _scale = scale);
   }
 
@@ -83,40 +86,48 @@ class _PinchZoomState extends State<PinchZoom> {
 
   @override
   Widget build(BuildContext context) {
-    final fontSize = StoreProvider.of<AppState>(context).state.settings.fontSize;
+    final fontSize = StoreProvider.of<AppState>(
+      context,
+    ).state.settings.fontSize;
     final media = MediaQuery.of(context);
 
-    return Listener(
-      onPointerDown: _down,
-      onPointerMove: (event) => _move(event, fontSize),
-      onPointerUp: _up,
-      onPointerCancel: _up,
-      child: Stack(
-        children: [
-          ReadingZoom(
-            scale: _scale,
-            // `Text` берёт масштаб из `MediaQuery` — туда он и кладётся, поверх
-            // системного, а не вместо него.
-            child: MediaQuery(
-              data: media.copyWith(textScaler: _Zoomed(media.textScaler, _scale)),
-              child: widget.child,
+    return ServiceReadingScope(
+      child: Listener(
+        onPointerDown: _down,
+        onPointerMove: (event) => _move(event, fontSize),
+        onPointerUp: _up,
+        onPointerCancel: _up,
+        child: Stack(
+          children: [
+            ReadingZoom(
+              scale: _scale,
+              // `Text` берёт масштаб из `MediaQuery` — туда он и кладётся, поверх
+              // системного, а не вместо него.
+              child: MediaQuery(
+                data: media.copyWith(
+                  textScaler: _Zoomed(media.textScaler, _scale),
+                ),
+                child: widget.child,
+              ),
             ),
-          ),
-          Positioned(
-            top: 12.0,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: AnimatedOpacity(
-                opacity: _showSize ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 200),
-                child: Center(
-                  child: Chip(label: Text("Кегль ${(fontSize * _scale).round()}")),
+            Positioned(
+              top: 12.0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  opacity: _showSize ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Center(
+                    child: Chip(
+                      label: Text("Кегль ${(fontSize * _scale).round()}"),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -134,7 +145,9 @@ class ReadingZoom extends InheritedWidget {
 
   static TextScaler scalerOf(BuildContext context) {
     final zoom = context.dependOnInheritedWidgetOfExactType<ReadingZoom>();
-    return zoom == null || zoom.scale == 1.0 ? TextScaler.noScaling : TextScaler.linear(zoom.scale);
+    return zoom == null || zoom.scale == 1.0
+        ? TextScaler.noScaling
+        : TextScaler.linear(zoom.scale);
   }
 
   @override

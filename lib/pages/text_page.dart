@@ -548,26 +548,26 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                 children: <Widget>[
                   if (future.data!.ruLink != null) TextButton(
                     onPressed: () => onClick(future.data!.ruLink as String),
-                    child: Text("РУ", style: TextStyle(color: Colors.white),),
+                    child: Text("РУ", style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),),
                   ),
                   if (future.data!.link != null) TextButton(
                     onPressed: () => onClick(future.data!.link as String),
-                    child: Text("ЦС", style: TextStyle(color: Colors.white),),
+                    child: Text("ЦС", style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),),
                   ),
                   if (future.data!.dneslovId != null) IconButton(
                       tooltip: "К святому",
                       onPressed: () => Navigator.pushNamed(context, "/saints", arguments: future.data!.dneslovId),
-                      icon: Icon(Icons.person, color: Colors.white),
+                      icon: Icon(Icons.person, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
                   ),
                   if (future.data!.bookId != null) IconButton(
                       tooltip: "К книге",
                       onPressed: () => Navigator.pushNamed(context, "/library", arguments: future.data!.bookId),
-                      icon: Icon(Icons.menu_book, color: Colors.white),
+                      icon: Icon(Icons.menu_book, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
                   ),
                   if (future.data!.dayId != null) IconButton(
                       tooltip: "К дню",
                       onPressed: () => Navigator.pushNamed(context, "/days", arguments: future.data!.dayId),
-                      icon: Icon(Icons.calendar_month, color: Colors.white),
+                      icon: Icon(Icons.calendar_month, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
                   ),
                 ],
               );
@@ -600,11 +600,11 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                 return const SizedBox.shrink();
               }
               if (_accentsLoading) {
-                return const Padding(
+                return Padding(
                   padding: EdgeInsets.all(14.0),
                   child: SizedBox(
                     width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
                   ),
                 );
               }
@@ -661,7 +661,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
             builder: (context, future) {
               if (future.hasData) {
                 return IconButton(
-                  icon: Icon(Icons.file_download, color: Colors.white),
+                  icon: Icon(Icons.file_download, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
                   tooltip: "Сохранить в fb2",
                   onPressed: () => _exportFb2(future.data!),
                 );
@@ -674,7 +674,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
         ],
       ),
       body: PinchZoom(child: Container(
-        color: StoreProvider.of<AppState>(context).state.settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+        color: readingBackgroundColor(context),
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         // Ширину колонки читатель выбирает сам; без выбора обёртка не делает

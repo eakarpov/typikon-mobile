@@ -3,6 +3,7 @@ import 'package:flutter_redux/flutter_redux.dart';
 
 import 'package:typikon/store/models/models.dart';
 import 'package:typikon/utils/script_convert.dart';
+import 'service_night_palette.dart';
 
 /// Цвет текста чтений: явный выбор пользователя, иначе — цвет из темы.
 ///
@@ -12,6 +13,7 @@ import 'package:typikon/utils/script_convert.dart';
 /// рисует текст белым, то есть в светлой теме — белым по белому. Весь текст
 /// чтений рисуется именно через RichText.
 Color readingTextColor(BuildContext context) {
+  if (ServiceNightPalette.isActive(context)) return ServiceNightPalette.foreground;
   final chosen = StoreProvider.of<AppState>(context).state.settings.fontColor;
   if (chosen != null) return chosen;
   final theme = Theme.of(context);
@@ -24,6 +26,7 @@ Color readingTextColor(BuildContext context) {
 /// не берут: они писались после прочих и повторили `Theme.of(context)` вместо
 /// настройки. Одно место лучше семи одинаковых выражений.
 Color readingBackgroundColor(BuildContext context) {
+  if (ServiceNightPalette.isActive(context)) return ServiceNightPalette.background;
   final settings = StoreProvider.of<AppState>(context).state.settings;
   return settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor;
 }
@@ -51,6 +54,7 @@ TextAlign readingTextAlign(BuildContext context) =>
 /// подложки заметок в `components/highlighted_text.dart`). Прибитый `Colors.blue`
 /// на тёмном фоне сливался с ним настолько, что сноску было не разглядеть.
 Color readingLinkColor(BuildContext context) {
+  if (ServiceNightPalette.isActive(context)) return ServiceNightPalette.accent;
   final isLightText = readingTextColor(context).computeLuminance() > 0.5;
   return isLightText ? const Color(0xFF82B1FF) : const Color(0xFF1565C0);
 }

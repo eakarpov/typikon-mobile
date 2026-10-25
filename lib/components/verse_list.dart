@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:typikon/dto/calendar.dart';
 import 'package:typikon/dto/user_note.dart';
 import 'package:typikon/components/highlighted_text.dart';
+import '../utils/service_night_palette.dart';
 import 'package:typikon/utils/reading_style.dart';
 import 'package:typikon/utils/script_convert.dart';
 import 'package:typikon/components/pinch_zoom.dart';
@@ -67,7 +68,7 @@ class VerseListView extends StatelessWidget {
           ).toList();
           return [
             TextSpan(text: "${v.verse} ", style: numberStyle),
-            ...buildHighlightedSpans("${presentScript(v.content, script, setting)} ", baseStyle, notesForVerse, onTapNote ?? (_) {}),
+            ...buildHighlightedSpans("${presentScript(v.content, script, setting)} ", baseStyle, notesForVerse, onTapNote ?? (_) {}, nightPalette: ServiceNightPalette.isActive(context)),
           ];
         }).toList(),
       ),

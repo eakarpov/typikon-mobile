@@ -10,6 +10,7 @@ import android.util.Base64;
 import android.widget.Toast;
 import android.content.Intent;
 import android.net.Uri;
+import android.view.WindowManager
 import androidx.annotation.NonNull
 
 import io.flutter.embedding.android.FlutterActivity
@@ -23,7 +24,14 @@ class MainActivity: FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
                 call, result ->
-            if (call.method == "openFile") {
+            if (call.method == "setKeepScreenOn") {
+                if (call.arguments == true) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+                result.success(null)
+            } else if (call.method == "openFile") {
                 val list = call.arguments as List<String>?
                 if (list != null && !list.isEmpty()) {
                     val batteryLevel = openFile(list.get(0) as String?, list.get(1) as String?)

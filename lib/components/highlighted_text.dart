@@ -22,6 +22,7 @@ List<InlineSpan> buildHighlightedSpans(
   void Function(UserNote note) onTapNote, {
   List<TextRange> searchMatches = const [],
   TextRange? activeMatch,
+  bool nightPalette = false,
 }) {
   final hasNotes = notes.isNotEmpty;
   final hasSearch = searchMatches.isNotEmpty;
@@ -35,15 +36,27 @@ List<InlineSpan> buildHighlightedSpans(
   final textColor = style.color;
   final isLightText = textColor == null || textColor.computeLuminance() > 0.5;
   final highlightStyle = style.copyWith(
-    backgroundColor: isLightText ? const Color(0xFF5A4A00) : const Color(0xFFFFF3B0),
+    backgroundColor: nightPalette
+        ? const Color(0xFF3D1915)
+        : isLightText
+        ? const Color(0xFF5A4A00)
+        : const Color(0xFFFFF3B0),
   );
   // Подложка совпадений поиска — по тому же правилу светлоты, но не желтая,
   // чтобы два слоя отличались; текущее совпадение — оранжевым, заметным.
   final searchStyle = style.copyWith(
-    backgroundColor: isLightText ? const Color(0xFF3D4A63) : const Color(0xFFDFE9F5),
+    backgroundColor: nightPalette
+        ? const Color(0xFF29100F)
+        : isLightText
+        ? const Color(0xFF3D4A63)
+        : const Color(0xFFDFE9F5),
   );
   final activeSearchStyle = style.copyWith(
-    backgroundColor: isLightText ? const Color(0xFFE65100) : const Color(0xFFFFB74D),
+    backgroundColor: nightPalette
+        ? const Color(0xFF62251D)
+        : isLightText
+        ? const Color(0xFFE65100)
+        : const Color(0xFFFFB74D),
   );
 
   // Заметки, как прежде: ищем без оглядки на ударения, а красим по исходной
@@ -84,7 +97,8 @@ List<InlineSpan> buildHighlightedSpans(
           .toList();
     }
     for (final piece in pieces) {
-      final active = activeMatch != null &&
+      final active =
+          activeMatch != null &&
           piece.$1 < activeMatch.$2 &&
           activeMatch.$1 < piece.$2;
       searchSegments.add(_Segment(piece.$1, piece.$2, active: active));
@@ -98,23 +112,29 @@ List<InlineSpan> buildHighlightedSpans(
   var cursor = 0;
   for (final segment in segments) {
     if (segment.start > cursor) {
-      spans.add(TextSpan(text: text.substring(cursor, segment.start), style: style));
+      spans.add(
+        TextSpan(text: text.substring(cursor, segment.start), style: style),
+      );
     }
     if (segment.note != null) {
       final note = segment.note!;
-      spans.add(TextSpan(
-        // Показываем то, что стоит в тексте, а не то, что записано в заметке:
-        // виды различаются знаками, и подставив написание заметки, мы нарисовали
-        // бы посреди книги слово из другого вида.
-        text: text.substring(segment.start, segment.end),
-        style: highlightStyle,
-        recognizer: TapGestureRecognizer()..onTap = () => onTapNote(note),
-      ));
+      spans.add(
+        TextSpan(
+          // Показываем то, что стоит в тексте, а не то, что записано в заметке:
+          // виды различаются знаками, и подставив написание заметки, мы нарисовали
+          // бы посреди книги слово из другого вида.
+          text: text.substring(segment.start, segment.end),
+          style: highlightStyle,
+          recognizer: TapGestureRecognizer()..onTap = () => onTapNote(note),
+        ),
+      );
     } else {
-      spans.add(TextSpan(
-        text: text.substring(segment.start, segment.end),
-        style: segment.active ? activeSearchStyle : searchStyle,
-      ));
+      spans.add(
+        TextSpan(
+          text: text.substring(segment.start, segment.end),
+          style: segment.active ? activeSearchStyle : searchStyle,
+        ),
+      );
     }
     cursor = segment.end;
   }

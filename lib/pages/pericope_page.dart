@@ -10,6 +10,7 @@ import '../components/verse_list.dart';
 import '../dto/pericope.dart';
 import '../store/models/models.dart';
 import '../utils/bible_route.dart';
+import '../utils/reading_style.dart';
 import '../utils/script_convert.dart';
 
 /// Зачало целиком: где читается, что читается и где это в книге.
@@ -71,7 +72,7 @@ class _PericopePageState extends State<PericopePage> {
         ],
       ),
       body: PinchZoom(child: Container(
-        color: settings.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+        color: readingBackgroundColor(context),
         child: AsyncView<PericopeReading>(
           future: reading,
           message: "Не удалось загрузить зачало.",
