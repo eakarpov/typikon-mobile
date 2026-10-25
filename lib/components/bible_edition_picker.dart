@@ -16,7 +16,8 @@ Future<List<String>?> showEditionPicker(
   return showModalBottomSheet<List<String>>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _EditionPicker(editions: editions, selected: selected),
+    builder: (context) =>
+        _EditionPicker(editions: editions, selected: selected),
   );
 }
 
@@ -72,7 +73,10 @@ class _EditionPickerState extends State<_EditionPicker> {
             padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 4.0),
             child: Text(
               "Издания",
-              style: TextStyle(fontFamily: "OldStandard", fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontFamily: "OldStandard",
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Padding(
@@ -122,10 +126,10 @@ class _EditionPickerState extends State<_EditionPicker> {
     return CheckboxListTile(
       dense: true,
       value: chosen.contains(edition.code),
-      // Издание, которое нечем нарисовать, выключено, а не спрятано: спрятанное
-      // выглядело бы как «у них этого нет», а это неправда — оно есть, просто в
-      // сборке нет шрифта для этого письма.
-      onChanged: reason != null ? null : (value) => _toggle(edition, value == true),
+      // Письмо не блокируем: отсутствующие знаки отрисует системный fallback.
+      onChanged: reason != null
+          ? null
+          : (value) => _toggle(edition, value == true),
       title: Text(
         edition.title,
         style: const TextStyle(fontFamily: "OldStandard", fontSize: 14.0),

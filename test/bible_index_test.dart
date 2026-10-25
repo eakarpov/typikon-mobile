@@ -9,23 +9,26 @@ import 'package:typikon/utils/bible_style.dart';
 // читатель решит, что сломалось приложение).
 
 BibleBook book(String id, String section, {bool inCanon = true}) => BibleBook(
-      id: id,
-      name: id,
-      abbr: id,
-      section: section,
-      inCanon: inCanon,
-      chapters: inCanon ? 1 : null,
-    );
+  id: id,
+  name: id,
+  abbr: id,
+  section: section,
+  inCanon: inCanon,
+  chapters: inCanon ? 1 : null,
+);
 
-BibleEdition edition(String code, String language, {String versification = "other"}) =>
-    BibleEdition(
-      code: code,
-      title: code,
-      shortTitle: code,
-      language: language,
-      languageCode: code,
-      versification: versification,
-    );
+BibleEdition edition(
+  String code,
+  String language, {
+  String versification = "other",
+}) => BibleEdition(
+  code: code,
+  title: code,
+  shortTitle: code,
+  language: language,
+  languageCode: code,
+  versification: versification,
+);
 
 void main() {
   group("разбивка на разделы", () {
@@ -84,26 +87,32 @@ void main() {
       expect(resolveEditionCodes(["ro-1688"], available), ["cs-eliz"]);
     });
 
-    test("издание без шрифта не предлагается, даже если его выбрали", () {
-      expect(resolveEditionCodes(["zh-1910"], available), ["cs-eliz"]);
+    test("китайское издание сохраняется в выборе с системными шрифтами", () {
+      expect(resolveEditionCodes(["zh-1910"], available), ["zh-1910"]);
     });
 
-    test("без эталона берётся первое, что сборка умеет нарисовать", () {
+    test("без эталона берётся первое доступное издание", () {
       final noReference = BibleEditionList([
         edition("zh-1910", "zh"),
         edition("la-vulgata", "la"),
       ]);
 
-      expect(resolveEditionCodes(const [], noReference), ["la-vulgata"]);
+      expect(resolveEditionCodes(const [], noReference), ["zh-1910"]);
     });
 
-    test("нечего рисовать — просим без параметра, а не пустой экран", () {
-      // Пустой набор сервер понимает как «все публичные издания».
-      final unreadable = BibleEditionList([edition("zh-1910", "zh")]);
+    test(
+      "издание с другим письмом доступно; пустой каталог не роняет выбор",
+      () {
+        // Пустой набор сервер понимает как «все публичные издания».
+        final unreadable = BibleEditionList([edition("zh-1910", "zh")]);
 
-      expect(resolveEditionCodes(const [], unreadable), isEmpty);
-      expect(resolveEditionCodes(const [], const BibleEditionList([])), isEmpty);
-    });
+        expect(resolveEditionCodes(const [], unreadable), ["zh-1910"]);
+        expect(
+          resolveEditionCodes(const [], const BibleEditionList([])),
+          isEmpty,
+        );
+      },
+    );
   });
 
   group("шрифт по письму издания", () {
@@ -126,12 +135,15 @@ void main() {
       expect(bibleFontFamily("ro"), "OldStandard");
     });
 
-    test("письмо, которого нет в сборке, честно признаётся непоказуемым", () {
-      // Китайских иероглифов нет ни в одном из двух шрифтов, а zh-1910 сервер
-      // отдаёт наравне с прочими: без проверки был бы экран квадратов.
-      expect(canRenderEdition(edition("zh-1910", "zh")), isFalse);
-      expect(editionUnavailableReason(edition("zh-1910", "zh")), isNotNull);
-      expect(editionUnavailableReason(edition("cs-eliz", "cu")), isNull);
+    test("другие письменности доступны через системный подбор шрифтов", () {
+      for (final language in ['zh', 'ka', 'hy', 'ar', 'he', 'ja']) {
+        final item = edition('$language-test', language);
+        expect(canRenderEdition(item), isTrue);
+        expect(editionUnavailableReason(item), isNull);
+        expect(resolveEditionCodes([item.code], BibleEditionList([item])), [
+          item.code,
+        ]);
+      }
     });
   });
 }

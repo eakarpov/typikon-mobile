@@ -16,27 +16,10 @@ const Set<String> _churchScripts = {"cu", "ro_cyr"};
 String bibleFontFamily(String language) =>
     _churchScripts.contains(language) ? _churchFont : _civilFont;
 
-/// Начертания, которые сборка умеет нарисовать.
-///
-/// OldStandard покрывает латиницу, греческий и гражданскую кириллицу; Monomakh —
-/// церковнославянское и валашское письмо. Китайских иероглифов нет ни в одном, а
-/// издание `zh-1910` сервер отдаёт наравне с остальными: без проверки читатель,
-/// выбравший его из любопытства, получил бы экран квадратов и решил, что
-/// сломалось приложение.
-///
-/// Список разрешительный, а не запретительный: заведёт веб японское или
-/// армянское издание — приложение честно скажет, что нарисовать не может, вместо
-/// того чтобы попробовать и осыпаться. У такого списка есть своя цена, и она уже
-/// однажды заплачена: собранный по догадке, он не знал письма `ro` и вычеркнул
-/// румынскую синодальную 1914 года — латиницу, которую OldStandard рисует без
-/// малейшего труда. Обнаружилось это только на устройстве, в списке выбора.
-/// Поэтому значения здесь взяты из ответа сервера, а не придуманы, и добавлять
-/// новое нужно, сверившись с `GET /api/v2/bible/editions`.
-const Set<String> _renderableScripts = {"cu", "ro_cyr", "grc", "la", "ro"};
+/// Отсутствие знака во встроенных шрифтах не запрещает чтение: Flutter
+/// ищет его в системных запасных шрифтах Android/iOS. Покрытие конкретного
+/// устройства нельзя определить по коду языка издания.
+/// https://api.flutter.dev/flutter/painting/TextStyle/fontFamilyFallback.html
+bool canRenderEdition(BibleEdition edition) => true;
 
-bool canRenderEdition(BibleEdition edition) =>
-    _renderableScripts.contains(edition.language);
-
-/// Почему издание нельзя показать — короткой строкой для списка выбора.
-String? editionUnavailableReason(BibleEdition edition) =>
-    canRenderEdition(edition) ? null : "нет шрифта для этого письма";
+String? editionUnavailableReason(BibleEdition edition) => null;
