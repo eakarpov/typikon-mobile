@@ -25,7 +25,9 @@ Future<http.Response> fetchSaintDossier(String address) {
     ttl: const Duration(hours: 24),
     isCacheable: (body) {
       final decoded = jsonDecode(body);
-      return decoded is Map && decoded.containsKey("memoryDates");
+      return decoded is Map &&
+          decoded.containsKey("memoryDates") &&
+          (!decoded.containsKey("works") || decoded["works"] != null);
     },
   );
 }
@@ -47,3 +49,22 @@ Future<http.Response> fetchSaintLife(String address) {
     },
   );
 }
+
+Future<http.Response> fetchSaintChant(String id) => cachedFetch(
+  'saint-chant:$id',
+  () => v2Get(v2Uri('/chants/${Uri.encodeComponent(id)}')),
+  isCacheable: (body) =>
+      jsonDecode(body) is Map && jsonDecode(body)['text'] is String,
+);
+
+Future<http.Response> fetchSaintService(String id, String? language) =>
+    cachedFetch(
+      'saint-service:$id:$language',
+      () => v2Get(
+        v2Uri('/saints/service/${Uri.encodeComponent(id)}', {
+          'lang': ?language,
+        }),
+      ),
+      isCacheable: (body) =>
+          jsonDecode(body) is Map && jsonDecode(body)['rows'] is List,
+    );

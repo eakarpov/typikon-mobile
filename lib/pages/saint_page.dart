@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:typikon/components/dossier.dart';
 import '../components/saint_icons.dart';
+import 'saint_corpus_page.dart';
 import '../dto/dneslov/images.dart';
 import 'package:typikon/components/reading_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -20,7 +21,7 @@ class SaintPage extends StatefulWidget {
   final String id;
 
   const SaintPage(
-    context, {
+    BuildContext? context, {
     super.key,
     required this.id,
     this.loadDossier = getSaintDossier,
@@ -65,18 +66,20 @@ class _SaintPageState extends State<SaintPage> {
     widget
         .loadDossier(widget.id)
         .then((value) {
-          if (mounted)
+          if (mounted) {
             setState(() {
               _dossier = value;
               _dossierLoading = false;
             });
+          }
         })
         .catchError((Object error) {
-          if (mounted)
+          if (mounted) {
             setState(() {
               _dossierError = error;
               _dossierLoading = false;
             });
+          }
         });
 
     // Житие идёт своим запросом и своей веткой состояния. Адрес резолвит
@@ -84,18 +87,20 @@ class _SaintPageState extends State<SaintPage> {
     widget
         .loadLife(widget.id)
         .then((value) {
-          if (mounted)
+          if (mounted) {
             setState(() {
               _life = value;
               _lifeLoading = false;
             });
+          }
         })
         .catchError((Object error) {
-          if (mounted)
+          if (mounted) {
             setState(() {
               _lifeError = error;
               _lifeLoading = false;
             });
+          }
         });
   }
 
@@ -182,18 +187,15 @@ class _SaintPageState extends State<SaintPage> {
             ],
           ),
         ),
-        body: Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: TabBarView(
-            children: [
-              _lifeTab(),
-              _dossierTab(_memoryTab),
-              _dossierTab(_textsTab),
-              _dossierTab(
-                (saint) => SaintIcons(saint: saint, loader: widget.loadIcons),
-              ),
-            ],
-          ),
+        body: TabBarView(
+          children: [
+            _lifeTab(),
+            _dossierTab(_memoryTab),
+            _dossierTab(_textsTab),
+            _dossierTab(
+              (saint) => SaintIcons(saint: saint, loader: widget.loadIcons),
+            ),
+          ],
         ),
       ),
     );
@@ -243,8 +245,6 @@ class _SaintPageState extends State<SaintPage> {
   }
 
   Widget _memoryTab(SaintDossier saint) {
-    final akathists = saint.akathists;
-
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       children: [
@@ -280,29 +280,6 @@ class _SaintPageState extends State<SaintPage> {
                 ].join(", "),
               );
             }).toList(),
-          ),
-        if (akathists != null && akathists.isNotEmpty)
-          DossierSection(
-            title: "Акафисты",
-            children: akathists
-                .map(
-                  (akathist) => DossierLine(
-                    title: akathist.title ?? akathist.memory ?? "Акафист",
-                    subtitle: akathist.stanzas == null
-                        ? ""
-                        : "икосов и кондаков: ${akathist.stanzas}",
-                    // Вероятнее всего, это и будет главным входом в раздел:
-                    // акафист ищут по святому, а не по перечню из тысячи.
-                    onTap: (akathist.id ?? "").isEmpty
-                        ? null
-                        : () => Navigator.pushNamed(
-                            context,
-                            "/akathists",
-                            arguments: akathist.id,
-                          ),
-                  ),
-                )
-                .toList(),
           ),
         if (saint.dedications.isNotEmpty)
           DossierSection(
@@ -404,24 +381,99 @@ class _SaintPageState extends State<SaintPage> {
   }
 
   Widget _textsTab(SaintDossier saint) {
-    if (saint.texts.isEmpty && saint.mentions.isEmpty) {
-      return const _Quiet("Текстов этому святому в корпусе пока нет.");
-    }
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      children: [
-        if (saint.texts.isNotEmpty)
-          DossierSection(
-            title: "Служба",
-            children: saint.texts.map(_text).toList(),
+    final works = <SaintWork>[
+      ...?saint.works,
+      for (final a in saint.akathists ?? const <SaintAkathist>[])
+        if ((a.id ?? '').isNotEmpty)
+          SaintWork(
+            id: a.id!,
+            genre: 'akathist',
+            reader: 'akathist',
+            title: a.title ?? a.memory ?? 'Акафист',
+            subtitle: a.stanzas == null ? null : 'Строф: ${a.stanzas}',
           ),
+    ];
+    const genres = {
+      'reading': 'Четьи тексты',
+      'troparion': 'Тропари',
+      'kontakion': 'Кондаки',
+      'magnification': 'Величания',
+      'canon': 'Каноны',
+      'akathist': 'Акафисты',
+      'service': 'Службы',
+      'other': 'Другие тексты',
+    };
+    final groups = <String, List<Widget>>{};
+    for (final t in saint.texts) {
+      (groups[t.genre] ??= []).add(_text(t));
+    }
+    final seen = <String>{};
+    for (final w in works) {
+      if (w.id.isEmpty || !seen.add('${w.reader}|${w.id}|${w.language}')) {
+        continue;
+      }
+      final genre = genres.containsKey(w.genre) ? w.genre : 'other';
+      (groups[genre] ??= []).add(_work(w));
+    }
+    final unavailable = saint.works == null && saint.akathistsUnknown;
+    if (groups.isEmpty && saint.mentions.isEmpty && !unavailable) {
+      return const _Quiet('Связанных текстов для этой записи пока нет.');
+    }
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: [
+        if (unavailable)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('Певческий корпус временно недоступен.'),
+          ),
+        for (final genre in genres.entries)
+          if ((groups[genre.key] ?? []).isNotEmpty)
+            DossierSection(title: genre.value, children: groups[genre.key]!),
         if (saint.mentions.isNotEmpty)
           DossierSection(
-            title: "Упоминания",
+            title: 'Упоминания',
             children: saint.mentions.map(_text).toList(),
           ),
       ],
+    );
+  }
+
+  Widget _work(SaintWork work) {
+    final route = switch (work.reader) {
+      'canon' => '/canons',
+      'akathist' => '/akathists',
+      'chant' || 'service' => '/saint-text',
+      _ => null,
+    };
+    return ListTile(
+      title: Text(
+        work.title,
+        style: const TextStyle(fontFamily: 'OldStandard'),
+      ),
+      subtitle: work.subtitle == null
+          ? null
+          : Text(
+              [
+                work.subtitle!,
+                if (work.language != null) languageLabel(work.language),
+              ].join(' · '),
+            ),
+      trailing: route == null ? null : const Icon(Icons.chevron_right),
+      onTap: route == null
+          ? null
+          : () => Navigator.pushNamed(
+              context,
+              route,
+              arguments: route == '/saint-text'
+                  ? SaintCorpusTarget(
+                      reader: work.reader,
+                      id: work.id,
+                      title: work.title,
+                      language: work.language,
+                    )
+                  : work.id,
+            ),
     );
   }
 

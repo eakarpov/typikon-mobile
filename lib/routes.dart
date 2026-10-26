@@ -47,6 +47,7 @@ import 'package:typikon/pages/rule_page.dart';
 import 'package:typikon/pages/rule_office_page.dart';
 import 'package:typikon/pages/ordo_page.dart';
 import 'package:typikon/pages/saint_page.dart';
+import 'package:typikon/pages/saint_corpus_page.dart';
 import 'package:typikon/pages/menu_entries.dart';
 import 'package:typikon/pages/search_page.dart';
 import 'package:typikon/pages/section_page.dart';
@@ -352,6 +353,12 @@ Route<dynamic>? generateRoute(
           );
         },
       );
+    case '/saint-text':
+      if (arguments is! SaintCorpusTarget || arguments.id.isEmpty ||
+          (arguments.reader != 'chant' && arguments.reader != 'service')) {
+        return null;
+      }
+      return MaterialPageRoute(builder: (_) => SaintCorpusPage(target: arguments));
     case "/saints":
       if (arguments is String) {
         return MaterialPageRoute(

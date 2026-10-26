@@ -168,12 +168,14 @@ class SaintText {
   final String name;
   final String? description;
   final String? author;
+  final String genre;
 
   const SaintText({
     required this.id,
     required this.name,
     this.description,
     this.author,
+    this.genre = 'reading',
   });
 
   factory SaintText.fromJson(Map<String, dynamic> json) => SaintText(
@@ -181,6 +183,7 @@ class SaintText {
     name: json["name"] ?? "",
     description: json["description"],
     author: json["author"],
+    genre: saintTextGenre(json['genre'] ?? json['contentType'] ?? json['type']),
   );
 }
 
@@ -268,6 +271,7 @@ class SaintDossier {
   final List<SaintMemory> memories;
   final List<SaintText> texts;
   final List<SaintText> mentions;
+  final List<SaintWork>? works;
 
   /// `null` — корпус певческих текстов на сервере не выложен, акафистов мы не
   /// смотрели вовсе; `[]` — смотрели и не нашли. Разница та же, что между
@@ -298,6 +302,7 @@ class SaintDossier {
     this.memories = const [],
     this.texts = const [],
     this.mentions = const [],
+    this.works,
     this.akathists,
     this.dedications = const [],
     this.noble,
@@ -351,6 +356,9 @@ class SaintDossier {
       memories: _list(json["memories"], SaintMemory.fromJson),
       texts: _list(json["texts"], SaintText.fromJson),
       mentions: _list(json["mentions"], SaintText.fromJson),
+      works: json["works"] is List
+          ? _list(json["works"], SaintWork.fromJson)
+          : null,
       akathists: akathists == null
           ? null
           : _list(akathists, SaintAkathist.fromJson),
@@ -359,4 +367,49 @@ class SaintDossier {
       caveat: json["caveat"],
     );
   }
+}
+
+/// A work linked to this saint through a verified liturgical memory.
+class SaintWork {
+  final String id;
+  final String genre;
+  final String reader;
+  final String title;
+  final String? subtitle;
+  final String? language;
+  const SaintWork({
+    required this.id,
+    required this.genre,
+    required this.reader,
+    required this.title,
+    this.subtitle,
+    this.language,
+  });
+  factory SaintWork.fromJson(Map<String, dynamic> json) => SaintWork(
+    id: json['id']?.toString() ?? '',
+    genre: json['genre'] ?? 'other',
+    reader: json['reader'] ?? '',
+    title: json['title'] ?? '',
+    subtitle: json['subtitle'],
+    language: json['language'],
+  );
+}
+
+String saintTextGenre(dynamic value) {
+  const genres = {
+    'troparion': 'troparion',
+    'тропарь': 'troparion',
+    'kontakion': 'kontakion',
+    'кондак': 'kontakion',
+    'magnification': 'magnification',
+    'velichanie': 'magnification',
+    'величание': 'magnification',
+    'canon': 'canon',
+    'канон': 'canon',
+    'akathist': 'akathist',
+    'акафист': 'akathist',
+    'service': 'service',
+    'служба': 'service',
+  };
+  return genres[value?.toString().toLowerCase()] ?? 'reading';
 }

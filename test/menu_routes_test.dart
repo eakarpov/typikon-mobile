@@ -28,6 +28,7 @@ const Set<String> unlistedRoutes = <String>{
   "/pericope", // зачало из указателя
   "/concordance", // стих в изданиях — из меню выделения в главе Библии
   "/incipit", // зачин из поиска
+  "/saint-text", // песнопение или служба из досье святого
   "/saints", // досье из памяти
   "/pomyannik/upcoming", // из помянника
   "/pomyannik/zapiska", // из помянника
