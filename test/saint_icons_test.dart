@@ -64,7 +64,7 @@ void main() {
   });
 
   test(
-    'saved images need no upstream request and all external ids are preserved',
+    'saved images remain available when upstream fails and all external ids are preserved',
     () async {
       final saint = SaintDossier.fromJson({
         'name': 'Святой',
@@ -79,7 +79,7 @@ void main() {
       expect(saint.dneslovIds, ['7974', '7975']);
       final result = await getSaintIcons(
         saint,
-        fetch: (_) async => throw StateError('must use snapshot'),
+        fetch: (_) async => throw const SocketException('offline'),
       );
       expect(
         result.list.single.thumb_url,
@@ -146,6 +146,82 @@ void main() {
       );
     }
     expect(calls, 2);
+  });
+
+  Future<void> imageCache() async {
+    final dir = await Directory.systemTemp.createTemp('icon-pages-');
+    const channel = MethodChannel('plugins.flutter.io/path_provider');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (_) async => dir.path);
+    addTearDown(() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+      await dir.delete(recursive: true);
+    });
+  }
+
+  test(
+    'loads all image records and counts body length rather than advertised end index',
+    () async {
+      await imageCache();
+      final ranges = <String>[];
+      final client = MockClient((r) async {
+        final range = r.headers['range'] ?? r.headers['Range']!;
+        ranges.add(range);
+        final offset = int.parse(
+          RegExp(r'records=(\d+)-').firstMatch(range)![1]!,
+        );
+        final count = offset == 0 ? 10 : 3;
+        return http.Response(
+          jsonEncode(
+            List.generate(count, (i) => {'url': '/icons/${offset + i}.webp'}),
+          ),
+          206,
+          headers: {
+            'content-range': 'records $offset-${offset == 0 ? 9 : 109}/13',
+          },
+        );
+      });
+      final result = await fetchDneslovImages('all-pages', client: client);
+      expect(
+        DneslovImageListD.fromJson(jsonDecode(result.body)).list.length,
+        13,
+      );
+      expect(ranges, ['records=0-100', 'records=10-110']);
+      await fetchDneslovImages('all-pages', client: client);
+      expect(ranges.length, 2);
+    },
+  );
+
+  test('a repeated first page is not cached as a complete icon list', () async {
+    await imageCache();
+    final bad = MockClient(
+      (_) async => http.Response(
+        jsonEncode(List.generate(10, (i) => {'url': '/icons/$i.webp'})),
+        206,
+        headers: {'content-range': 'records 0-9/13'},
+      ),
+    );
+    await expectLater(
+      fetchDneslovImages('incomplete-pages', client: bad),
+      throwsFormatException,
+    );
+    var calls = 0;
+    final good = MockClient((_) async {
+      calls++;
+      return http.Response(
+        jsonEncode([
+          {'url': '/icons/fresh.webp'},
+        ]),
+        200,
+      );
+    });
+    final response = await fetchDneslovImages('incomplete-pages', client: good);
+    expect(calls, 1);
+    expect(
+      DneslovImageListD.fromJson(jsonDecode(response.body)).list.single.url,
+      contains('fresh.webp'),
+    );
   });
 
   testWidgets(

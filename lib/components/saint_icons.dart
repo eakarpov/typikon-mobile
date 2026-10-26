@@ -65,6 +65,9 @@ class _SaintIconsState extends State<SaintIcons> {
   @override
   Widget build(BuildContext context) => FutureBuilder<DneslovImageListD>(
     future: _images,
+    initialData: widget.saint.images.isEmpty
+        ? null
+        : DneslovImageListD(list: widget.saint.images),
     builder: (context, snapshot) {
       if (snapshot.hasError) {
         return ApiErrorView(
@@ -115,7 +118,8 @@ class _SaintIconsState extends State<SaintIcons> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title),
-                      if (item.description.isNotEmpty && item.description.trim() != title.trim())
+                      if (item.description.isNotEmpty &&
+                          item.description.trim() != title.trim())
                         Text(
                           item.description,
                           style: Theme.of(context).textTheme.bodySmall,
