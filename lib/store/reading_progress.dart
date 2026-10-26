@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'psalter_serial_bookmark.dart';
+import 'rule_cycle.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -78,10 +79,14 @@ Future<ReadingProgress?> getReadingProgress(String textId) async {
 
 /// Все сохранённые места: по убыванию updatedAt, не больше [maxProgressEntries].
 /// Безымянные (старые) записи не отбрасываются — решает показывающий экран.
-Future<List<SavedReading>> getAllReadingProgress() async {
+Future<List<SavedReading>> getAllReadingProgress({DateTime? now}) async {
+  final cycle = RuleCycle.at(now ?? DateTime.now());
   final all = await _readAll();
   final entries = <SavedReading>[];
   for (final entry in all.entries) {
+    if (entry.key.startsWith('rule:') && entry.key != cycle.progressId) {
+      continue;
+    }
     try {
       entries.add(
         SavedReading(

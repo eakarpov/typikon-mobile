@@ -11,6 +11,8 @@ import '../dto/calendar.dart' show CalendarDay, CalendarDayPartItem;
 import '../dto/corpus.dart';
 import '../store/reading_progress.dart';
 import '../store/rule_marks.dart';
+import '../store/rule_cycle.dart';
+import '../utils/route_observer.dart';
 import '../utils/bible_route.dart';
 import '../utils/rule_reminders.dart';
 import '../utils/notification_permission.dart';
@@ -29,6 +31,7 @@ class RuleDayData {
   /// Канон повечерия для дня недели и гласа.
   final Canon? eveningCanon;
   final int? tone;
+  final int? eveningTone;
 
   /// Дневное зачало Евангелия. `null` — секция прячется.
   final CalendarDayPartItem? gospel;
@@ -37,8 +40,11 @@ class RuleDayData {
     this.morningCanon,
     this.eveningCanon,
     this.gospel,
-    this.tone,
-  });
+    int? tone,
+    int? morningTone,
+    int? eveningTone,
+  }) : tone = morningTone ?? tone,
+       eveningTone = eveningTone ?? tone;
 }
 
 /// Загрузчик канонов — чтобы правило можно было собрать в тесте без сети.
@@ -103,6 +109,7 @@ String midnightTitle(int weekday) => weekday == DateTime.sunday
 
 Future<RuleDayData> loadRuleDay({
   DateTime? now,
+  DateTime? eveningDate,
   CanonsLoader canons = getCanons,
   Future<CalendarDay> Function(String date)? dayLoader,
   Future<int?> Function(DateTime date)? toneLoader,
@@ -111,15 +118,22 @@ Future<RuleDayData> loadRuleDay({
 }) async {
   final at = now ?? DateTime.now();
   final needsMorningCanon = morningOffice && at.weekday == DateTime.sunday;
-  int? tone;
-  if (needsMorningCanon || eveningOffice) {
+  final eveningAt = eveningDate ?? at;
+  Future<int?> readTone(DateTime date) async {
     try {
-      tone = await (toneLoader ?? getOrdoTone)(at);
+      return await (toneLoader ?? getOrdoTone)(date);
     } catch (_) {
-      /* Глас не угадан при отказе сервера. */
+      return null;
     }
   }
-  Future<Canon?> choose(String service) async {
+
+  final morningTone = needsMorningCanon ? await readTone(at) : null;
+  final eveningTone = eveningOffice
+      ? (dayKey(eveningAt) == dayKey(at) && needsMorningCanon
+            ? morningTone
+            : await readTone(eveningAt))
+      : null;
+  Future<Canon?> choose(String service, DateTime date, int? tone) async {
     if (tone == null) return null;
     var offset = 0;
     while (true) {
@@ -132,7 +146,7 @@ Future<RuleDayData> loadRuleDay({
         if ((canon.language == null ||
                 canon.language == 'cu' ||
                 canon.language == 'cu_gr') &&
-            canon.weekday == canonWeekdayCode(at.weekday) &&
+            canon.weekday == canonWeekdayCode(date.weekday) &&
             (canon.memoryTone ?? canon.tone) == tone) {
           return canon;
         }
@@ -143,10 +157,14 @@ Future<RuleDayData> loadRuleDay({
   }
 
   final morning = needsMorningCanon
-      ? choose('midnight').catchError((Object _) => null)
+      ? choose('midnight', at, morningTone).catchError((Object _) => null)
       : Future<Canon?>.value();
   final evening = eveningOffice
-      ? choose('compline').catchError((Object _) => null)
+      ? choose(
+          'compline',
+          eveningAt,
+          eveningTone,
+        ).catchError((Object _) => null)
       : Future<Canon?>.value();
   CalendarDayPartItem? gospel;
   try {
@@ -166,7 +184,8 @@ Future<RuleDayData> loadRuleDay({
     morningCanon: await morning,
     eveningCanon: await evening,
     gospel: gospel,
-    tone: tone,
+    morningTone: morningTone,
+    eveningTone: eveningTone,
   );
 }
 
@@ -205,15 +224,84 @@ class RulePage extends StatefulWidget {
   /// Подменяется тестами; в приложении — `loadRuleDay`.
   final Future<RuleDayData> Function()? loader;
   final DateTime? date;
+  final DateTime Function()? now;
 
-  const RulePage(BuildContext? context, {super.key, this.loader, this.date});
+  const RulePage(
+    BuildContext? context, {
+    super.key,
+    this.loader,
+    this.date,
+    this.now,
+  });
 
   @override
   State<RulePage> createState() => _RulePageState();
 }
 
-class _RulePageState extends State<RulePage> {
-  late final DateTime _now;
+class _RulePageState extends State<RulePage>
+    with WidgetsBindingObserver, RouteAware {
+  late RuleCycle _cycle;
+  Timer? _resetTimer;
+  PageRoute<dynamic>? _route;
+  DateTime get _now => _cycle.morning;
+  DateTime _clock() => widget.now?.call() ?? widget.date ?? DateTime.now();
+
+  void _scheduleReset() {
+    _resetTimer?.cancel();
+    final now = _clock();
+    _resetTimer = Timer(
+      RuleCycle.at(now).nextReset.difference(now),
+      _syncCycle,
+    );
+  }
+
+  void _syncCycle({bool reloadPrefs = true}) {
+    if (!mounted) return;
+    final next = RuleCycle.at(_clock());
+    final changed = next.key != _cycle.key;
+    if (changed) {
+      setState(() {
+        _cycle = next;
+        _marks = {};
+        _currentSections = [];
+        _load();
+      });
+    }
+    if (changed || reloadPrefs) unawaited(_loadPrefs());
+    _scheduleReset();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic> && route != _route) {
+      routeObserver.unsubscribe(this);
+      _route = route;
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() => _syncCycle();
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _syncCycle();
+    } else {
+      _resetTimer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _resetTimer?.cancel();
+    routeObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   bool _morningOffice = false;
   bool _eveningOffice = false;
   late Future<RuleDayData> _data;
@@ -224,6 +312,7 @@ class _RulePageState extends State<RulePage> {
 
   /// Отметки «прочитано» по id секции.
   Map<String, bool> _marks = const <String, bool>{};
+  int _marksRevision = 0;
 
   /// Секции последнего построения: тоглу прогресса нужен их состав, и просить
   /// его заново у `FutureBuilder` неоткуда.
@@ -232,7 +321,9 @@ class _RulePageState extends State<RulePage> {
   @override
   void initState() {
     super.initState();
-    _now = widget.date ?? DateTime.now();
+    _cycle = RuleCycle.at(_clock());
+    WidgetsBinding.instance.addObserver(this);
+    _scheduleReset();
     _load();
     _loadPrefs();
   }
@@ -242,31 +333,37 @@ class _RulePageState extends State<RulePage> {
         widget.loader?.call() ??
         loadRuleDay(
           now: _now,
+          eveningDate: _cycle.evening,
           morningOffice: _morningOffice,
           eveningOffice: _eveningOffice,
         );
   }
 
   Future<void> _refresh() {
+    _syncCycle();
     setState(_load);
     return settle(_data);
   }
 
   Future<void> _loadPrefs() async {
+    final cycle = _cycle;
+    final marksRevision = _marksRevision;
     final results = await Future.wait<Object>(<Future<Object>>[
       ruleGender(),
       ruleReminderEnabled(ruleRemindMorningKey),
       ruleReminderEnabled(ruleRemindEveningKey),
-      marksWithPrefix("rule_done:${dayKey(_now)}:"),
+      ruleCycleMarks(cycle),
       ruleUsesHorologion(true),
       ruleUsesHorologion(false),
     ]);
-    if (!mounted) return;
+    if (!mounted || cycle.key != _cycle.key) return;
     setState(() {
       _gender = results[0] as String;
       _remindMorning = results[1] as bool;
       _remindEvening = results[2] as bool;
-      _marks = results[3] as Map<String, bool>;
+      if (marksRevision == _marksRevision) {
+        _marks = results[3] as Map<String, bool>;
+      }
       _morningOffice = results[4] as bool;
       _eveningOffice = results[5] as bool;
       if (widget.loader == null && (_morningOffice || _eveningOffice)) _load();
@@ -393,15 +490,15 @@ class _RulePageState extends State<RulePage> {
           id: 'compline',
           title: 'Повечерие с каноном',
           evening: true,
-          subtitle: data.tone == null
+          subtitle: data.eveningTone == null
               ? 'Глас не определён'
-              : 'Глас ${data.tone}',
+              : 'Глас ${data.eveningTone}',
           route: '/rule/office',
           arguments: RuleOfficeTarget(
             textId: complineTextId,
             title: 'Повечерие с каноном',
             canonId: data.eveningCanon?.id,
-            tone: data.tone,
+            tone: data.eveningTone,
             needsCanon: true,
           ),
         ),
@@ -409,9 +506,12 @@ class _RulePageState extends State<RulePage> {
   }
 
   Future<void> _toggle(_Section section, bool done) async {
-    final date = dayKey(_now);
-    await setRuleSectionDone(date, section.id, done);
-    if (!mounted) return;
+    final cycle = _cycle;
+    _syncCycle(reloadPrefs: false);
+    if (cycle.key != _cycle.key) return;
+    _marksRevision++;
+    await setRuleCycleSectionDone(cycle, section.id, done);
+    if (!mounted || cycle.key != _cycle.key) return;
     setState(() => _marks = <String, bool>{..._marks, section.id: done});
     final total = _currentSections.length;
     final doneCount = _currentSections
@@ -420,11 +520,13 @@ class _RulePageState extends State<RulePage> {
     // 1.0 — край: стор сам стирает запись, и имя в «продолжить чтение» не
     // горит. Так и надо: день закрыт галочками, а не дочитан наполовину.
     unawaited(
-      saveReadingProgress(
-        "rule:$date",
-        total == 0 ? 0 : doneCount / total,
-        name: "Молитвенное правило",
-      ),
+      doneCount == 0
+          ? clearReadingProgress(cycle.progressId)
+          : saveReadingProgress(
+              cycle.progressId,
+              total == 0 ? 0 : doneCount / total,
+              name: "Молитвенное правило",
+            ),
     );
   }
 
@@ -485,13 +587,20 @@ class _RulePageState extends State<RulePage> {
             ],
           ),
         ),
-        const _GroupHeader("Утро"),
-        _sourceChoice(true),
-        for (final section in sections.where((s) => !s.evening))
-          _sectionTile(section),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            'Вечер ${dayLabel(_cycle.evening)} — утро ${dayLabel(_cycle.morning)}. '
+            'Новое правило каждый день в 15:00.',
+          ),
+        ),
         const _GroupHeader("Вечер"),
         _sourceChoice(false),
         for (final section in sections.where((s) => s.evening))
+          _sectionTile(section),
+        const _GroupHeader("Утро"),
+        _sourceChoice(true),
+        for (final section in sections.where((s) => !s.evening))
           _sectionTile(section),
         const Divider(height: 1),
         SwitchListTile(

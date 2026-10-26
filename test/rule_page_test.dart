@@ -123,6 +123,64 @@ void main() {
     },
   );
 
+  test(
+    'цикл подбирает субботнее повечерие и воскресную полунощницу по разным датам и гласам',
+    () async {
+      const saturday = Canon(
+        id: 'saturday',
+        memory: 'Богородице',
+        service: 'compline',
+        book: 'octoechos',
+        weekday: 'subbota',
+        memoryTone: 2,
+        language: 'cu',
+      );
+      final dates = <DateTime>[];
+      String? gospelDate;
+      final result = await loadRuleDay(
+        now: DateTime(2026, 10, 25),
+        eveningDate: DateTime(2026, 10, 24),
+        morningOffice: true,
+        eveningOffice: true,
+        toneLoader: (date) async {
+          dates.add(date);
+          return date.day == 24 ? 2 : 3;
+        },
+        canons: ({query, offset = 0, book, tone, service, role}) async =>
+            page(service == 'midnight' ? [midnight] : [saturday]),
+        dayLoader: (date) async {
+          gospelDate = date;
+          throw StateError('no gospel');
+        },
+      );
+      expect(result.morningCanon?.id, midnight.id);
+      expect(result.eveningCanon?.id, saturday.id);
+      expect(result.tone, 3);
+      expect(result.eveningTone, 2);
+      expect(dates, [DateTime(2026, 10, 25), DateTime(2026, 10, 24)]);
+      expect(gospelDate, '2026-10-25');
+    },
+  );
+
+  test(
+    'отказ гласа вечернего дня не подменяется гласом следующего утра',
+    () async {
+      final result = await loadRuleDay(
+        now: DateTime(2026, 10, 25),
+        eveningDate: DateTime(2026, 10, 24),
+        morningOffice: true,
+        eveningOffice: true,
+        toneLoader: (date) async => date.day == 24 ? null : 3,
+        canons: ({query, offset = 0, book, tone, service, role}) async =>
+            page([midnight]),
+        dayLoader: (_) async => throw StateError('no gospel'),
+      );
+      expect(result.morningCanon?.id, midnight.id);
+      expect(result.eveningCanon, isNull);
+      expect(result.eveningTone, isNull);
+    },
+  );
+
   Future<void> pump(
     WidgetTester tester, {
     DateTime? date,
