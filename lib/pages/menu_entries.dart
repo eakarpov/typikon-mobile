@@ -147,21 +147,21 @@ const List<MenuSection> drawerSections = <MenuSection>[
   MenuSection(
     entries: <MenuEntry>[
       MenuEntry("Главная страница", "/"),
-      MenuEntry("Чтения на календарный день", "/months"),
-      MenuEntry("Памяти на день", "/day-saints"),
       MenuEntry("Калькулятор чтений на день", "/calculator"),
+      MenuEntry("Памяти на день", "/day-saints"),
     ],
   ),
   MenuSection(
-    title: "Круг года",
+    title: "Уставные чтения",
     entries: <MenuEntry>[
       MenuEntry("Триодион", "/triodion"),
       MenuEntry("Пятидесятница", "/penticostarion"),
       MenuEntry("Вне триодного цикла", "/outside"),
+      MenuEntry("Чтения на календарный день", "/months"),
     ],
   ),
   MenuSection(
-    title: "Тексты",
+    title: "Коллекции",
     entries: <MenuEntry>[
       MenuEntry("Собрание", corpusRoute),
       MenuEntry("Пособия", handbookRoute),
