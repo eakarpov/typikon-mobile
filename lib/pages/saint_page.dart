@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:typikon/components/dossier.dart';
+import '../components/saint_icons.dart';
+import '../dto/dneslov/images.dart';
 import 'package:typikon/components/reading_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -23,6 +25,7 @@ class SaintPage extends StatefulWidget {
     required this.id,
     this.loadDossier = getSaintDossier,
     this.loadLife = getSaintLife,
+    this.loadIcons = getSaintIcons,
   });
 
   /// Запись каталога. Подменяется тестом, чтобы показать страницу без сети.
@@ -30,6 +33,7 @@ class SaintPage extends StatefulWidget {
 
   /// Житие. Подменяется тестом.
   final Future<SaintLife> Function(String address) loadLife;
+  final Future<DneslovImageListD> Function(SaintDossier) loadIcons;
 
   @override
   State<SaintPage> createState() => _SaintPageState();
@@ -58,19 +62,41 @@ class _SaintPageState extends State<SaintPage> {
     _lifeError = null;
     _lifeLoading = true;
 
-    widget.loadDossier(widget.id).then((value) {
-      if (mounted) setState(() { _dossier = value; _dossierLoading = false; });
-    }).catchError((Object error) {
-      if (mounted) setState(() { _dossierError = error; _dossierLoading = false; });
-    });
+    widget
+        .loadDossier(widget.id)
+        .then((value) {
+          if (mounted)
+            setState(() {
+              _dossier = value;
+              _dossierLoading = false;
+            });
+        })
+        .catchError((Object error) {
+          if (mounted)
+            setState(() {
+              _dossierError = error;
+              _dossierLoading = false;
+            });
+        });
 
     // Житие идёт своим запросом и своей веткой состояния. Адрес резолвит
     // сервер — досье дожидаться не нужно.
-    widget.loadLife(widget.id).then((value) {
-      if (mounted) setState(() { _life = value; _lifeLoading = false; });
-    }).catchError((Object error) {
-      if (mounted) setState(() { _lifeError = error; _lifeLoading = false; });
-    });
+    widget
+        .loadLife(widget.id)
+        .then((value) {
+          if (mounted)
+            setState(() {
+              _life = value;
+              _lifeLoading = false;
+            });
+        })
+        .catchError((Object error) {
+          if (mounted)
+            setState(() {
+              _lifeError = error;
+              _lifeLoading = false;
+            });
+        });
   }
 
   void _retry() => setState(_load);
@@ -84,19 +110,23 @@ class _SaintPageState extends State<SaintPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: links
-              .map((link) => Padding(
-                    padding: const EdgeInsets.all(5.0),
-                    child: InkWell(
-                      onTap: () => launchUrl(
-                        Uri.parse(link.url),
-                        mode: LaunchMode.externalApplication,
-                      ),
-                      child: Text(
-                        link.url,
-                        style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              .map(
+                (link) => Padding(
+                  padding: const EdgeInsets.all(5.0),
+                  child: InkWell(
+                    onTap: () => launchUrl(
+                      Uri.parse(link.url),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    child: Text(
+                      link.url,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                  ))
+                  ),
+                ),
+              )
               .toList(),
         ),
       ),
@@ -118,7 +148,7 @@ class _SaintPageState extends State<SaintPage> {
     final links = life?.links ?? const <SaintLifeLink>[];
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Text(
@@ -148,6 +178,7 @@ class _SaintPageState extends State<SaintPage> {
               Tab(text: "Житие"),
               Tab(text: "Память"),
               Tab(text: "Тексты"),
+              Tab(text: "Иконы"),
             ],
           ),
         ),
@@ -158,6 +189,9 @@ class _SaintPageState extends State<SaintPage> {
               _lifeTab(),
               _dossierTab(_memoryTab),
               _dossierTab(_textsTab),
+              _dossierTab(
+                (saint) => SaintIcons(saint: saint, loader: widget.loadIcons),
+              ),
             ],
           ),
         ),
@@ -173,12 +207,17 @@ class _SaintPageState extends State<SaintPage> {
     if (_lifeError != null) {
       // errorViewFor различает честный отказ («житие не связано с каталогом» —
       // кнопки «Повторить» нет, говорит сам сервер) и обрыв сети.
-      return errorViewFor(context, _lifeError, "Не удалось загрузить житие.", _retry);
+      return errorViewFor(
+        context,
+        _lifeError,
+        "Не удалось загрузить житие.",
+        _retry,
+      );
     }
 
     final life = _life!;
     if (!life.hasText) {
-      return const _Quiet("Жития у этой памяти нет.");
+      return const _Quiet("В Днеслове нет текста жития для этой записи.");
     }
 
     // Настройки чтения, а не только шрифт: размер, цвет и интервал житие
@@ -189,7 +228,8 @@ class _SaintPageState extends State<SaintPage> {
   // --- Наша запись --------------------------------------------------------
 
   Widget _dossierTab(Widget Function(SaintDossier) build) {
-    if (_dossierLoading) return const Center(child: CircularProgressIndicator());
+    if (_dossierLoading)
+      return const Center(child: CircularProgressIndicator());
 
     if (_dossierError != null) {
       return ApiErrorView(
@@ -213,13 +253,15 @@ class _SaintPageState extends State<SaintPage> {
           DossierSection(
             title: "Дни памяти",
             children: saint.memoryDates
-                .map((date) => DossierLine(
-                      title: date.civil,
-                      subtitle: [
-                        date.julian,
-                        if ((date.note ?? "").isNotEmpty) date.note!,
-                      ].join(" — "),
-                    ))
+                .map(
+                  (date) => DossierLine(
+                    title: date.civil,
+                    subtitle: [
+                      date.julian,
+                      if ((date.note ?? "").isNotEmpty) date.note!,
+                    ].join(" — "),
+                  ),
+                )
                 .toList(),
           ),
         if (saint.memories.isNotEmpty)
@@ -243,32 +285,46 @@ class _SaintPageState extends State<SaintPage> {
           DossierSection(
             title: "Акафисты",
             children: akathists
-                .map((akathist) => DossierLine(
-                      title: akathist.title ?? akathist.memory ?? "Акафист",
-                      subtitle: akathist.stanzas == null ? "" : "икосов и кондаков: ${akathist.stanzas}",
-                      // Вероятнее всего, это и будет главным входом в раздел:
-                      // акафист ищут по святому, а не по перечню из тысячи.
-                      onTap: (akathist.id ?? "").isEmpty
-                          ? null
-                          : () => Navigator.pushNamed(context, "/akathists",
-                              arguments: akathist.id),
-                    ))
+                .map(
+                  (akathist) => DossierLine(
+                    title: akathist.title ?? akathist.memory ?? "Акафист",
+                    subtitle: akathist.stanzas == null
+                        ? ""
+                        : "икосов и кондаков: ${akathist.stanzas}",
+                    // Вероятнее всего, это и будет главным входом в раздел:
+                    // акафист ищут по святому, а не по перечню из тысячи.
+                    onTap: (akathist.id ?? "").isEmpty
+                        ? null
+                        : () => Navigator.pushNamed(
+                            context,
+                            "/akathists",
+                            arguments: akathist.id,
+                          ),
+                  ),
+                )
                 .toList(),
           ),
         if (saint.dedications.isNotEmpty)
           DossierSection(
             title: "Храмы",
             children: saint.dedications
-                .map((dedication) => DossierLine(
-                      title: dedication.name,
-                      subtitle: _temples(dedication.count),
-                    ))
+                .map(
+                  (dedication) => DossierLine(
+                    title: dedication.name,
+                    subtitle: _temples(dedication.count),
+                  ),
+                )
                 .toList(),
           ),
         if (saint.noble != null)
           DossierSection(
             title: "Родословная",
-            children: [DossierLine(title: saint.noble!.name ?? "Есть запись в родословной", subtitle: "")],
+            children: [
+              DossierLine(
+                title: saint.noble!.name ?? "Есть запись в родословной",
+                subtitle: "",
+              ),
+            ],
           ),
         if ((saint.caveat ?? "").isNotEmpty)
           Padding(
@@ -304,7 +360,8 @@ class _SaintPageState extends State<SaintPage> {
                 height: 56.0,
                 fit: BoxFit.cover,
                 // Образ с чужого сайта: не загрузился — просто нет образа.
-                errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+                errorBuilder: (context, error, stack) =>
+                    const SizedBox.shrink(),
               ),
             ),
             const SizedBox(width: 12.0),
@@ -315,7 +372,10 @@ class _SaintPageState extends State<SaintPage> {
               children: [
                 Text(
                   saint.name,
-                  style: const TextStyle(fontFamily: "OldStandard", fontSize: 18.0),
+                  style: const TextStyle(
+                    fontFamily: "OldStandard",
+                    fontSize: 18.0,
+                  ),
                 ),
                 if (about.isNotEmpty)
                   Padding(
@@ -330,10 +390,9 @@ class _SaintPageState extends State<SaintPage> {
                     padding: const EdgeInsets.only(top: 4.0),
                     child: Text(
                       saint.altNames.join(", "),
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(fontFamily: "OldStandard"),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontFamily: "OldStandard",
+                      ),
                     ),
                   ),
               ],
@@ -353,9 +412,15 @@ class _SaintPageState extends State<SaintPage> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       children: [
         if (saint.texts.isNotEmpty)
-          DossierSection(title: "Служба", children: saint.texts.map(_text).toList()),
+          DossierSection(
+            title: "Служба",
+            children: saint.texts.map(_text).toList(),
+          ),
         if (saint.mentions.isNotEmpty)
-          DossierSection(title: "Упоминания", children: saint.mentions.map(_text).toList()),
+          DossierSection(
+            title: "Упоминания",
+            children: saint.mentions.map(_text).toList(),
+          ),
       ],
     );
   }
@@ -382,8 +447,6 @@ String _temples(int count) {
   if (ten >= 2 && ten <= 4) return "$count храма";
   return "$count храмов";
 }
-
-
 
 /// Пустой раздел словами. Пустой экран читатель прочтёт как незагрузившийся.
 class _Quiet extends StatelessWidget {

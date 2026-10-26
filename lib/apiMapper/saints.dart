@@ -1,3 +1,5 @@
+import '../dto/dneslov/images.dart';
+import 'dneslov/images.dart';
 import 'dart:convert';
 
 import 'package:typikon/api/saints.dart';
@@ -32,4 +34,32 @@ Future<SaintLife> getSaintLife(String address) async {
     return SaintLife.fromJson(jsonDecode(response.body));
   }
   throwV2Error(response, "Не удалось загрузить житие");
+}
+
+/// Reuse the Prologue image source; prefer the server's saved CDN list.
+Future<DneslovImageListD> getSaintIcons(
+  SaintDossier dossier, {
+  Future<DneslovImageListD> Function(String)? fetch,
+}) async {
+  if (dossier.images.isNotEmpty) return DneslovImageListD(list: dossier.images);
+  final ids = {
+    ...dossier.dneslovIds,
+    if (dossier.externals['dneslov'] != null) dossier.externals['dneslov']!,
+  };
+  if (ids.isEmpty) return const DneslovImageListD(list: []);
+  final images = <DneslovImageDItem>[];
+  var succeeded = false;
+  Object? error;
+  // Do not flood the source when several memories refer to the same saint.
+  for (final id in ids) {
+    try {
+      images.addAll((await (fetch ?? fetchDneslovImagesD)(id)).list);
+      succeeded = true;
+    } catch (e) {
+      error = e;
+    }
+  }
+  if ((!succeeded || images.isEmpty) && error != null) throw error;
+  final seen = <String>{};
+  return DneslovImageListD(list: images.where((i) => seen.add(i.url)).toList());
 }

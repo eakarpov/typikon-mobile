@@ -7,4 +7,4 @@
 // обновиться на себя же; в большую — не заметит настоящего обновления.
 const int majorVersion = 2;
 const int minorVersion = 3;
-const int patchVersion = 3;
+const int patchVersion = 4;

@@ -1,3 +1,5 @@
+import 'dneslov/images.dart';
+
 // Досье святого и его житие — две разные вещи из двух разных ручек.
 //
 // SaintDossier — наша запись каталога: имя, чины, дни памяти, службы, тексты.
@@ -15,10 +17,8 @@ class SaintLifeLink {
 
   const SaintLifeLink({required this.id, required this.url});
 
-  factory SaintLifeLink.fromJson(Map<String, dynamic> json) => SaintLifeLink(
-        id: json["id"] ?? 0,
-        url: json["url"] ?? "",
-      );
+  factory SaintLifeLink.fromJson(Map<String, dynamic> json) =>
+      SaintLifeLink(id: json["id"] ?? 0, url: json["url"] ?? "");
 }
 
 /// Одна память из жития. Описание у памяти может отсутствовать: сервер такие
@@ -37,10 +37,10 @@ class SaintLifeMemo {
   });
 
   factory SaintLifeMemo.fromJson(Map<String, dynamic> json) => SaintLifeMemo(
-        title: json["title"] ?? "",
-        happenedAt: json["happenedAt"],
-        description: json["description"] ?? "",
-      );
+    title: json["title"] ?? "",
+    happenedAt: json["happenedAt"],
+    description: json["description"] ?? "",
+  );
 }
 
 class SaintLife {
@@ -61,7 +61,8 @@ class SaintLife {
     this.links = const [],
   });
 
-  SaintLifeMemo? get memo => memoes.isEmpty ? null : memoes.first;
+  SaintLifeMemo? get memo =>
+      memoes.where((m) => m.description.trim().isNotEmpty).firstOrNull;
 
   bool get hasText => (memo?.description ?? "").trim().isNotEmpty;
 
@@ -87,9 +88,9 @@ class SaintOrder {
   const SaintOrder({required this.code, required this.label});
 
   factory SaintOrder.fromJson(Map<String, dynamic> json) => SaintOrder(
-        code: json["code"] ?? "",
-        label: json["label"] ?? json["code"] ?? "",
-      );
+    code: json["code"] ?? "",
+    label: json["label"] ?? json["code"] ?? "",
+  );
 }
 
 /// День памяти, разложенный в гражданский календарь.
@@ -120,7 +121,8 @@ class SaintMemoryDate {
     this.note,
   });
 
-  factory SaintMemoryDate.fromJson(Map<String, dynamic> json) => SaintMemoryDate(
+  factory SaintMemoryDate.fromJson(Map<String, dynamic> json) =>
+      SaintMemoryDate(
         raw: json["raw"] ?? "",
         julian: json["julian"] ?? "",
         civil: json["civil"] ?? "",
@@ -149,11 +151,11 @@ class SaintMemory {
   });
 
   factory SaintMemory.fromJson(Map<String, dynamic> json) => SaintMemory(
-        memoryId: json["memoryId"] ?? "",
-        label: json["label"] ?? "",
-        address: json["address"],
-        sign: json["sign"],
-      );
+    memoryId: json["memoryId"] ?? "",
+    label: json["label"] ?? "",
+    address: json["address"],
+    sign: json["sign"],
+  );
 }
 
 /// Текст корпуса в перечне — без содержимого.
@@ -175,11 +177,11 @@ class SaintText {
   });
 
   factory SaintText.fromJson(Map<String, dynamic> json) => SaintText(
-        id: json["id"] ?? "",
-        name: json["name"] ?? "",
-        description: json["description"],
-        author: json["author"],
-      );
+    id: json["id"] ?? "",
+    name: json["name"] ?? "",
+    description: json["description"],
+    author: json["author"],
+  );
 }
 
 class SaintAkathist {
@@ -191,11 +193,11 @@ class SaintAkathist {
   const SaintAkathist({this.id, this.title, this.memory, this.stanzas});
 
   factory SaintAkathist.fromJson(Map<String, dynamic> json) => SaintAkathist(
-        id: json["id"]?.toString(),
-        title: json["title"],
-        memory: json["memory"],
-        stanzas: json["stanzas"] is int ? json["stanzas"] : null,
-      );
+    id: json["id"]?.toString(),
+    title: json["title"],
+    memory: json["memory"],
+    stanzas: json["stanzas"] is int ? json["stanzas"] : null,
+  );
 }
 
 class SaintDedication {
@@ -215,7 +217,8 @@ class SaintDedication {
 
   String get name => (short ?? "").isNotEmpty ? short! : (label ?? slug);
 
-  factory SaintDedication.fromJson(Map<String, dynamic> json) => SaintDedication(
+  factory SaintDedication.fromJson(Map<String, dynamic> json) =>
+      SaintDedication(
         slug: json["slug"] ?? "",
         short: json["short"],
         label: json["label"],
@@ -229,10 +232,8 @@ class SaintNoble {
 
   const SaintNoble({required this.id, this.name});
 
-  factory SaintNoble.fromJson(Map<String, dynamic> json) => SaintNoble(
-        id: json["id"]?.toString() ?? "",
-        name: json["name"],
-      );
+  factory SaintNoble.fromJson(Map<String, dynamic> json) =>
+      SaintNoble(id: json["id"]?.toString() ?? "", name: json["name"]);
 }
 
 class SaintDossier {
@@ -255,10 +256,10 @@ class SaintDossier {
 
   final List<SaintMemoryDate> memoryDates;
 
-  /// Оплечный образ. Прочие изображения записи (`images`) не берём: их до
-  /// десятка на святого, они с чужого сайта и на странице им места нет — а
-  /// разобрать поле значило бы пообещать, что мы его когда-то покажем.
+  /// Оплечный образ для заголовка карточки.
   final String? roundelUrl;
+  final List<DneslovImageDItem> images;
+  final List<String> dneslovIds;
 
   /// Внешние ключи. Номеров святцев у одного лица бывает несколько: календарь
   /// разводит порознь мирское и монашеское имя, лицо и перенесение мощей.
@@ -291,6 +292,8 @@ class SaintDossier {
     this.baseYearLabel,
     this.memoryDates = const [],
     this.roundelUrl,
+    this.images = const [],
+    this.dneslovIds = const [],
     this.externals = const {},
     this.memories = const [],
     this.texts = const [],
@@ -303,8 +306,12 @@ class SaintDossier {
 
   bool get akathistsUnknown => akathists == null;
 
-  static List<T> _list<T>(dynamic raw, T Function(Map<String, dynamic>) parse) =>
-      raw is List ? raw.map((item) => parse(item as Map<String, dynamic>)).toList() : <T>[];
+  static List<T> _list<T>(
+    dynamic raw,
+    T Function(Map<String, dynamic>) parse,
+  ) => raw is List
+      ? raw.map((item) => parse(item as Map<String, dynamic>)).toList()
+      : <T>[];
 
   factory SaintDossier.fromJson(Map<String, dynamic> json) {
     final externals = <String, String>{};
@@ -312,7 +319,9 @@ class SaintDossier {
       for (final item in json["externals"] as List) {
         final source = item["source"];
         final id = item["id"];
-        if (source is String && id != null) externals.putIfAbsent(source, () => id.toString());
+        if (source is String && id != null) {
+          externals.putIfAbsent(source, () => id.toString());
+        }
       }
     }
 
@@ -321,17 +330,30 @@ class SaintDossier {
     return SaintDossier(
       slug: json["slug"],
       name: json["name"] ?? "",
-      altNames: json["altNames"] is List ? List<String>.from(json["altNames"]) : const [],
+      altNames: json["altNames"] is List
+          ? List<String>.from(json["altNames"])
+          : const [],
       kindLabel: json["kindLabel"],
       orders: _list(json["orders"], SaintOrder.fromJson),
       baseYearLabel: json["baseYearLabel"],
       memoryDates: _list(json["memoryDates"], SaintMemoryDate.fromJson),
       roundelUrl: json["roundelUrl"],
       externals: externals,
+      dneslovIds: json['externals'] is List
+          ? (json['externals'] as List)
+                .whereType<Map>()
+                .where((r) => r['source'] == 'dneslov' && r['id'] != null)
+                .map((r) => r['id'].toString())
+                .toSet()
+                .toList()
+          : const [],
+      images: DneslovImageListD.fromJson(json['images'] ?? const []).list,
       memories: _list(json["memories"], SaintMemory.fromJson),
       texts: _list(json["texts"], SaintText.fromJson),
       mentions: _list(json["mentions"], SaintText.fromJson),
-      akathists: akathists == null ? null : _list(akathists, SaintAkathist.fromJson),
+      akathists: akathists == null
+          ? null
+          : _list(akathists, SaintAkathist.fromJson),
       dedications: _list(json["dedications"], SaintDedication.fromJson),
       noble: json["noble"] is Map ? SaintNoble.fromJson(json["noble"]) : null,
       caveat: json["caveat"],
