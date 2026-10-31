@@ -21,6 +21,7 @@ import "api/constants.dart";
 import "api/http_cache_version.dart";
 import "utils/app_version.dart";
 import "utils/day_reading_reminders.dart";
+import "utils/reading_plan_notifications.dart";
 import "utils/push.dart";
 import "utils/crash_reporter.dart";
 import "utils/rule_reminders.dart";
@@ -45,20 +46,21 @@ const String newTextPayloadPrefix = "newText:";
 const String pomyannikPayloadPrefix = "pomyannik:";
 const String _lastSeenTextIdKey = "last_seen_text_id";
 
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 // Нужен, чтобы открыть текст по тапу на уведомление о новом тексте —
 // колбэк стрима вне дерева виджетов, без своего BuildContext.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-
 /// Streams are created so that app can respond to notification-related events
 /// since the plugin is initialised in the `main` function
 final StreamController<ReceivedNotification> didReceiveLocalNotificationStream =
-StreamController<ReceivedNotification>.broadcast();
+    StreamController<ReceivedNotification>.broadcast();
 
+String? _initialPlanNotification;
 final StreamController<String?> selectNotificationStream =
-StreamController<String?>.broadcast();
+    StreamController<String?>.broadcast();
 
 class ReceivedNotification {
   ReceivedNotification({
@@ -86,30 +88,34 @@ Future<void> main() async {
   var IOS = new DarwinInitializationSettings();
 
   // initialise settings for both Android and iOS device.
-  var settings = new InitializationSettings(
-    android: android,
-    iOS: IOS,
-  );
+  var settings = new InitializationSettings(android: android, iOS: IOS);
   // Ни один из шагов ниже не стоит пустого экрана: сорвался — приложение
   // открывается без него, а сбой уезжает в отчёт о падениях.
   try {
     await flutterLocalNotificationsPlugin.initialize(
       settings,
-      onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) {
-        switch (notificationResponse.notificationResponseType) {
-          case NotificationResponseType.selectedNotification:
-            selectNotificationStream.add(notificationResponse.payload);
-            break;
-          case NotificationResponseType.selectedNotificationAction:
-            if (notificationResponse.actionId == navigationActionId) {
-              selectNotificationStream.add(notificationResponse.payload);
+      onDidReceiveNotificationResponse:
+          (NotificationResponse notificationResponse) {
+            switch (notificationResponse.notificationResponseType) {
+              case NotificationResponseType.selectedNotification:
+                selectNotificationStream.add(notificationResponse.payload);
+                break;
+              case NotificationResponseType.selectedNotificationAction:
+                if (notificationResponse.actionId == navigationActionId) {
+                  selectNotificationStream.add(notificationResponse.payload);
+                }
+                break;
             }
-            break;
-        }
-      },
+          },
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
     _notificationsReady = true;
+    final launch = await flutterLocalNotificationsPlugin
+        .getNotificationAppLaunchDetails();
+    final payload = launch?.notificationResponse?.payload;
+    if (launch?.didNotificationLaunchApp == true &&
+        payload?.startsWith('reading-plan:') == true)
+      _initialPlanNotification = payload;
   } catch (error, stack) {
     unawaited(reportCrash(error, stack, context: "запуск: уведомления"));
   }
@@ -143,7 +149,9 @@ Future<void> main() async {
   // никогда. Без Firebase не трогаем ничего: `FirebaseMessaging.instance` без
   // поднятого приложения бросает, и до `runApp` дело бы не дошло.
   if (pushReady) {
-    unawaited(refreshPushRegistration(wanted: store.state.settings.remindsFromServer));
+    unawaited(
+      refreshPushRegistration(wanted: store.state.settings.remindsFromServer),
+    );
     watchPushToken(wanted: () => store.state.settings.remindsFromServer);
   }
 
@@ -200,7 +208,9 @@ Future<void> _ensureNotificationsReady() async {
 /// втором, и тому, кто не выгружает приложение, не приходили вовсе.
 ///
 /// Каждая проверка отдельно: сорвавшаяся не должна отменять следующие.
-Future<void> _runBackgroundChecks({Future<void> Function()? beforePomyannik}) async {
+Future<void> _runBackgroundChecks({
+  Future<void> Function()? beforePomyannik,
+}) async {
   final checks = <Future<void> Function()>[
     () => _checkVersionAndNotify(""),
     _checkNewTextsAndNotify,
@@ -233,13 +243,43 @@ Future<void> _runBackgroundChecks({Future<void> Function()? beforePomyannik}) as
 @pragma('vm:entry-point')
 Future<void> pushHandler(RemoteMessage message) async {
   final kind = message.data["kind"];
-  if (kind != "pomyannik" && kind != "reading") return;
+  if (kind != "pomyannik" && kind != "reading" && kind != "reading-plan")
+    return;
 
   // Фоновый обработчик поднимается в своей изоляции: ни магазина состояния, ни
   // подключённых плагинов в ней нет, и уведомления надо поднять заново.
   await Firebase.initializeApp();
   await _ensureNotificationsReady();
 
+  if (kind == 'reading-plan') {
+    try {
+      if (!dotenv.isInitialized) await dotenv.load(fileName: '.env');
+      await checkReadingPlanPush(
+        message.data['deliveryId'] ?? '',
+        show: (notice) async {
+          await flutterLocalNotificationsPlugin.show(
+            902,
+            'Личный план чтения',
+            notice.body,
+            const NotificationDetails(
+              android: AndroidNotificationDetails(
+                'readingPlanChannelId',
+                'Личный план чтения',
+                channelDescription: 'Напоминания о личном плане чтения',
+                importance: Importance.defaultImportance,
+                priority: Priority.defaultPriority,
+              ),
+              iOS: DarwinNotificationDetails(presentSound: false),
+            ),
+            payload: notice.payload,
+          );
+        },
+      );
+    } catch (_) {
+      /* Do not display stale or unauthenticated reminders. */
+    }
+    return;
+  }
   if (kind == "pomyannik") {
     await _checkPomyannikAndNotify();
   } else {
@@ -248,7 +288,9 @@ Future<void> pushHandler(RemoteMessage message) async {
 }
 
 @pragma('vm:entry-point')
-void notificationTapBackground(NotificationResponse notificationResponse) async {
+void notificationTapBackground(
+  NotificationResponse notificationResponse,
+) async {
   // ignore: avoid_print
   // print('notification(${notificationResponse.id}) action tapped: '
   //     '${notificationResponse.actionId} with'
@@ -258,6 +300,7 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
   //   print(
   //       'notification action tapped with input: ${notificationResponse.input}');
   // }
+  if (notificationResponse.payload?.startsWith('reading-plan:') == true) return;
   final Uri url = Uri.parse('$apiBaseUrl/app/app.apk');
   if (await canLaunchUrl(url)) {
     await launchUrl(
@@ -287,16 +330,18 @@ Future _checkVersionAndNotify(String type) async {
 
       // initialise channel platform for both Android and iOS device.
       var platformChannelSpecifics = new NotificationDetails(
-          android: androidPlatformChannelSpecifics,
-          iOS: iOSPlatformChannelSpecifics
+        android: androidPlatformChannelSpecifics,
+        iOS: iOSPlatformChannelSpecifics,
       );
-      await flutterLocalNotificationsPlugin.show(id++,
-          'Уставные чтения',
-          'Появилось новое обновление. Нажмите для загрузки.',
-          // Адрес выпуска едет вместе с уведомлением: нажать на него могут
-          // через час после проверки, и второй раз спрашивать сервер ради
-          // одного адреса незачем.
-          platformChannelSpecifics, payload: "$wantToGetUpdate ${updateUrl(version)}",
+      await flutterLocalNotificationsPlugin.show(
+        id++,
+        'Уставные чтения',
+        'Появилось новое обновление. Нажмите для загрузки.',
+        // Адрес выпуска едет вместе с уведомлением: нажать на него могут
+        // через час после проверки, и второй раз спрашивать сервер ради
+        // одного адреса незачем.
+        platformChannelSpecifics,
+        payload: "$wantToGetUpdate ${updateUrl(version)}",
       );
     }
   } catch (error) {
@@ -310,26 +355,28 @@ Future _checkVersionAndNotify(String type) async {
 /// телефон должен вздрагивать, а отдельным каналом его можно приглушить, не
 /// глуша уведомлений об обновлении.
 Future<void> _checkReadingAndNotify() async {
-  await checkReadingAndNotify(show: (body, payload) async {
-    await flutterLocalNotificationsPlugin.show(
-      // Постоянный номер: второй показ за день заменяет прежнее уведомление, а
-      // не копит их стопкой.
-      901,
-      "Чтения дня",
-      body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'dayReadingChannelId',
-          'dayReadingChannel',
-          channelDescription: 'Чтения дня утром',
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
+  await checkReadingAndNotify(
+    show: (body, payload) async {
+      await flutterLocalNotificationsPlugin.show(
+        // Постоянный номер: второй показ за день заменяет прежнее уведомление, а
+        // не копит их стопкой.
+        901,
+        "Чтения дня",
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'dayReadingChannelId',
+            'dayReadingChannel',
+            channelDescription: 'Чтения дня утром',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(presentSound: false),
         ),
-        iOS: DarwinNotificationDetails(presentSound: false),
-      ),
-      payload: payload,
-    );
-  });
+        payload: payload,
+      );
+    },
+  );
 }
 
 /// Напоминание о молитвенном правиле.
@@ -338,43 +385,51 @@ Future<void> _checkReadingAndNotify() async {
 /// показ. Канал свой и негромкий, как у чтений дня: переключатели напоминания
 /// стоят на самом экране правила, и этот канал можно приглушить отдельно.
 Future<void> _checkRuleReminders() async {
-  await checkRuleRemindersAndNotify(show: (body, payload) async {
-    await flutterLocalNotificationsPlugin.show(
-      // Постоянный номер: второй показ за день заменяет прежнее уведомление,
-      // а не копит их стопкой.
-      902,
-      "Молитвенное правило",
-      body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'ruleReminderChannelId',
-          'ruleReminderChannel',
-          channelDescription: 'Напоминания о молитвенном правиле',
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
+  await checkRuleRemindersAndNotify(
+    show: (body, payload) async {
+      await flutterLocalNotificationsPlugin.show(
+        // Постоянный номер: второй показ за день заменяет прежнее уведомление,
+        // а не копит их стопкой.
+        902,
+        "Молитвенное правило",
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'ruleReminderChannelId',
+            'ruleReminderChannel',
+            channelDescription: 'Напоминания о молитвенном правиле',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(presentSound: false),
         ),
-        iOS: DarwinNotificationDetails(presentSound: false),
-      ),
-      payload: payload,
-    );
-  });
+        payload: payload,
+      );
+    },
+  );
 }
 
 Future<void> _checkCommunionReminders() async {
-  await checkCommunionRemindersAndNotify(show: (body, payload) async {
-    await flutterLocalNotificationsPlugin.show(
-      903, 'Подготовка к Причащению', body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'communionReminderChannelId', 'Подготовка к Причащению',
-          channelDescription: 'Вечерние напоминания подготовки',
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
+  await checkCommunionRemindersAndNotify(
+    show: (body, payload) async {
+      await flutterLocalNotificationsPlugin.show(
+        903,
+        'Подготовка к Причащению',
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'communionReminderChannelId',
+            'Подготовка к Причащению',
+            channelDescription: 'Вечерние напоминания подготовки',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(presentSound: false),
         ),
-        iOS: DarwinNotificationDetails(presentSound: false),
-      ), payload: payload,
-    );
-  });
+        payload: payload,
+      );
+    },
+  );
 }
 
 /// Напоминание о поминальном дне.
@@ -388,26 +443,28 @@ Future<void> _checkCommunionReminders() async {
 /// вздрагивать; отдельным каналом его вдобавок можно приглушить, не глуша
 /// уведомлений об обновлении.
 Future<void> _checkPomyannikAndNotify() async {
-  await checkPomyannikAndNotify(show: (body, payload) async {
-    await flutterLocalNotificationsPlugin.show(
-      // Постоянный номер, а не id++: второй показ за день заменяет прежнее
-      // уведомление, а не копит их стопкой.
-      900,
-      "Помянник",
-      body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'pomyannikChannelId',
-          'pomyannikChannel',
-          channelDescription: 'Напоминания о поминальных днях',
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
+  await checkPomyannikAndNotify(
+    show: (body, payload) async {
+      await flutterLocalNotificationsPlugin.show(
+        // Постоянный номер, а не id++: второй показ за день заменяет прежнее
+        // уведомление, а не копит их стопкой.
+        900,
+        "Помянник",
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'pomyannikChannelId',
+            'pomyannikChannel',
+            channelDescription: 'Напоминания о поминальных днях',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(presentSound: false),
         ),
-        iOS: DarwinNotificationDetails(presentSound: false),
-      ),
-      payload: payload,
-    );
-  });
+        payload: payload,
+      );
+    },
+  );
 }
 
 // Едет на том же background_fetch-колбэке, что и _checkVersionAndNotify —
@@ -431,7 +488,9 @@ Future<void> _checkNewTextsAndNotify() async {
     if (lastSeenId == newest.id) return;
 
     final knownIndex = texts.list.indexWhere((t) => t.id == lastSeenId);
-    final newItems = knownIndex == -1 ? texts.list : texts.list.sublist(0, knownIndex);
+    final newItems = knownIndex == -1
+        ? texts.list
+        : texts.list.sublist(0, knownIndex);
     if (newItems.isEmpty) return;
 
     await prefs.setString(_lastSeenTextIdKey, newest.id);
@@ -446,15 +505,17 @@ Future<void> _checkNewTextsAndNotify() async {
     );
     var iOSPlatformChannelSpecifics = new DarwinNotificationDetails();
     var platformChannelSpecifics = new NotificationDetails(
-        android: androidPlatformChannelSpecifics,
-        iOS: iOSPlatformChannelSpecifics
+      android: androidPlatformChannelSpecifics,
+      iOS: iOSPlatformChannelSpecifics,
     );
 
     final isSingle = newItems.length == 1;
     await flutterLocalNotificationsPlugin.show(
       id++,
       isSingle ? newItems.first.name : 'Новые тексты',
-      isSingle ? 'Добавлен новый текст. Нажмите, чтобы открыть.' : 'Добавлено новых текстов: ${newItems.length}',
+      isSingle
+          ? 'Добавлен новый текст. Нажмите, чтобы открыть.'
+          : 'Добавлено новых текстов: ${newItems.length}',
       platformChannelSpecifics,
       payload: isSingle ? '$newTextPayloadPrefix${newItems.first.id}' : null,
     );
@@ -491,6 +552,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _cacheVersionTimer?.cancel();
     }
   }
+
   bool _hasSkippedUpdate = false;
 
   void _handleTapboxChanged(bool val) {
@@ -500,8 +562,13 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   ThemeData _buildTheme(Brightness brightness) {
-    final colorScheme = ColorScheme.fromSeed(seedColor: Colors.green, brightness: brightness);
-    final brandColor = brightness == Brightness.dark ? Colors.green.shade900 : Colors.green;
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: Colors.green,
+      brightness: brightness,
+    );
+    final brandColor = brightness == Brightness.dark
+        ? Colors.green.shade900
+        : Colors.green;
     return ThemeData(
       colorScheme: colorScheme,
       brightness: brightness,
@@ -528,9 +595,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         foregroundColor: Colors.white,
         titleTextStyle: TextStyle(fontSize: 18.0, color: Colors.white),
       ),
-      drawerTheme: DrawerThemeData(
-        backgroundColor: colorScheme.surface,
-      ),
+      drawerTheme: DrawerThemeData(backgroundColor: colorScheme.surface),
     );
   }
 
@@ -555,7 +620,8 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
     // Configure BackgroundFetch.
-    await BackgroundFetch.configure(BackgroundFetchConfig(
+    await BackgroundFetch.configure(
+      BackgroundFetchConfig(
         minimumFetchInterval: 60,
         stopOnTerminate: false,
         enableHeadless: true,
@@ -563,26 +629,32 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         requiresCharging: false,
         requiresStorageNotLow: false,
         requiresDeviceIdle: false,
-        requiredNetworkType: NetworkType.ANY
-    ), (String taskId) async {  // <-- Event handler
-      // This is the fetch-event callback.
-      try {
-        await _runBackgroundChecks(beforePomyannik: () async {
-          // Зеркало обновляется отсюда, а не из фоновой задачи: там сессию
-          // продлить нечем — окна входа показать некому.
-          if (await remindersEnabled()) {
-            await refreshPomyannikMirror(appStore?.state.auth.userId);
-          }
-        });
-      } finally {
-        // IMPORTANT:  You must signal completion of your task or the OS can punish your app
-        // for taking too long in the background.
+        requiredNetworkType: NetworkType.ANY,
+      ),
+      (String taskId) async {
+        // <-- Event handler
+        // This is the fetch-event callback.
+        try {
+          await _runBackgroundChecks(
+            beforePomyannik: () async {
+              // Зеркало обновляется отсюда, а не из фоновой задачи: там сессию
+              // продлить нечем — окна входа показать некому.
+              if (await remindersEnabled()) {
+                await refreshPomyannikMirror(appStore?.state.auth.userId);
+              }
+            },
+          );
+        } finally {
+          // IMPORTANT:  You must signal completion of your task or the OS can punish your app
+          // for taking too long in the background.
+          BackgroundFetch.finish(taskId);
+        }
+      },
+      (String taskId) async {
+        // Время вышло: отвечаем и на это, иначе система урежет пробуждения.
         BackgroundFetch.finish(taskId);
-      }
-    }, (String taskId) async {
-      // Время вышло: отвечаем и на это, иначе система урежет пробуждения.
-      BackgroundFetch.finish(taskId);
-    });
+      },
+    );
     // print('[BackgroundFetch] configure success: $status');
 
     // If the widget was removed from the tree while the asynchronous platform
@@ -591,12 +663,28 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (!mounted) return;
   }
 
-  void _configureDidReceiveLocalNotificationSubject() {
-
-  }
+  void _configureDidReceiveLocalNotificationSubject() {}
 
   void _configureSelectNotificationSubject() {
+    final initial = _initialPlanNotification;
+    _initialPlanNotification = null;
+    if (initial != null)
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => selectNotificationStream.add(initial),
+      );
     selectNotificationStream.stream.listen((String? payload) async {
+      if (payload?.startsWith('reading-plan:') == true) {
+        final plan = readingPlanPayloadPlan(
+          payload!,
+          appStore?.state.auth.userId,
+        );
+        if (plan != null)
+          navigatorKey.currentState?.pushNamed(
+            '/reading-plan',
+            arguments: plan,
+          );
+        return;
+      }
       // Уведомление о чтениях ведёт в службу дня.
       if (payload != null && payload.startsWith("reading:")) {
         final alias = payload.substring("reading:".length);
@@ -606,8 +694,10 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return;
       }
       if (payload != null && payload.startsWith('communion:')) {
-        navigatorKey.currentState?.pushNamed('/communion',
-          arguments: payload.substring('communion:'.length));
+        navigatorKey.currentState?.pushNamed(
+          '/communion',
+          arguments: payload.substring('communion:'.length),
+        );
         return;
       }
       // Напоминание о правиле ведёт на само правило.
@@ -620,7 +710,8 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         // им остаётся прежний, свой.
         final String named = payload.substring(wantToGetUpdate.length).trim();
         final Uri url = Uri.parse(
-            named.isEmpty ? '$apiBaseUrl/app/app.apk' : named);
+          named.isEmpty ? '$apiBaseUrl/app/app.apk' : named,
+        );
         if (await canLaunchUrl(url)) {
           await launchUrl(
             url,
@@ -679,43 +770,42 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return StoreProvider(
-        store: widget.store,
-        child: StoreBuilder<AppState>(
-            builder: (context, store) {
-              return MaterialApp(
-                navigatorKey: navigatorKey,
-                navigatorObservers: [routeObserver],
-                title: 'Typikon',
-                builder: (context, child) => ServiceModeTheme(child: child ?? const SizedBox.shrink()),
-                localizationsDelegates: [
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: [
-                  const Locale('ru'),
-                ],
-                restorationScopeId: "root",
-                initialRoute: '/',
-                // Разбор маршрутов живёт в lib/routes.dart: он же сверяется
-                // тестом с перечнем пунктов меню.
-                onGenerateRoute: (settings) => generateRoute(
-                  settings,
-                  hasSkippedUpdate: _hasSkippedUpdate,
-                  skipUpdateWindow: _handleTapboxChanged,
-                ),
-                // generateRoute отвечает null на незнакомое имя и на негодный
-                // аргумент; без этой строки такой переход был исключением.
-                onUnknownRoute: (settings) => MaterialPageRoute(
-                  settings: settings,
-                  builder: (context) => const NotFoundPage(),
-                ),
-                theme: _buildTheme(Brightness.light),
-                darkTheme: _buildTheme(Brightness.dark),
-                themeMode: store.state.settings.themeMode,
-              );
-            },
-        ),
+      store: widget.store,
+      child: StoreBuilder<AppState>(
+        builder: (context, store) {
+          return MaterialApp(
+            navigatorKey: navigatorKey,
+            navigatorObservers: [routeObserver],
+            title: 'Typikon',
+            builder: (context, child) =>
+                ServiceModeTheme(child: child ?? const SizedBox.shrink()),
+            localizationsDelegates: [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: [const Locale('ru')],
+            restorationScopeId: "root",
+            initialRoute: '/',
+            // Разбор маршрутов живёт в lib/routes.dart: он же сверяется
+            // тестом с перечнем пунктов меню.
+            onGenerateRoute: (settings) => generateRoute(
+              settings,
+              hasSkippedUpdate: _hasSkippedUpdate,
+              skipUpdateWindow: _handleTapboxChanged,
+            ),
+            // generateRoute отвечает null на незнакомое имя и на негодный
+            // аргумент; без этой строки такой переход был исключением.
+            onUnknownRoute: (settings) => MaterialPageRoute(
+              settings: settings,
+              builder: (context) => const NotFoundPage(),
+            ),
+            theme: _buildTheme(Brightness.light),
+            darkTheme: _buildTheme(Brightness.dark),
+            themeMode: store.state.settings.themeMode,
+          );
+        },
+      ),
     );
   }
 }

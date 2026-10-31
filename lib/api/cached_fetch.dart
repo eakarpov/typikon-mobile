@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import 'http_cache_version.dart';
+import '../utils/diagnostic_flags.dart';
 
 /// Within a generation: cache first, stale-while-revalidate.
 /// After app/server updates: network first, retaining saved readings offline.
@@ -16,6 +17,11 @@ Future<http.Response> cachedFetch(
   bool Function(String body)? isCacheable,
   HttpCacheVersions? versions,
 }) async {
+  if (networkDiagnosticsEnabled &&
+      bypassHttpCacheForDiagnostics &&
+      versions == null) {
+    return fetcher();
+  }
   final revision = versions ?? httpCacheVersions;
   await revision.check();
   final generation = revision.generation;
@@ -162,4 +168,34 @@ Future<void> clearHttpCache({HttpCacheVersions? versions}) async {
       await dir.delete(recursive: true);
     }
   } catch (_) {}
+}
+
+/// Read-only summary for the optional diagnostic build. Never returns content.
+Future<Map<String, Object?>> inspectHttpCacheEntry(String key) async {
+  final file = await _cacheFile(key);
+  if (!await file.exists()) return {'exists': false};
+  final entry = await _readCache(key);
+  if (entry == null) return {'exists': true, 'readable': false};
+  var jsonValid = false;
+  try {
+    jsonDecode(entry.body);
+    jsonValid = true;
+  } catch (_) {}
+  return {
+    'exists': true,
+    'readable': true,
+    'jsonValid': jsonValid,
+    'bytes': utf8.encode(entry.body).length,
+    'cachedAt': entry.cachedAt.toIso8601String(),
+    'currentGeneration': entry.generation == httpCacheVersions.generation,
+  };
+}
+
+/// Removes only the temporary entry created by the network self-test.
+Future<void> removeDiagnosticCacheEntry(String key) async {
+  if (!key.startsWith('network-diagnostic:')) {
+    throw ArgumentError('Only diagnostic cache entries may be removed');
+  }
+  final file = await _cacheFile(key);
+  if (await file.exists()) await file.delete();
 }

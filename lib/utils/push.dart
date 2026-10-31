@@ -5,6 +5,8 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../apiMapper/pomyannik.dart' as pomyannik;
 import '../store/day_reading_notice.dart';
+import 'reading_plan_notifications.dart';
+import '../store/store.dart';
 
 /// ТОЧНЫЕ НАПОМИНАНИЯ: пуш с сервера.
 ///
@@ -69,7 +71,7 @@ Future<bool> initPush() async {
 ///
 /// Возвращает, вышло ли. Не вышло — приложению остаётся его собственная фоновая
 /// задача, и настройка честно вернётся к «шлёт приложение».
-Future<bool> enablePush() async {
+Future<bool> enablePush({bool? pomyannikEnabled}) async {
   final token = await readPushToken();
   if (token == null || token.isEmpty) return false;
 
@@ -80,7 +82,7 @@ Future<bool> enablePush() async {
   // Час чтений отдаём вместе с ключом: сервер шлёт пуш в него, а не в общий
   // для всех восьмой. Не выбран — сервер о чтениях этому устройству не пишет.
   final hour = await dayReadingHour();
-  final ok = await pomyannik.registerDevice(token, zone, readingHour: hour);
+  final ok = await pomyannik.registerDevice(token, zone, readingHour: hour, pomyannikEnabled: pomyannikEnabled ?? (appStore?.state.settings.reminderSource == "server"));
   if (ok) _token = token;
 
   return ok;
@@ -126,7 +128,7 @@ Future<String> deviceTimeZone() async {
 /// экране. Поэтому при каждом запуске с выбранным сервером ключ отдаётся
 /// заново, а заодно и часовой пояс — человек мог переехать.
 Future<void> refreshPushRegistration({required bool wanted}) async {
-  if (!wanted) return;
+  if (!wanted && !await readingPlanPushWanted()) return;
 
   try {
     await enablePush();
@@ -141,9 +143,13 @@ Future<void> refreshPushRegistration({required bool wanted}) async {
 /// запуска пуши уходили бы в пустоту.
 void watchPushToken({required bool Function() wanted}) {
   FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
-    if (!wanted()) return;
+    if (!wanted() && !await readingPlanPushWanted()) return;
     _token = token;
-    await pomyannik.registerDevice(token, await deviceTimeZone(),
-        readingHour: await dayReadingHour());
+    await pomyannik.registerDevice(
+      token,
+      await deviceTimeZone(),
+      readingHour: await dayReadingHour(),
+      pomyannikEnabled: appStore?.state.settings.reminderSource == "server",
+    );
   });
 }

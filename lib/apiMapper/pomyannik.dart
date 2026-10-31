@@ -190,10 +190,11 @@ Future<bool> registerDevice(
   String token,
   String timeZone, {
   int? readingHour,
+  bool? pomyannikEnabled,
 }) async {
   try {
     final response = await withSession(
-      () => api.registerDevice(token, timeZone, readingHour: readingHour),
+      () => api.registerDevice(token, timeZone, readingHour: readingHour, pomyannikEnabled: pomyannikEnabled),
     );
     return response.statusCode == 200;
   } catch (_) {

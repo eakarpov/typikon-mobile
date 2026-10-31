@@ -54,6 +54,7 @@ import 'package:typikon/pages/section_page.dart';
 import 'package:typikon/pages/settings_page.dart';
 import 'package:typikon/pages/signs_page.dart';
 import 'package:typikon/pages/text_page.dart';
+import 'package:typikon/pages/reading_plan_page.dart';
 import 'package:typikon/pages/triodion_page.dart';
 import 'package:typikon/utils/bible_route.dart';
 import 'package:typikon/utils/incipit_route.dart';
@@ -161,9 +162,7 @@ Route<dynamic>? generateRoute(
       }
       return null;
     case '/pericopes':
-      return MaterialPageRoute(
-        builder: (context) => PericopesPage(context),
-      );
+      return MaterialPageRoute(builder: (context) => PericopesPage(context));
     case '/pericope':
       if (arguments is String) {
         return MaterialPageRoute(
@@ -188,18 +187,14 @@ Route<dynamic>? generateRoute(
           builder: (context) => NamePage(context, name: arguments),
         );
       }
-      return MaterialPageRoute(
-        builder: (context) => ImeninyPage(context),
-      );
+      return MaterialPageRoute(builder: (context) => ImeninyPage(context));
     case '/dictionary':
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) => LexemePage(context, id: arguments),
         );
       }
-      return MaterialPageRoute(
-        builder: (context) => DictionaryPage(context),
-      );
+      return MaterialPageRoute(builder: (context) => DictionaryPage(context));
     // Певческий корпус: три раздела по одному обычаю —
     // без аргумента перечень, с ним чтение целиком.
     case '/canons':
@@ -208,55 +203,51 @@ Route<dynamic>? generateRoute(
           builder: (context) => CanonPage(context, id: arguments),
         );
       }
-      return MaterialPageRoute(
-        builder: (context) => CanonsPage(context),
-      );
+      return MaterialPageRoute(builder: (context) => CanonsPage(context));
     case '/akathists':
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) => AkathistPage(context, id: arguments),
         );
       }
-      return MaterialPageRoute(
-        builder: (context) => AkathistsPage(context),
-      );
+      return MaterialPageRoute(builder: (context) => AkathistsPage(context));
     case '/prayers':
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) => PrayerPage(context, id: arguments),
         );
       }
-      return MaterialPageRoute(
-        builder: (context) => PrayersPage(context),
-      );
+      return MaterialPageRoute(builder: (context) => PrayersPage(context));
     // Псалтирь: без аргумента список кафизм. Аргумент кафизмы — прежде
     // число 1..20 (или 151 — дополнительный псалом), с поминальным режимом —
     // строка «<число>|d»; разбор — в pages/kathisma_page.dart. «Подряд»
     // открывается без аргумента (с закладки), с аргументом-числом — с
     // названного псалма, строка «d»/«<псалом>|d» — поминальный режим.
     case '/psalter':
-      return MaterialPageRoute(
-        builder: (context) => const PsalterPage(),
-      );
+      return MaterialPageRoute(builder: (context) => const PsalterPage());
     // Молитвенное правило дня и подготовка к Причащению: состав секций
     // подбирается на самом экране, аргумент не нужен.
     case '/ordo':
       return MaterialPageRoute(builder: (context) => const OrdoPage());
     case practiceRoute:
-      return MaterialPageRoute(builder: (context) => SectionPage(
-        context, title: 'Правило', entries: practiceEntries,
-      ));
+      return MaterialPageRoute(
+        builder: (context) =>
+            SectionPage(context, title: 'Правило', entries: practiceEntries),
+      );
     case '/rule/office':
       if (arguments is! RuleOfficeTarget) return null;
-      return MaterialPageRoute(builder: (_) => RuleOfficePage(target: arguments));
-    case '/rule':
       return MaterialPageRoute(
-        builder: (context) => RulePage(context),
+        builder: (_) => RuleOfficePage(target: arguments),
       );
+    case '/rule':
+      return MaterialPageRoute(builder: (context) => RulePage(context));
     case '/communion':
       return MaterialPageRoute(
-        builder: (context) => CommunionPage(context,
-          initialDate: arguments is String ? DateTime.tryParse(arguments) : null,
+        builder: (context) => CommunionPage(
+          context,
+          initialDate: arguments is String
+              ? DateTime.tryParse(arguments)
+              : null,
         ),
       );
     // Чтение последования молитвослова: аргумент — `<key>|<lang>|<gender>|
@@ -305,17 +296,12 @@ Route<dynamic>? generateRoute(
         builder: (context) => const PsalterSorokoustPage(),
       );
     case '/chronology':
-      return MaterialPageRoute(
-        builder: (context) => ChronologyPage(context),
-      );
+      return MaterialPageRoute(builder: (context) => ChronologyPage(context));
     case '/library':
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) {
-            return BookPage(
-              context,
-              id: arguments,
-            );
+            return BookPage(context, id: arguments);
           },
         );
       } else {
@@ -325,14 +311,17 @@ Route<dynamic>? generateRoute(
           },
         );
       }
+    case "/reading-plan":
+      return MaterialPageRoute(
+        builder: (_) => ReadingPlanPage(
+          expectedPlanId: arguments is String ? arguments : null,
+        ),
+      );
     case "/reading":
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) {
-            return TextPage(
-              context,
-              id: arguments,
-            );
+            return TextPage(context, id: arguments);
           },
         );
       }
@@ -340,33 +329,29 @@ Route<dynamic>? generateRoute(
     case "/settings":
       return MaterialPageRoute(
         builder: (context) {
-          return SettingsPage(
-            context,
-          );
+          return SettingsPage(context);
         },
       );
     case "/calculator":
       return MaterialPageRoute(
         builder: (context) {
-          return CalculatorPage(
-            context,
-          );
+          return CalculatorPage(context);
         },
       );
     case '/saint-text':
-      if (arguments is! SaintCorpusTarget || arguments.id.isEmpty ||
+      if (arguments is! SaintCorpusTarget ||
+          arguments.id.isEmpty ||
           (arguments.reader != 'chant' && arguments.reader != 'service')) {
         return null;
       }
-      return MaterialPageRoute(builder: (_) => SaintCorpusPage(target: arguments));
+      return MaterialPageRoute(
+        builder: (_) => SaintCorpusPage(target: arguments),
+      );
     case "/saints":
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) {
-            return SaintPage(
-              context,
-              id: arguments,
-            );
+            return SaintPage(context, id: arguments);
           },
         );
       }
@@ -377,49 +362,35 @@ Route<dynamic>? generateRoute(
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) {
-            return PlacePage(
-              context,
-              id: arguments,
-            );
+            return PlacePage(context, id: arguments);
           },
         );
       }
-      return MaterialPageRoute(
-        builder: (context) => PlacesPage(context),
-      );
+      return MaterialPageRoute(builder: (context) => PlacesPage(context));
 
     case "/triodion":
       return MaterialPageRoute(
         builder: (context) {
-          return TriodionPage(
-            context,
-          );
+          return TriodionPage(context);
         },
       );
     case "/penticostarion":
       return MaterialPageRoute(
         builder: (context) {
-          return PenticostarionPage(
-            context,
-          );
+          return PenticostarionPage(context);
         },
       );
     case "/search":
       return MaterialPageRoute(
         builder: (context) {
-          return SearchPage(
-            context,
-          );
+          return SearchPage(context);
         },
       );
     case "/days":
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) {
-            return DaysPage(
-              context,
-              id: arguments,
-            );
+            return DaysPage(context, id: arguments);
           },
         );
       }
@@ -430,10 +401,7 @@ Route<dynamic>? generateRoute(
       if (arguments is String) {
         return MaterialPageRoute(
           builder: (context) {
-            return MonthPage(
-              context,
-              id: arguments,
-            );
+            return MonthPage(context, id: arguments);
           },
         );
       } else {
@@ -446,9 +414,7 @@ Route<dynamic>? generateRoute(
     case "/favourites":
       return MaterialPageRoute(
         builder: (context) {
-          return FavouritePage(
-            context,
-          );
+          return FavouritePage(context);
         },
       );
     // Как у '/library' и '/imeniny': без аргумента разворот
@@ -459,9 +425,7 @@ Route<dynamic>? generateRoute(
           builder: (context) => PomyannikPersonPage(context, id: arguments),
         );
       }
-      return MaterialPageRoute(
-        builder: (context) => PomyannikPage(context),
-      );
+      return MaterialPageRoute(builder: (context) => PomyannikPage(context));
     // Столбец берётся у вкладки, с которой пришли, — он и есть аргумент.
     case "/pomyannik/import":
       if (arguments is! String) return null;
@@ -489,9 +453,7 @@ Route<dynamic>? generateRoute(
     case "/contact":
       return MaterialPageRoute(
         builder: (context) {
-          return ContactPage(
-            context,
-          );
+          return ContactPage(context);
         },
       );
     case "/day-saints":
@@ -504,19 +466,13 @@ Route<dynamic>? generateRoute(
     // пояснения не разъехались с ящиком.
     case corpusRoute:
       return MaterialPageRoute(
-        builder: (context) => SectionPage(
-          context,
-          title: "Собрание",
-          entries: corpusEntries,
-        ),
+        builder: (context) =>
+            SectionPage(context, title: "Собрание", entries: corpusEntries),
       );
     case handbookRoute:
       return MaterialPageRoute(
-        builder: (context) => SectionPage(
-          context,
-          title: "Пособия",
-          entries: handbookEntries,
-        ),
+        builder: (context) =>
+            SectionPage(context, title: "Пособия", entries: handbookEntries),
       );
     case "/resources":
       return MaterialPageRoute(

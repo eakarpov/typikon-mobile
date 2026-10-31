@@ -1,4 +1,7 @@
 import '../utils/service_mode.dart';
+import '../utils/reading_plan_notifications.dart';
+import '../utils/network_diagnostics.dart';
+import 'network_diagnostics_page.dart';
 import '../utils/rule_reminders.dart';
 import 'dart:async';
 
@@ -181,7 +184,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _onReminderSource(String value) async {
     if (value == "server") {
       setState(() => _switchingSource = true);
-      final ok = await enablePush();
+      final ok = await enablePush(pomyannikEnabled: true);
       if (!mounted) return;
       setState(() => _switchingSource = false);
 
@@ -197,7 +200,11 @@ class _SettingsPageState extends State<SettingsPage> {
         return;
       }
     } else {
-      await disablePush();
+      if (await readingPlanPushWanted()) {
+        if (!await enablePush(pomyannikEnabled: false)) return;
+      } else {
+        await disablePush();
+      }
     }
 
     appStore?.dispatch(ChangeReminderSourceAction(value));
@@ -560,6 +567,17 @@ class _SettingsPageState extends State<SettingsPage> {
     key: const PageStorageKey('settings-system'),
     padding: const EdgeInsets.only(bottom: 24),
     children: [
+      if (networkDiagnosticsEnabled)
+        ListTile(
+          leading: const Icon(Icons.network_check),
+          title: const Text('Проверка сети и кэша'),
+          subtitle: const Text('Диагностическая сборка'),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const NetworkDiagnosticsPage(),
+            ),
+          ),
+        ),
       Padding(
         padding: EdgeInsets.symmetric(horizontal: 16),
         child: TextButton(
@@ -639,6 +657,8 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
       ),
+      if (viewModel.isSignedIn)
+        ListTile(title: const Text('Личный план чтения'), subtitle: const Text('Очередное чтение и напоминания по дням недели'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.of(context).pushNamed('/reading-plan')),
       Padding(
         padding: const EdgeInsets.only(top: 20, left: 16, right: 16),
         child: Text(

@@ -55,19 +55,25 @@ Future<http.Response> fetchNameCheck(String query) =>
 // --- Лица ---------------------------------------------------------------------
 
 Future<http.Response> fetchPersons({String? kind, int offset = 0}) {
-  return v2Send("GET", v2Uri("/pomyannik/persons", {
-    "limit": "$pomyannikPageSize",
-    if (offset > 0) "offset": "$offset",
-    "kind": ?kind,
-  }));
+  return v2Send(
+    "GET",
+    v2Uri("/pomyannik/persons", {
+      "limit": "$pomyannikPageSize",
+      if (offset > 0) "offset": "$offset",
+      "kind": ?kind,
+    }),
+  );
 }
 
 Future<http.Response> fetchPerson(String id) =>
     v2Send("GET", v2Uri("/pomyannik/persons/$id"));
 
 Future<http.Response> createPersons(List<Map<String, dynamic>> persons) =>
-    v2Send("POST", v2Uri("/pomyannik/persons"),
-        body: persons.length == 1 ? persons.single : {"persons": persons});
+    v2Send(
+      "POST",
+      v2Uri("/pomyannik/persons"),
+      body: persons.length == 1 ? persons.single : {"persons": persons},
+    );
 
 /// Правка уходит лицом целиком — см. `Person.toInput`.
 Future<http.Response> savePerson(String id, Map<String, dynamic> person) =>
@@ -81,40 +87,53 @@ Future<http.Response> removePerson(String id) =>
 /// [from] отправляем всегда и своё, местное: часовой пояс телефона свой, и в
 /// час пополуночи серверное «сегодня» бывает вчерашним.
 Future<http.Response> fetchUpcoming({required String from, int days = 60}) =>
-    v2Send("GET", v2Uri("/pomyannik/upcoming", {"from": from, "days": "$days"}));
+    v2Send(
+      "GET",
+      v2Uri("/pomyannik/upcoming", {"from": from, "days": "$days"}),
+    );
 
 // --- Записка ------------------------------------------------------------------
 
 Future<http.Response> fetchNoteSheet(String kind, List<String> personIds) =>
-    v2Send("POST", v2Uri("/pomyannik/note/preview"),
-        body: {"kind": kind, "personIds": personIds});
+    v2Send(
+      "POST",
+      v2Uri("/pomyannik/note/preview"),
+      body: {"kind": kind, "personIds": personIds},
+    );
 
 Future<http.Response> sendNote(
   String kind,
   List<String> personIds, {
   String? code,
   String? slug,
-}) =>
-    v2Send("POST", v2Uri("/pomyannik/zapiski"), body: {
-      "kind": kind,
-      "personIds": personIds,
-      if (code != null && code.isNotEmpty) "code": code,
-      if (slug != null && slug.isNotEmpty) "slug": slug,
-    });
+}) => v2Send(
+  "POST",
+  v2Uri("/pomyannik/zapiski"),
+  body: {
+    "kind": kind,
+    "personIds": personIds,
+    if (code != null && code.isNotEmpty) "code": code,
+    if (slug != null && slug.isNotEmpty) "slug": slug,
+  },
+);
 
-Future<http.Response> fetchSentNotes({int offset = 0}) =>
-    v2Send("GET", v2Uri("/pomyannik/zapiski", {
-      "limit": "$pomyannikPageSize",
-      if (offset > 0) "offset": "$offset",
-    }));
+Future<http.Response> fetchSentNotes({int offset = 0}) => v2Send(
+  "GET",
+  v2Uri("/pomyannik/zapiski", {
+    "limit": "$pomyannikPageSize",
+    if (offset > 0) "offset": "$offset",
+  }),
+);
 
 // --- Приём --------------------------------------------------------------------
 
-Future<http.Response> fetchReceivedNotes({int offset = 0}) =>
-    v2Send("GET", v2Uri("/pomyannik/prinyatye", {
-      "limit": "$pomyannikPageSize",
-      if (offset > 0) "offset": "$offset",
-    }));
+Future<http.Response> fetchReceivedNotes({int offset = 0}) => v2Send(
+  "GET",
+  v2Uri("/pomyannik/prinyatye", {
+    "limit": "$pomyannikPageSize",
+    if (offset > 0) "offset": "$offset",
+  }),
+);
 
 Future<http.Response> markNote(String id, String mark) =>
     v2Send("PATCH", v2Uri("/pomyannik/prinyatye/$id"), body: {"mark": mark});
@@ -126,15 +145,25 @@ Future<http.Response> markNote(String id, String mark) =>
 /// Часовой пояс обязателен: сервер считает утро по месту телефона, а не по
 /// своему. Восемь утра в Петропавловске и восемь утра в Калининграде —
 /// одиннадцать часов разницы.
-Future<http.Response> registerDevice(String token, String timeZone, {int? readingHour}) =>
-    v2Send("POST", v2Uri("/pomyannik/devices"), body: {
-      "token": token,
-      "timeZone": timeZone,
-      "platform": "android",
-      // Час чтений дня. Не выбран — поле уходит `null`, и сервер о чтениях
-      // этому устройству не пишет: молчание тут и есть выбор.
-      "readingHour": readingHour,
-    });
+Future<http.Response> registerDevice(
+  String token,
+  String timeZone, {
+  int? readingHour,
+  bool? pomyannikEnabled,
+}) => v2Send(
+  "POST",
+  v2Uri("/pomyannik/devices"),
+  body: {
+    "token": token,
+    "timeZone": timeZone,
+    "platform": "android",
+    // Час чтений дня. Не выбран — поле уходит `null`, и сервер о чтениях
+    // этому устройству не пишет: молчание тут и есть выбор.
+    "readingHour": readingHour,
+    "readingPlanCapable": true,
+    if (pomyannikEnabled != null) "pomyannikEnabled": pomyannikEnabled,
+  },
+);
 
 Future<http.Response> forgetDevice(String token) =>
     v2Send("DELETE", v2Uri("/pomyannik/devices", {"token": token}));
