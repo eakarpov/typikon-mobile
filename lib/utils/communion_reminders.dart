@@ -16,8 +16,7 @@ RuleReminderNotice communionReminderVerdict({
     return const RuleReminderNotice.silent('нет активной подготовки');
   }
   final today = DateTime(now.year, now.month, now.day);
-  if (today.isBefore(communionPreparationStart(plan.date)) ||
-      !today.isBefore(plan.date)) {
+  if (today.isBefore(plan.preparationStart) || !today.isBefore(plan.date)) {
     return const RuleReminderNotice.silent('вне дней подготовки');
   }
   final slot = ruleReminderVerdict(
@@ -49,9 +48,11 @@ Future<void> checkCommunionRemindersAndNotify({
     now: at,
     done:
         plan != null &&
-        communionPreparationItemIds.every(
-          (id) => prefs.getBool('$prefix$id') == true,
-        ),
+        (prefs.getStringList(
+                  'communion_active_item_ids:${dayKey(plan.date)}',
+                ) ??
+                communionPreparationItemIds)
+            .every((id) => prefs.getBool('$prefix$id') == true),
   );
   if (!notice.shows) return;
   await show(notice.body!, notice.payload!);

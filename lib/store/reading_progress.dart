@@ -123,8 +123,9 @@ Future<void> saveReadingProgress(
   String textId,
   double fraction, {
   String? name,
+  bool keepLast = false,
 }) async {
-  if (fraction >= finishedFraction) {
+  if (fraction >= finishedFraction && !keepLast) {
     await clearReadingProgress(textId);
     return;
   }

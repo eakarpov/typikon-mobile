@@ -85,4 +85,34 @@ void main() {
       expect(parseCommunionDate('2026-02-31'), isNull);
     },
   );
+  test(
+    'selected preparation duration is independent of legacy start date',
+    () async {
+      final short = CommunionPlan(
+        DateTime(2026, 10, 21),
+        DateTime(2026, 10, 25),
+        preparationDays: 1,
+      );
+      expect(
+        communionReminderVerdict(
+          plan: short,
+          enabled: true,
+          lastNotifiedDate: null,
+          now: DateTime(2026, 10, 23, 21),
+        ).shows,
+        false,
+      );
+      expect(
+        communionReminderVerdict(
+          plan: short,
+          enabled: true,
+          lastNotifiedDate: null,
+          now: DateTime(2026, 10, 24, 21),
+        ).shows,
+        true,
+      );
+      await saveCommunionPlan(short);
+      expect((await getCommunionPlan())!.preparationDays, 1);
+    },
+  );
 }

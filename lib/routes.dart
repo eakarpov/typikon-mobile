@@ -19,6 +19,8 @@ import 'package:typikon/pages/favourite_page.dart';
 import 'package:typikon/pages/imeniny_page.dart';
 import 'package:typikon/pages/incipit_page.dart';
 import 'package:typikon/pages/library_page.dart';
+import 'package:typikon/pages/study_page.dart';
+import 'dart:convert';
 import 'package:typikon/pages/main_page.dart';
 import 'package:typikon/pages/month_page.dart';
 import 'package:typikon/pages/months_page.dart';
@@ -44,8 +46,10 @@ import 'package:typikon/pages/psalter_serial_page.dart';
 import 'package:typikon/pages/psalter_sorokoust_page.dart';
 import 'package:typikon/pages/resources_page.dart';
 import 'package:typikon/pages/rule_page.dart';
+import 'package:typikon/pages/prayer_circle_page.dart';
 import 'package:typikon/pages/rule_office_page.dart';
 import 'package:typikon/pages/ordo_page.dart';
+import 'package:typikon/pages/companion_page.dart';
 import 'package:typikon/pages/saint_page.dart';
 import 'package:typikon/pages/saint_corpus_page.dart';
 import 'package:typikon/pages/menu_entries.dart';
@@ -100,6 +104,20 @@ Route<dynamic>? generateRoute(
   // кнопки приложения, `/bible/<книга>/<глава>` — в ту же главу Библии. Путь
   // целиком становится именем маршрута, поэтому разбирается здесь, а дальше
   // дело за обычными ветками `/reading` и `/bible`.
+  if (name.startsWith('/study?')) {
+    final raw = Uri.parse(name).queryParameters['target'];
+    try {
+      return MaterialPageRoute(
+        builder: (_) => StudyPage(
+          initialTarget: raw == null
+              ? null
+              : Map<String, dynamic>.from(jsonDecode(raw)),
+        ),
+      );
+    } catch (_) {
+      return MaterialPageRoute(builder: (_) => const StudyPage());
+    }
+  }
   final readingLink = deepLinkArgument(name, "/reading/");
   if (readingLink != null) {
     return generateRoute(
@@ -227,6 +245,14 @@ Route<dynamic>? generateRoute(
       return MaterialPageRoute(builder: (context) => const PsalterPage());
     // Молитвенное правило дня и подготовка к Причащению: состав секций
     // подбирается на самом экране, аргумент не нужен.
+    case '/companion':
+      return MaterialPageRoute(
+        builder: (context) => CompanionPage(
+          initialSelection: arguments is Map
+              ? Map<String, dynamic>.from(arguments)
+              : null,
+        ),
+      );
     case '/ordo':
       return MaterialPageRoute(builder: (context) => const OrdoPage());
     case practiceRoute:
@@ -240,7 +266,14 @@ Route<dynamic>? generateRoute(
         builder: (_) => RuleOfficePage(target: arguments),
       );
     case '/rule':
+      return MaterialPageRoute(builder: (_) => const PrayerCirclePage());
+    case '/rule/legacy':
       return MaterialPageRoute(builder: (context) => RulePage(context));
+    case '/communion/assembled':
+      if (arguments is! Map<String, dynamic>) return null;
+      return MaterialPageRoute(
+        builder: (_) => CommunionAssembledPage(section: arguments),
+      );
     case '/communion':
       return MaterialPageRoute(
         builder: (context) => CommunionPage(
@@ -297,6 +330,16 @@ Route<dynamic>? generateRoute(
       );
     case '/chronology':
       return MaterialPageRoute(builder: (context) => ChronologyPage(context));
+    case '/study':
+      return MaterialPageRoute(
+        builder: (_) => StudyPage(
+          initialTarget: arguments is Map
+              ? Map<String, dynamic>.from(arguments)
+              : null,
+        ),
+      );
+    case '/library/catalog':
+      return MaterialPageRoute(builder: (context) => LibraryPage(context));
     case '/library':
       if (arguments is String) {
         return MaterialPageRoute(
@@ -307,7 +350,7 @@ Route<dynamic>? generateRoute(
       } else {
         return MaterialPageRoute(
           builder: (context) {
-            return LibraryPage(context);
+            return const StudyPage();
           },
         );
       }

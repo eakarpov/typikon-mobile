@@ -3,6 +3,7 @@ import 'rule_marks.dart';
 
 const communionStartKey = 'communion_plan_start';
 const communionDateKey = 'communion_plan_date';
+const communionDaysKey = 'communion_plan_days';
 const communionReminderKey = 'communion_remind';
 const communionLastNoticeKey = 'communion_remind_last';
 
@@ -50,7 +51,10 @@ Future<void> migrateCommunionMarks(String date) async {
 class CommunionPlan {
   final DateTime start;
   final DateTime date;
-  const CommunionPlan(this.start, this.date);
+  final int preparationDays;
+  const CommunionPlan(this.start, this.date, {this.preparationDays = 3});
+  DateTime get preparationStart =>
+      DateTime(date.year, date.month, date.day - preparationDays);
 }
 
 Future<CommunionPlan?> getCommunionPlan() async {
@@ -58,16 +62,31 @@ Future<CommunionPlan?> getCommunionPlan() async {
   final start = parseCommunionDate(prefs.getString(communionStartKey));
   final date = parseCommunionDate(prefs.getString(communionDateKey));
   if (start == null || date == null || date.isBefore(start)) return null;
-  return CommunionPlan(start, date);
+  final stored = prefs.getInt(communionDaysKey) ?? 3;
+  return CommunionPlan(start, date, preparationDays: stored.clamp(0, 40));
 }
 
 Future<void> saveCommunionPlan(CommunionPlan plan) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(communionStartKey, dayKey(plan.start));
   await prefs.setString(communionDateKey, dayKey(plan.date));
+  await prefs.setInt(communionDaysKey, plan.preparationDays.clamp(0, 40));
   // Новую дату подтверждают отдельно: прежнее согласие относится к прежнему плану.
   await prefs.setBool(communionReminderKey, false);
   await prefs.remove(communionLastNoticeKey);
+}
+
+Future<void> clearCommunionPlan() async {
+  final prefs = await SharedPreferences.getInstance();
+  for (final key in [
+    communionStartKey,
+    communionDateKey,
+    communionDaysKey,
+    communionReminderKey,
+    communionLastNoticeKey,
+  ]) {
+    await prefs.remove(key);
+  }
 }
 
 Future<bool> communionReminderEnabled() async =>

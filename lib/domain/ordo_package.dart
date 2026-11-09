@@ -8,6 +8,11 @@ import '../dto/ordo_services.dart';
 class OrdoPackage {
   final String? date;
   final List<Map<String, dynamic>> _services;
+  List<Map<String, dynamic>> get structuredServices => List.unmodifiable(
+    _services.map(
+      (s) => Map<String, dynamic>.from(jsonDecode(jsonEncode(s)) as Map),
+    ),
+  );
   OrdoServices get reading => OrdoServices.fromJson({'services': _services});
 
   const OrdoPackage._(this.date, this._services);

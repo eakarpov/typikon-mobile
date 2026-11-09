@@ -17,10 +17,16 @@ import 'package:typikon/utils/reading_style.dart';
 /// которая прокручивается своими силами: вложенная прокрутка и есть та самая
 /// беда с окошком в 350 точек.
 class ReadingMarkdown extends StatelessWidget {
-  const ReadingMarkdown(this.data, {super.key, this.scrollable = true});
+  const ReadingMarkdown(
+    this.data, {
+    super.key,
+    this.scrollable = true,
+    this.onTapLink,
+  });
 
   final String data;
   final bool scrollable;
+  final void Function(String, String?, String)? onTapLink;
 
   MarkdownStyleSheet _styleSheet(BuildContext context) {
     final base = MarkdownStyleSheet.fromTheme(Theme.of(context));
@@ -29,8 +35,10 @@ class ReadingMarkdown extends StatelessWidget {
     // Заголовки следуют за размером чтений, но крупнее его: разметка в житиях
     // пользуется ими, и прибитые системные размеры рядом с крупным текстом
     // выглядели бы мельче него.
-    TextStyle? heading(TextStyle? from, double scale) =>
-        from?.copyWith(fontFamily: body.fontFamily, fontSize: body.fontSize! * scale);
+    TextStyle? heading(TextStyle? from, double scale) => from?.copyWith(
+      fontFamily: body.fontFamily,
+      fontSize: body.fontSize! * scale,
+    );
 
     return base.copyWith(
       p: body,
@@ -48,8 +56,12 @@ class ReadingMarkdown extends StatelessWidget {
     final styleSheet = _styleSheet(context);
 
     if (!scrollable) {
-      return MarkdownBody(data: data, styleSheet: styleSheet);
+      return MarkdownBody(
+        data: data,
+        styleSheet: styleSheet,
+        onTapLink: onTapLink,
+      );
     }
-    return Markdown(data: data, styleSheet: styleSheet);
+    return Markdown(data: data, styleSheet: styleSheet, onTapLink: onTapLink);
   }
 }

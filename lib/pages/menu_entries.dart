@@ -54,12 +54,16 @@ class MenuEntry {
 
   final MenuVisibility visibility;
 
+  /// Видим всем, но открывается только после входа.
+  final bool requiresSignIn;
+
   const MenuEntry(
     this.title,
     this.route, {
     this.hint,
     this.icon,
     this.visibility = MenuVisibility.always,
+    this.requiresSignIn = false,
   });
 }
 
@@ -75,7 +79,12 @@ class MenuSection {
 const String corpusRoute = "/corpus";
 const String practiceRoute = "/practice";
 const List<MenuEntry> practiceEntries = <MenuEntry>[
-  MenuEntry("Правило дня", "/rule", hint: "Утренние и вечерние молитвы"),
+  MenuEntry(
+    "Спутник богослужения",
+    "/companion",
+    hint: "Понять порядок, тексты и особенности дня",
+  ),
+  MenuEntry("Мой круг", "/rule", hint: "Личное правило и чтения"),
   MenuEntry("Псалтирь", "/psalter", hint: "По кафизмам, подряд и по усопшему"),
   MenuEntry("Причастие", "/communion", hint: "Подготовка к Причащению"),
   MenuEntry(
@@ -173,7 +182,7 @@ const List<MenuSection> drawerSections = <MenuSection>[
       MenuEntry("Избранное", "/favourites"),
       MenuEntry("Мои заметки", "/notes", visibility: MenuVisibility.signedIn),
       MenuEntry("Правило", practiceRoute),
-      MenuEntry("Помянник", "/pomyannik", visibility: MenuVisibility.signedIn),
+      MenuEntry("Помянник", "/pomyannik", requiresSignIn: true),
       MenuEntry(
         "Поданные записки",
         "/pomyannik/prinyatye",

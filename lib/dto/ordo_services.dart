@@ -9,8 +9,20 @@ class OrdoSection {
 class OrdoService {
   final String title;
   final String? error;
+  final String? key;
+  final String? ordoId;
+  final String? civil;
+  final String? partLabel;
   final List<OrdoSection> sections;
-  const OrdoService(this.title, this.sections, {this.error});
+  const OrdoService(
+    this.title,
+    this.sections, {
+    this.error,
+    this.key,
+    this.ordoId,
+    this.civil,
+    this.partLabel,
+  });
 
   factory OrdoService.fromJson(Map<String, dynamic> json) {
     final sections = <OrdoSection>[];
@@ -72,6 +84,10 @@ class OrdoService {
       json['label'] as String? ?? json['key'] as String? ?? 'Служба',
       sections,
       error: json['error'] as String?,
+      key: json['key'] as String?,
+      ordoId: json['ordo'] as String?,
+      civil: json['civil'] as String?,
+      partLabel: json['part_label'] as String?,
     );
   }
 }

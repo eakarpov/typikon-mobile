@@ -98,10 +98,15 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
       });
       appStore?.dispatch(ChangeShowAccentsAction(false));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failureMessage(error, "Не удалось расставить ударения"))),
+        SnackBar(
+          content: Text(
+            failureMessage(error, "Не удалось расставить ударения"),
+          ),
+        ),
       );
     }
   }
+
   /// Места, названные в этом тексте: разметкой и разбором, принятым на сверке.
   ///
   /// Молча пусто при отказе — это прибавка к чтению, а не само чтение, и ради
@@ -119,7 +124,6 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   /// оглавление. Ставится на первый подсвеченный блок.
 
   List<UserNote> _userNotes = [];
-
 
   final ScrollController _scrollController = ScrollController();
   Timer? _persistDebounce;
@@ -144,7 +148,6 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   ScaffoldMessengerState? _messenger;
   bool _bannerVisible = false;
 
-
   @override
   void initState() {
     super.initState();
@@ -155,7 +158,6 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     _loadReading();
     _loadUserNotes();
     _loadPlaces();
-
   }
 
   Future<void> _loadPlaces() async {
@@ -209,7 +211,10 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     if (_scrollController.hasClients) {
       final position = _scrollController.position;
       if (position.maxScrollExtent > 0) {
-        _lastFraction = (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0);
+        _lastFraction = (position.pixels / position.maxScrollExtent).clamp(
+          0.0,
+          1.0,
+        );
       }
     }
     _persistDebounce?.cancel();
@@ -220,7 +225,7 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     final fraction = _lastFraction;
     // Не прокручивали — записывать нечего, и прежнюю запись не затираем.
     if (fraction == null) return;
-    saveReadingProgress(_realId, fraction, name: _readingName);
+    saveReadingProgress(_realId, fraction, name: _readingName, keepLast: true);
   }
 
   Future<void> _checkResumeProgress() async {
@@ -243,7 +248,9 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     _bannerVisible = true;
     ScaffoldMessenger.of(context).showMaterialBanner(
       MaterialBanner(
-        content: Text("Вы уже читали этот текст. Продолжить с места, где остановились?"),
+        content: Text(
+          "Вы уже читали этот текст. Продолжить с места, где остановились?",
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -339,10 +346,15 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     showTableOfContents(
       context,
       headings
-          .map((heading) => TocEntry(
-                title: heading.title,
-                anchorKey: _paragraphKeys.putIfAbsent(heading.paragraphIndex, () => GlobalKey()),
-              ))
+          .map(
+            (heading) => TocEntry(
+              title: heading.title,
+              anchorKey: _paragraphKeys.putIfAbsent(
+                heading.paragraphIndex,
+                () => GlobalKey(),
+              ),
+            ),
+          )
           .toList(),
     );
   }
@@ -366,18 +378,28 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   void _loadUserNotes() {
     // listen: false — метод зовётся из initState, а подписка на наследника
     // до конца initState запрещена: читаем стор одним разом, без зависимости.
-    if (!StoreProvider.of<AppState>(context, listen: false).state.auth.isSignedIn) return;
-    getUserNotes(textId: _realId).then((notes) {
-      if (!mounted) return;
-      setState(() { _userNotes = notes; });
-    }).catchError((error) {
-      // Заметки — дополнение к тексту, а не он сам: если сессия истекла или
-      // сервер недоступен, страница просто показывает текст без подсветок.
-      // withSession уже погасил локальный вход, поэтому пункты меню выделения
-      // пропадут при следующей перерисовке.
-      if (!mounted) return;
-      setState(() { _userNotes = []; });
-    });
+    if (!StoreProvider.of<AppState>(
+      context,
+      listen: false,
+    ).state.auth.isSignedIn)
+      return;
+    getUserNotes(textId: _realId)
+        .then((notes) {
+          if (!mounted) return;
+          setState(() {
+            _userNotes = notes;
+          });
+        })
+        .catchError((error) {
+          // Заметки — дополнение к тексту, а не он сам: если сессия истекла или
+          // сервер недоступен, страница просто показывает текст без подсветок.
+          // withSession уже погасил локальный вход, поэтому пункты меню выделения
+          // пропадут при следующей перерисовке.
+          if (!mounted) return;
+          setState(() {
+            _userNotes = [];
+          });
+        });
   }
 
   /// Письмо текста. Уставом — только отмеченные `csSource`; прочие тексты
@@ -390,23 +412,26 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   /// Заметка хранит книжное написание, а в тексте теперь другое, и подсветка
   /// её не нашла бы — ни ошибки, ни следа. Фраза переводится тем же правилом,
   /// что и текст; по нажатию открывается сама заметка, а не эта копия.
-  List<UserNote> _presentedNotes(TextScript script, String setting) => _userNotes
-      .map((note) => UserNote(
-            id: note.id,
-            textId: note.textId,
-            note: note.note,
-            textName: note.textName,
-            selection: NoteSelection(
-              type: note.selection.type,
-              phrase: presentScript(note.selection.phrase, script, setting),
-              paragraphIndex: note.selection.paragraphIndex,
-              paragraph: note.selection.paragraph,
-              chapter: note.selection.chapter,
-              verse: note.selection.verse,
-              verseText: note.selection.verseText,
+  List<UserNote> _presentedNotes(TextScript script, String setting) =>
+      _userNotes
+          .map(
+            (note) => UserNote(
+              id: note.id,
+              textId: note.textId,
+              note: note.note,
+              textName: note.textName,
+              selection: NoteSelection(
+                type: note.selection.type,
+                phrase: presentScript(note.selection.phrase, script, setting),
+                paragraphIndex: note.selection.paragraphIndex,
+                paragraph: note.selection.paragraph,
+                chapter: note.selection.chapter,
+                verse: note.selection.verse,
+                verseText: note.selection.verseText,
+              ),
             ),
-          ))
-      .toList();
+          )
+          .toList();
 
   void _onTapUserNote(UserNote note) {
     showAddNoteSheet(
@@ -453,7 +478,10 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     final Uri uri = await FileSaver.instance.saveBytesAsync(
       fileName: fb2FileName(reading.name),
       bytes: utf8.encode(fb2Content),
-      fileType: CustomFileType(ext: 'fb2', mimeType: 'application/x-fictionbook'),
+      fileType: CustomFileType(
+        ext: 'fb2',
+        mimeType: 'application/x-fictionbook',
+      ),
       conflictResolution: ConflictResolution.autoRename,
     );
 
@@ -487,12 +515,11 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
 
   /// Ссылка на это чтение для «Поделиться»: куда указывает адрес сайта.
   /// Состав текста отправки (фраза плюс ссылка) собирает само меню выделения.
-  String _shareLinkFor(String phrase) => "https://$siteHostFull/reading/$_realId";
+  String _shareLinkFor(String phrase) =>
+      "https://$siteHostFull/reading/$_realId";
 
   Widget imageCard(value) {
-    return Image(
-      image: NetworkImage(value),
-    );
+    return Image(image: NetworkImage(value));
   }
 
   /// Отметка ставится в сторе — оттуда её видят и сердечко, и страница
@@ -502,8 +529,6 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
     store.dispatch(ToggleFavouriteAction(_realId));
     unawaited(syncFavourites(store));
   }
-
-
 
   /// Само зачало внутри книги: подложка, полоса слева и подписи с обоих концов.
   ///
@@ -517,7 +542,6 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
   /// [totalRuns] — сколько их всего: только зная и то, и другое, можно
   /// подписать первый кусок началом, а последний — концом. Зачало бывает и
   /// разорванным (две-три группы стихов), и переходящим через границу главы.
-
 
   @override
   Widget build(BuildContext context) {
@@ -542,40 +566,90 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
         ),
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(40.0), // here the desired height
-          child: FutureBuilder(future: reading, builder: (context, future) {
-            if (future.hasData) {
-              return Row(
-                children: <Widget>[
-                  if (future.data!.ruLink != null) TextButton(
-                    onPressed: () => onClick(future.data!.ruLink as String),
-                    child: Text("РУ", style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),),
-                  ),
-                  if (future.data!.link != null) TextButton(
-                    onPressed: () => onClick(future.data!.link as String),
-                    child: Text("ЦС", style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),),
-                  ),
-                  if (future.data!.dneslovId != null) IconButton(
-                      tooltip: "К святому",
-                      onPressed: () => Navigator.pushNamed(context, "/saints", arguments: future.data!.dneslovId),
-                      icon: Icon(Icons.person, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
-                  ),
-                  if (future.data!.bookId != null) IconButton(
-                      tooltip: "К книге",
-                      onPressed: () => Navigator.pushNamed(context, "/library", arguments: future.data!.bookId),
-                      icon: Icon(Icons.menu_book, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
-                  ),
-                  if (future.data!.dayId != null) IconButton(
-                      tooltip: "К дню",
-                      onPressed: () => Navigator.pushNamed(context, "/days", arguments: future.data!.dayId),
-                      icon: Icon(Icons.calendar_month, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
-                  ),
-                ],
-              );
-            }
-            return Row(children: []);
-          }),
+          child: FutureBuilder(
+            future: reading,
+            builder: (context, future) {
+              if (future.hasData) {
+                return Row(
+                  children: <Widget>[
+                    if (future.data!.ruLink != null)
+                      TextButton(
+                        onPressed: () => onClick(future.data!.ruLink as String),
+                        child: Text(
+                          "РУ",
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).appBarTheme.foregroundColor ??
+                                Colors.white,
+                          ),
+                        ),
+                      ),
+                    if (future.data!.link != null)
+                      TextButton(
+                        onPressed: () => onClick(future.data!.link as String),
+                        child: Text(
+                          "ЦС",
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).appBarTheme.foregroundColor ??
+                                Colors.white,
+                          ),
+                        ),
+                      ),
+                    if (future.data!.dneslovId != null)
+                      IconButton(
+                        tooltip: "К святому",
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          "/saints",
+                          arguments: future.data!.dneslovId,
+                        ),
+                        icon: Icon(
+                          Icons.person,
+                          color:
+                              Theme.of(context).appBarTheme.foregroundColor ??
+                              Colors.white,
+                        ),
+                      ),
+                    if (future.data!.bookId != null)
+                      IconButton(
+                        tooltip: "К книге",
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          "/library",
+                          arguments: future.data!.bookId,
+                        ),
+                        icon: Icon(
+                          Icons.menu_book,
+                          color:
+                              Theme.of(context).appBarTheme.foregroundColor ??
+                              Colors.white,
+                        ),
+                      ),
+                    if (future.data!.dayId != null)
+                      IconButton(
+                        tooltip: "К дню",
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          "/days",
+                          arguments: future.data!.dayId,
+                        ),
+                        icon: Icon(
+                          Icons.calendar_month,
+                          color:
+                              Theme.of(context).appBarTheme.foregroundColor ??
+                              Colors.white,
+                        ),
+                      ),
+                  ],
+                );
+              }
+              return Row(children: []);
+            },
+          ),
         ),
         actions: <Widget>[
+          IconButton(tooltip: "Вдумчивое чтение", icon: const Icon(Icons.auto_stories_outlined), onPressed:()=>Navigator.pushNamed(context,"/study",arguments:{"kind":"text","id":_realId})),
           // Сердечко берёт состояние из стора, а не из своего поля: раньше оно и
           // страница избранного читали SharedPreferences по отдельности и
           // расходились, пока экран не перезапросишь.
@@ -603,14 +677,22 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
                 return Padding(
                   padding: EdgeInsets.all(14.0),
                   child: SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color:
+                          Theme.of(context).appBarTheme.foregroundColor ??
+                          Colors.white,
+                    ),
                   ),
                 );
               }
 
               return IconButton(
-                icon: Icon(_showAccents ? Icons.text_fields : Icons.text_fields_outlined),
+                icon: Icon(
+                  _showAccents ? Icons.text_fields : Icons.text_fields_outlined,
+                ),
                 tooltip: _showAccents ? "Как в книге" : "Расставить ударения",
                 onPressed: () => _toggleAccents(future.data!),
               );
@@ -619,7 +701,9 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           FutureBuilder<Reading>(
             future: reading,
             builder: (context, future) => ScriptToggle(
-              source: future.hasData ? _scriptOf(future.data!) : TextScript.other,
+              source: future.hasData
+                  ? _scriptOf(future.data!)
+                  : TextScript.other,
               onChanged: () => setState(() {}),
             ),
           ),
@@ -661,7 +745,12 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
             builder: (context, future) {
               if (future.hasData) {
                 return IconButton(
-                  icon: Icon(Icons.file_download, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white),
+                  icon: Icon(
+                    Icons.file_download,
+                    color:
+                        Theme.of(context).appBarTheme.foregroundColor ??
+                        Colors.white,
+                  ),
                   tooltip: "Сохранить в fb2",
                   onPressed: () => _exportFb2(future.data!),
                 );
@@ -673,204 +762,276 @@ class _TextPageState extends State<TextPage> with WidgetsBindingObserver {
           ),
         ],
       ),
-      body: PinchZoom(child: Container(
-        color: readingBackgroundColor(context),
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        // Ширину колонки читатель выбирает сам; без выбора обёртка не делает
-        // ничего.
-        child: ReadingColumn(child: FutureBuilder<Reading>(
-          future: reading,
-          builder: (context, future) {
-            if (future.hasData) {
-              // Показываем размеченный вид, если он спрошен и получен. Подменяем
-              // ИМЕННО эту переменную: из неё питаются и `containers:` для
-              // выделения, и рисуемые абзацы, — одной подменой оба остаются
-              // согласованными. Сам `Reading` не трогается, и потому выгрузка в
-              // fb2 (`_exportFb2`) уносит книгу, а не машинные знаки.
-              String content = _presentedContent(future.data!);
-              final script = _scriptOf(future.data!);
-              final setting = readerScript(context);
-              final converted = convertsScript(script, setting);
-              final paragraphs = content.split("\n\n");
-              // Текущее совпадение поиска подсвечивается контрастнее; прочие —
-              // обычным фоном. Заголовки глав — для оглавления внутри текста.
-              final currentSearch = _currentSearchMatch();
-              final headings = future.data!.newUi
-                  ? const <TextHeading>[]
-                  : findTextHeadings(paragraphs);
-              final notes = converted ? _presentedNotes(script, setting) : _userNotes;
-              String name = future.data!.name;
-              return SingleChildScrollView(
-                controller: _scrollController,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 12.0),
-                        child: Text(
-                            name,
-                            style: const TextStyle(
+      body: PinchZoom(
+        child: Container(
+          color: readingBackgroundColor(context),
+          width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
+          // Ширину колонки читатель выбирает сам; без выбора обёртка не делает
+          // ничего.
+          child: ReadingColumn(
+            child: FutureBuilder<Reading>(
+              future: reading,
+              builder: (context, future) {
+                if (future.hasData) {
+                  // Показываем размеченный вид, если он спрошен и получен. Подменяем
+                  // ИМЕННО эту переменную: из неё питаются и `containers:` для
+                  // выделения, и рисуемые абзацы, — одной подменой оба остаются
+                  // согласованными. Сам `Reading` не трогается, и потому выгрузка в
+                  // fb2 (`_exportFb2`) уносит книгу, а не машинные знаки.
+                  String content = _presentedContent(future.data!);
+                  final script = _scriptOf(future.data!);
+                  final setting = readerScript(context);
+                  final converted = convertsScript(script, setting);
+                  final paragraphs = content.split("\n\n");
+                  // Текущее совпадение поиска подсвечивается контрастнее; прочие —
+                  // обычным фоном. Заголовки глав — для оглавления внутри текста.
+                  final currentSearch = _currentSearchMatch();
+                  final headings = future.data!.newUi
+                      ? const <TextHeading>[]
+                      : findTextHeadings(paragraphs);
+                  final notes = converted
+                      ? _presentedNotes(script, setting)
+                      : _userNotes;
+                  String name = future.data!.name;
+                  return SingleChildScrollView(
+                    controller: _scrollController,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              0.0,
+                              0.0,
+                              0.0,
+                              12.0,
+                            ),
+                            child: Text(
+                              name,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.red,
-                            )
-                        ),
-                      ),
-                      future.data!.newUi ? (
-                          // Не Markdown в SizedBox(height: 350): страница
-                          // прокручивается сама, а окошко со своей прокруткой
-                          // посреди неё резало текст и не знало ни одной
-                          // настройки чтения.
-                          // Меню — без заметок: они привязаны к номеру абзаца
-                          // по двойному переводу строки, а markdown делит текст
-                          // на абзацы по-своему, и номер разошёлся бы с экраном.
-                          SelectionMenu.wordsOnly(
-                            shareLinkFor: _shareLinkFor,
-                            child: ReadingMarkdown(content, scrollable: false),
-                          )
-                        ) : (
-                            SelectionMenu(
-                              // В переведённом виде заметку и сообщение об
-                              // ошибке не заводим: они ушли бы на сервер не
-                              // книжным написанием, а нашим переводом.
-                              enabled: StoreProvider.of<AppState>(context).state.auth.isSignedIn &&
-                                  !converted,
-                              textId: _realId,
-                              shareLinkFor: _shareLinkFor,
-                              containers: paragraphs.asMap().entries.map((entry) =>
-                                  TextContainer.paragraph(paragraphIndex: entry.key, text: entry.value)
-                              ).toList(),
-                              child: Column(
-                                children: paragraphs.asMap().entries.map((entry) {
-                                  // Якорь нужен абзацу с заголовком главы
-                                  // (оглавление) и с совпадением поиска
-                                  // (прокрутка к нему); прочие оборачивать
-                                  // незачем.
-                                  final needsKey = headings.any((h) => h.paragraphIndex == entry.key) ||
-                                      _searchMatches.containsKey(entry.key);
-                                  final widget = FusionTextWidgets(
-                                    text: entry.value,
-                                    footnotes: future.data?.footnotes??[],
-                                    fontFamily: presentFont(
-                                        future.data!.csSource ? "Monomakh" : "OldStandard",
-                                        script,
-                                        setting),
-                                    notes: notes.where((n) =>
-                                        n.selection.type == 'paragraph' && n.selection.paragraphIndex == entry.key
-                                    ).toList(),
-                                    onTapNote: (note) => _onTapUserNote(
-                                        _userNotes.firstWhere((n) => n.id == note.id,
-                                            orElse: () => note)),
-                                    searchMatches: _searchMatches[entry.key] ?? const [],
-                                    activeMatch: currentSearch != null &&
-                                            currentSearch.$1 == entry.key
-                                        ? currentSearch.$2
-                                        : null,
-                                  );
-                                  if (!needsKey) return widget;
-                                  return Container(
-                                    key: _paragraphKeys.putIfAbsent(entry.key, () => GlobalKey()),
-                                    child: widget,
-                                  );
-                                }).toList(),
                               ),
-                            )
-                        ),
-                      ScriptCaveat(source: script),
-                      // Оговорка теми же словами, что на сайте. Она обязательна:
-                      // без неё машинная догадка выдаётся за книгу, а решение
-                      // писать эти знаки в самый корпус остаётся за хозяином.
-                      if (_showAccents && _accented != null) Padding(
-                        padding: const EdgeInsets.only(top: 16.0),
-                        child: Text(
-                          "Ударения расставлены машинно по словарю собрания: "
-                          "${_accented!.marked} из ${_accented!.expected} слов, которым "
-                          "знак положен. Спорные места оставлены без знака. В самом "
-                          "тексте ударений нет — это подсказка для чтения вслух, а не книга.",
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                      if (_places.isNotEmpty) Padding(
-                        padding: const EdgeInsets.only(top: 16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              // Статья энциклопедии — о самом месте; прочие
-                              // тексты место лишь называют, и смешивать это
-                              // значило бы обещать статью там, где упоминание.
-                              _places.any((place) => place.subject)
-                                  ? "Место:"
-                                  : "Места:",
-                              style: Theme.of(context).textTheme.labelMedium,
                             ),
-                            const SizedBox(height: 6.0),
-                            Wrap(
-                              spacing: 8.0,
-                              runSpacing: 4.0,
-                              children: _places
-                                  .map((place) => ActionChip(
-                                        label: Text(place.name),
-                                        avatar: place.subject
-                                            ? const Icon(Icons.article_outlined, size: 16.0)
-                                            : const Icon(Icons.place_outlined, size: 16.0),
-                                        onPressed: () => Navigator.pushNamed(
-                                          context, "/places", arguments: place.address),
-                                      ))
-                                  .toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (future.data!.dneslovId != null) FutureBuilder<DneslovImageListD>(
-                          future: dneslovImages,
-                          builder: (context, future) {
-                            if (future.hasData) {
-                              return CarouselSlider(
-                                options: CarouselOptions(height: 400.0),
-                                items: future.data!.list.map((item) {
-                                  return Builder(
-                                    builder: (BuildContext context) {
-                                      return Container(
-                                          width: MediaQuery.of(context).size.width,
-                                          margin: EdgeInsets.symmetric(horizontal: 5.0),
-                                          decoration: BoxDecoration(
+                          ),
+                          future.data!.newUi
+                              ? (
+                                // Не Markdown в SizedBox(height: 350): страница
+                                // прокручивается сама, а окошко со своей прокруткой
+                                // посреди неё резало текст и не знало ни одной
+                                // настройки чтения.
+                                // Меню — без заметок: они привязаны к номеру абзаца
+                                // по двойному переводу строки, а markdown делит текст
+                                // на абзацы по-своему, и номер разошёлся бы с экраном.
+                                SelectionMenu.wordsOnly(
+                                  shareLinkFor: _shareLinkFor,
+                                  child: ReadingMarkdown(
+                                    content,
+                                    scrollable: false,
+                                  ),
+                                ))
+                              : (SelectionMenu(
+                                  // В переведённом виде заметку и сообщение об
+                                  // ошибке не заводим: они ушли бы на сервер не
+                                  // книжным написанием, а нашим переводом.
+                                  enabled:
+                                      StoreProvider.of<AppState>(
+                                        context,
+                                      ).state.auth.isSignedIn &&
+                                      !converted,
+                                  textId: _realId,
+                                  shareLinkFor: _shareLinkFor,
+                                  containers: paragraphs
+                                      .asMap()
+                                      .entries
+                                      .map(
+                                        (entry) => TextContainer.paragraph(
+                                          paragraphIndex: entry.key,
+                                          text: entry.value,
+                                        ),
+                                      )
+                                      .toList(),
+                                  child: Column(
+                                    children: paragraphs.asMap().entries.map((
+                                      entry,
+                                    ) {
+                                      // Якорь нужен абзацу с заголовком главы
+                                      // (оглавление) и с совпадением поиска
+                                      // (прокрутка к нему); прочие оборачивать
+                                      // незачем.
+                                      final needsKey =
+                                          headings.any(
+                                            (h) =>
+                                                h.paragraphIndex == entry.key,
+                                          ) ||
+                                          _searchMatches.containsKey(entry.key);
+                                      final widget = FusionTextWidgets(
+                                        text: entry.value,
+                                        footnotes: future.data?.footnotes ?? [],
+                                        fontFamily: presentFont(
+                                          future.data!.csSource
+                                              ? "Monomakh"
+                                              : "OldStandard",
+                                          script,
+                                          setting,
+                                        ),
+                                        notes: notes
+                                            .where(
+                                              (n) =>
+                                                  n.selection.type ==
+                                                      'paragraph' &&
+                                                  n.selection.paragraphIndex ==
+                                                      entry.key,
+                                            )
+                                            .toList(),
+                                        onTapNote: (note) => _onTapUserNote(
+                                          _userNotes.firstWhere(
+                                            (n) => n.id == note.id,
+                                            orElse: () => note,
                                           ),
-                                          child: Image(
-                                            image: NetworkImage(item.thumb_url),
-                                          ),
+                                        ),
+                                        searchMatches:
+                                            _searchMatches[entry.key] ??
+                                            const [],
+                                        activeMatch:
+                                            currentSearch != null &&
+                                                currentSearch.$1 == entry.key
+                                            ? currentSearch.$2
+                                            : null,
                                       );
-                                    },
+                                      if (!needsKey) return widget;
+                                      return Container(
+                                        key: _paragraphKeys.putIfAbsent(
+                                          entry.key,
+                                          () => GlobalKey(),
+                                        ),
+                                        child: widget,
+                                      );
+                                    }).toList(),
+                                  ),
+                                )),
+                          ScriptCaveat(source: script),
+                          // Оговорка теми же словами, что на сайте. Она обязательна:
+                          // без неё машинная догадка выдаётся за книгу, а решение
+                          // писать эти знаки в самый корпус остаётся за хозяином.
+                          if (_showAccents && _accented != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16.0),
+                              child: Text(
+                                "Ударения расставлены машинно по словарю собрания: "
+                                "${_accented!.marked} из ${_accented!.expected} слов, которым "
+                                "знак положен. Спорные места оставлены без знака. В самом "
+                                "тексте ударений нет — это подсказка для чтения вслух, а не книга.",
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          if (_places.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    // Статья энциклопедии — о самом месте; прочие
+                                    // тексты место лишь называют, и смешивать это
+                                    // значило бы обещать статью там, где упоминание.
+                                    _places.any((place) => place.subject)
+                                        ? "Место:"
+                                        : "Места:",
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelMedium,
+                                  ),
+                                  const SizedBox(height: 6.0),
+                                  Wrap(
+                                    spacing: 8.0,
+                                    runSpacing: 4.0,
+                                    children: _places
+                                        .map(
+                                          (place) => ActionChip(
+                                            label: Text(place.name),
+                                            avatar: place.subject
+                                                ? const Icon(
+                                                    Icons.article_outlined,
+                                                    size: 16.0,
+                                                  )
+                                                : const Icon(
+                                                    Icons.place_outlined,
+                                                    size: 16.0,
+                                                  ),
+                                            onPressed: () =>
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  "/places",
+                                                  arguments: place.address,
+                                                ),
+                                          ),
+                                        )
+                                        .toList(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (future.data!.dneslovId != null)
+                            FutureBuilder<DneslovImageListD>(
+                              future: dneslovImages,
+                              builder: (context, future) {
+                                if (future.hasData) {
+                                  return CarouselSlider(
+                                    options: CarouselOptions(height: 400.0),
+                                    items: future.data!.list.map((item) {
+                                      return Builder(
+                                        builder: (BuildContext context) {
+                                          return Container(
+                                            width: MediaQuery.of(
+                                              context,
+                                            ).size.width,
+                                            margin: EdgeInsets.symmetric(
+                                              horizontal: 5.0,
+                                            ),
+                                            decoration: BoxDecoration(),
+                                            child: Image(
+                                              image: NetworkImage(
+                                                item.thumb_url,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    }).toList(),
                                   );
-                                }).toList(),
-                              );
-                              // return Column(
-                              //   children: future.data!.list.map((item) => imageCard(item.url)).toList(),
-                              // );
-                            }
-                            return Image.asset("assets/images/trinity.jpeg");
-                          }
+                                  // return Column(
+                                  //   children: future.data!.list.map((item) => imageCard(item.url)).toList(),
+                                  // );
+                                }
+                                return Image.asset(
+                                  "assets/images/trinity.jpeg",
+                                );
+                              },
+                            ),
+                          if (future.data!.dneslovId == null)
+                            Image.asset("assets/images/trinity.jpeg"),
+                        ],
                       ),
-                      if (future.data!.dneslovId == null) Image.asset("assets/images/trinity.jpeg"),
-                    ],
+                    ),
+                  );
+                } else if (future.hasError) {
+                  return _buildError(context, future.error);
+                }
+                return Container(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: const CircularProgressIndicator(),
                   ),
-                ),
-              );
-            } else if (future.hasError) {
-              return _buildError(context, future.error);
-            }
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              width: double.infinity,
-              height: double.infinity,
-              child: Align(
-                alignment: Alignment.center,
-                child: const CircularProgressIndicator(),
-              ),
-            );
-          },
-        ))),
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -27,33 +27,9 @@ import '../components/trapeza_line.dart';
 import '../store/reading_progress.dart';
 import '../utils/bible_route.dart';
 import '../utils/route_observer.dart';
-import 'menu_entries.dart';
+import '../components/drawer_menu_sections.dart';
 
 const String APP_STATE_KEY = "APP_STATE";
-
-/// Пункты раздела, видимые сейчас.
-///
-/// Личные разделы без учётной записи не прячутся из вежливости: заметок и
-/// помянника у невошедшего нет вовсе, и открытый пустой экран читался бы как
-/// поломка.
-///
-/// Приём записок — отдельный случай: его открывают не входом, а подтверждением
-/// в личном кабинете на сайте. Неподтверждённому пункта нет совсем, потому что
-/// заглушка «приём вам не открыт» в меню у всех подряд обещает возможность,
-/// которой у человека нет.
-List<MenuEntry> _visibleEntries(BuildContext context, MenuSection section) {
-  final auth = StoreProvider.of<AppState>(context).state.auth;
-  return section.entries.where((entry) {
-    switch (entry.visibility) {
-      case MenuVisibility.always:
-        return true;
-      case MenuVisibility.signedIn:
-        return auth.isSignedIn;
-      case MenuVisibility.commemorator:
-        return auth.isSignedIn && auth.isCommemorator;
-    }
-  }).toList();
-}
 
 class MainPage extends StatefulWidget {
   const MainPage(context, {
@@ -604,33 +580,7 @@ class _MainPageState extends State<MainPage>
                     ],
                   ),
                 ),
-                // Меню строится из описи lib/pages/menu_entries.dart: двадцать
-                // пять одинаковых ListTile подряд разъезжались с маршрутами и
-                // росли с каждым разделом. Одиннадцать пунктов ушли под
-                // «Собрание» и «Пособия».
-                for (final section in drawerSections) ...[
-                  if (_visibleEntries(context, section).isNotEmpty) ...[
-                    if (section.title != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 4.0),
-                        child: Text(
-                          section.title!,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                        ),
-                      ),
-                    for (final entry in _visibleEntries(context, section))
-                      ListTile(
-                        title: Text(entry.title, style: const TextStyle(fontSize: 14.0)),
-                        selected: ModalRoute.of(context)?.settings.name == entry.route,
-                        onTap: () {
-                          Navigator.pushNamed(context, entry.route);
-                        },
-                      ),
-                    const Divider(height: 1),
-                  ],
-                ],
+                const DrawerMenuSections(),
                 ListTile(
                   title: const Text('Помочь проекту', style: TextStyle(fontSize: 14.0),),
                   onTap: () {

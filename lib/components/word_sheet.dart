@@ -12,18 +12,43 @@ import 'api_error_view.dart';
 /// отвечает на два вопроса, на которые ответ есть: как слово прочесть и что это
 /// за форма. Значение слова ищется по начальной форме, и дорога к ней — статья
 /// словаря.
-void showWordSheet(BuildContext context, String word) {
+class WordMeaning {
+  final String title, text, source;
+  const WordMeaning({
+    required this.title,
+    required this.text,
+    required this.source,
+  });
+}
+
+void showWordSheet(
+  BuildContext context,
+  String word, {
+  List<WordMeaning> meanings = const [],
+  bool hasMeaningContext = false,
+}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    builder: (context) => WordSheet(word: word),
+    builder: (context) => WordSheet(
+      word: word,
+      meanings: meanings,
+      hasMeaningContext: hasMeaningContext,
+    ),
   );
 }
 
 class WordSheet extends StatefulWidget {
   final String word;
+  final List<WordMeaning> meanings;
+  final bool hasMeaningContext;
 
-  const WordSheet({super.key, required this.word});
+  const WordSheet({
+    super.key,
+    required this.word,
+    this.meanings = const [],
+    this.hasMeaningContext = false,
+  });
 
   @override
   State<WordSheet> createState() => _WordSheetState();
@@ -49,9 +74,9 @@ class _WordSheetState extends State<WordSheet> {
   /// Статья не нашлась или поиск не удался — одно и то же для шторки: ссылки
   /// нет. Отказ поиска не повод прятать ударение, ради которого её открыли.
   Future<String?> _lexemeId(String spelling) => _lexemeIds.putIfAbsent(
-        spelling,
-        () => findLexemeId(spelling).catchError((Object _) => null),
-      );
+    spelling,
+    () => findLexemeId(spelling).catchError((Object _) => null),
+  );
 
   void _openLexeme(String id) {
     final navigator = Navigator.of(context);
@@ -64,15 +89,32 @@ class _WordSheetState extends State<WordSheet> {
     final theme = Theme.of(context);
     return SafeArea(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
+        ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.word, style: const TextStyle(fontFamily: "Monomakh", fontSize: 26.0)),
+              Text(
+                widget.word,
+                style: const TextStyle(fontFamily: "Monomakh", fontSize: 26.0),
+              ),
               const SizedBox(height: 12.0),
+              if (widget.hasMeaningContext) ...[
+                Text('Значение здесь', style: theme.textTheme.titleMedium),
+                if (widget.meanings.isEmpty)
+                  const Text('Значение в этом контексте не подготовлено.'),
+                for (final meaning in widget.meanings) ...[
+                  Text(meaning.title, style: theme.textTheme.titleSmall),
+                  Text(meaning.text),
+                  Text(meaning.source, style: theme.textTheme.bodySmall),
+                ],
+                const SizedBox(height: 12),
+                Text('Форма и ударение', style: theme.textTheme.titleMedium),
+              ],
               FutureBuilder<WordAccents>(
                 future: _accents,
                 builder: (context, future) {
@@ -80,7 +122,12 @@ class _WordSheetState extends State<WordSheet> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(failureMessage(future.error, "ударение не загрузилось")),
+                        Text(
+                          failureMessage(
+                            future.error,
+                            "ударение не загрузилось",
+                          ),
+                        ),
                         TextButton(
                           onPressed: () => setState(_load),
                           child: const Text("Повторить"),
@@ -88,7 +135,8 @@ class _WordSheetState extends State<WordSheet> {
                       ],
                     );
                   }
-                  if (future.connectionState != ConnectionState.done || !future.hasData) {
+                  if (future.connectionState != ConnectionState.done ||
+                      !future.hasData) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16.0),
                       child: Center(child: CircularProgressIndicator()),
@@ -108,9 +156,11 @@ class _WordSheetState extends State<WordSheet> {
     final caption = theme.textTheme.bodySmall;
 
     if (!accents.known) {
-      return Text(hasTitlo(widget.word)
-          ? "Слово под титлом — сокращение, а сокращений словарь не разбирает."
-          : "Этого слова нет ни в словаре, ни среди текстов, где стоят ударения.");
+      return Text(
+        hasTitlo(widget.word)
+            ? "Слово под титлом — сокращение, а сокращений словарь не разбирает."
+            : "Этого слова нет ни в словаре, ни среди текстов, где стоят ударения.",
+      );
     }
 
     final stresses = accents.stresses;
@@ -134,8 +184,13 @@ class _WordSheetState extends State<WordSheet> {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text(stress.spelling,
-                    style: const TextStyle(fontFamily: "Monomakh", fontSize: 22.0)),
+                Text(
+                  stress.spelling,
+                  style: const TextStyle(
+                    fontFamily: "Monomakh",
+                    fontSize: 22.0,
+                  ),
+                ),
                 const SizedBox(width: 12.0),
                 Expanded(child: Text(_usageLine(stress), style: caption)),
               ],
@@ -144,7 +199,8 @@ class _WordSheetState extends State<WordSheet> {
         const SizedBox(height: 12.0),
         _heading(theme, "Разбор"),
         if (accents.lexicon.isNotEmpty)
-          for (final group in _byLemma(accents.lexicon)) _readingTile(theme, group)
+          for (final group in _byLemma(accents.lexicon))
+            _readingTile(theme, group)
         else
           _unparsed(theme),
       ],
@@ -152,17 +208,19 @@ class _WordSheetState extends State<WordSheet> {
   }
 
   Widget _heading(ThemeData theme, String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 4.0),
-        child: Text(text, style: theme.textTheme.titleSmall),
-      );
+    padding: const EdgeInsets.only(bottom: 4.0),
+    child: Text(text, style: theme.textTheme.titleSmall),
+  );
 
   /// Где и как часто стоит это ударение. Чтения и песнопения — порознь: у
   /// «спасе» они расходятся, и общая доля спрятала бы именно это.
   String _usageLine(StressVariant stress) {
     String percent(double share) => "${(share * 100).round()} %";
     final parts = <String>[
-      if (stress.readingsShare != null) "в чтениях ${percent(stress.readingsShare!)}",
-      if (stress.chantsShare != null) "в песнопениях ${percent(stress.chantsShare!)}",
+      if (stress.readingsShare != null)
+        "в чтениях ${percent(stress.readingsShare!)}",
+      if (stress.chantsShare != null)
+        "в песнопениях ${percent(stress.chantsShare!)}",
     ];
     if (parts.isEmpty) return stress.inLexicon ? "по словарю" : "";
     return parts.join(" · ");
@@ -174,27 +232,42 @@ class _WordSheetState extends State<WordSheet> {
   List<List<WordReading>> _byLemma(List<WordReading> lexicon) {
     final groups = <String, List<WordReading>>{};
     for (final reading in lexicon) {
-      groups.putIfAbsent("${reading.lexeme}\n${reading.spelling}", () => []).add(reading);
+      groups
+          .putIfAbsent("${reading.lexeme}\n${reading.spelling}", () => [])
+          .add(reading);
     }
     return groups.values.toList();
   }
 
   Widget _readingTile(ThemeData theme, List<WordReading> group) {
     final first = group.first;
-    final parses = group.expand((reading) => reading.parses).map(formParseLabel).toList();
+    final parses = group
+        .expand((reading) => reading.parses)
+        .map(formParseLabel)
+        .toList();
     return FutureBuilder<String?>(
       future: _lexemeId(first.lexeme),
       builder: (context, lookup) {
         final id = lookup.data;
         return ListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(first.spelling,
-              style: const TextStyle(fontFamily: "Monomakh", fontSize: 20.0)),
-          subtitle: Text.rich(TextSpan(children: [
-            const TextSpan(text: "от "),
-            TextSpan(text: first.lexeme, style: const TextStyle(fontFamily: "Monomakh")),
-            if (parses.isNotEmpty) TextSpan(text: ": ${parses.join("; или ")}"),
-          ])),
+          title: Text(
+            first.spelling,
+            style: const TextStyle(fontFamily: "Monomakh", fontSize: 20.0),
+          ),
+          subtitle: Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(text: "от "),
+                TextSpan(
+                  text: first.lexeme,
+                  style: const TextStyle(fontFamily: "Monomakh"),
+                ),
+                if (parses.isNotEmpty)
+                  TextSpan(text: ": ${parses.join("; или ")}"),
+              ],
+            ),
+          ),
           trailing: id == null ? null : const Icon(Icons.chevron_right),
           onTap: id == null ? null : () => _openLexeme(id),
         );
@@ -221,7 +294,9 @@ class _WordSheetState extends State<WordSheet> {
         return ListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text("Статья в словаре"),
-          subtitle: const Text("Разбора этой формы нет, но слово в словаре есть."),
+          subtitle: const Text(
+            "Разбора этой формы нет, но слово в словаре есть.",
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _openLexeme(id),
         );

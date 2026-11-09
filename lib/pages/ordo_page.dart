@@ -151,6 +151,18 @@ class _OrdoPageState extends State<OrdoPage>
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                           ),
+                          TextButton(
+                            onPressed: () => Navigator.pushNamed(
+                              context,
+                              '/companion',
+                              arguments: {
+                                'mode': 'day',
+                                'date': SelectedDay.keyOf(selectedDay),
+                                if (service.key != null) 'service': service.key,
+                              },
+                            ),
+                            child: const Text('Понять эту службу'),
+                          ),
                           if (service.error != null)
                             Text('Служба не собрана: ${service.error}'),
                           if (service.error == null && service.sections.isEmpty)

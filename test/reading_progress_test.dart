@@ -29,6 +29,11 @@ void main() {
     expect(saved.name, "Житие преподобного");
   });
 
+  test("библиотека сохраняет последнее место после прокрутки до конца", () async {
+    await saveReadingProgress("library", 0.99, name: "Книга", keepLast: true);
+    expect((await getReadingProgress("library"))?.fraction, 0.99);
+  });
+
   group("старые записи без имени", () {
     test("читаются: имя просто null", () async {
       SharedPreferences.setMockInitialValues({

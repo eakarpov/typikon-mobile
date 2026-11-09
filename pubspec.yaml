@@ -58,8 +58,11 @@ dependencies:
   firebase_core: ^4.14.0
   firebase_messaging: ^16.6.0
   flutter_timezone: ^5.1.0
+  timezone: ^0.10.1
   file_selector: ^1.1.0
   share_plus: ^12.0.2
+  crypto: ^3.0.7
+  unorm_dart: ^0.3.3
 
 dev_dependencies:
   flutter_test:

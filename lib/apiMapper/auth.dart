@@ -1,3 +1,4 @@
+import '../store/study.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -10,6 +11,8 @@ import '../api/constants.dart';
 import '../store/actions/actions.dart';
 import '../store/auth_token.dart';
 import '../store/pomyannik_cache.dart';
+import '../store/prayer_circle.dart';
+import '../store/companion.dart';
 import '../store/models/models.dart';
 import '../store/store.dart';
 import '../utils/push.dart';
@@ -111,10 +114,15 @@ Future<void> forgetSession() async {
   try {
     await clearSessionCookie();
   } catch (_) {}
+  try {
+    await clearPrivateCompanionCache();
+    await clearPrivateStudyCache();
+  } catch (_) {}
   // Выход СТИРАЕТ помянник с устройства, а не прячет его: в зеркале ближайших
   // дней лежат чужие даты смерти, и держать их после выхода не за что.
   try {
     await clearPomyannikCache();
+    await clearPrivatePrayerCircleCache();
   } catch (_) {}
   // И устройство отвязывается: иначе сервер продолжал бы будить этот телефон
   // помянником того, кто с него уже вышел. Здесь сессии может уже не быть —
@@ -128,6 +136,10 @@ Future<void> forgetSession() async {
     await GoogleSignIn.instance.signOut();
   } catch (_) {}
   appStore?.dispatch(SignOutAction());
+  try {
+    await clearPrivateCompanionCache();
+    await clearPrivateStudyCache();
+  } catch (_) {}
 }
 
 Future<void>? _signInInFlight;
@@ -185,8 +197,13 @@ Future<void> signOut(Store<AppState> store) async {
   // диске остаться не должны тем более. Обнаружено на устройстве: очистка стояла
   // на одном из двух путей, и по коду это не читалось.
   await clearPomyannikCache();
+  await clearPrivatePrayerCircleCache();
+  await clearPrivateCompanionCache();
+  await clearPrivateStudyCache();
   // Отвязываем до того, как погаснет сессия: осознанный выход — единственный
   // случай, когда отвязка проходит наверняка.
   await disablePush();
   store.dispatch(SignOutAction());
+  await clearPrivateCompanionCache();
+  await clearPrivateStudyCache();
 }

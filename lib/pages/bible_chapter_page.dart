@@ -247,6 +247,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
           ),
         ),
         actions: [
+          FutureBuilder<BibleChapter>(future:chapter,builder:(context,snapshot)=>IconButton(tooltip:"Вдумчивое чтение",icon:const Icon(Icons.auto_stories_outlined),onPressed:snapshot.hasData&&snapshot.data!.editions.isNotEmpty?()=>Navigator.pushNamed(context,"/study",arguments:{"kind":"bible","id":widget.canonId,"chapter":widget.chapter,"edition":snapshot.data!.editions.first.code}):null)),
           // Кнопка есть, только когда среди изданий есть уставное: румынское
           // или греческое переписывать нечем и незачем.
           FutureBuilder<BibleChapter>(
