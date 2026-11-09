@@ -1,3 +1,4 @@
+import 'note_sharing.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -319,6 +320,7 @@ class _AddNoteFormState extends State<_AddNoteForm> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (isEdit) NoteSharingButton(noteId: widget.existingNote!.id),
           Text(isEdit ? "Заметка" : "Новая заметка", style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Text(

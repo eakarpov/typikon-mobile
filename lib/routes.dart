@@ -1,3 +1,4 @@
+import 'package:typikon/pages/shared_note_page.dart';
 import 'package:flutter/material.dart';
 
 import 'package:typikon/pages/akathist_page.dart';
@@ -104,6 +105,18 @@ Route<dynamic>? generateRoute(
   // кнопки приложения, `/bible/<книга>/<глава>` — в ту же главу Библии. Путь
   // целиком становится именем маршрута, поэтому разбирается здесь, а дальше
   // дело за обычными ветками `/reading` и `/bible`.
+  if (name.startsWith('/companion/notes/') || name.startsWith('/notes/shared/')) {
+    final token = Uri.parse(name).pathSegments.last;
+    return MaterialPageRoute(builder: (_) => SharedNotePage(token: token));
+  }
+  if (name.startsWith('/companion?')) {
+    final query = Uri.parse(name).queryParameters;
+    return MaterialPageRoute(builder: (_) => CompanionPage(
+      initialSelection: {for (final key in ['mode', 'date', 'service', 'ordo', 'variant', 'ustav', 'part', 'lang'])
+        if (query[key] != null) key: query[key]},
+      initialNodeId: query['node'],
+    ));
+  }
   if (name.startsWith('/study?')) {
     final raw = Uri.parse(name).queryParameters['target'];
     try {

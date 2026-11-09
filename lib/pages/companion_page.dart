@@ -11,11 +11,13 @@ import '../components/service_reading_scope.dart';
 import '../components/selection_menu.dart';
 import '../components/word_sheet.dart';
 import '../components/fusion_text.dart';
+import '../components/companion_notes.dart';
 
 class CompanionPage extends StatefulWidget {
   final CompanionJson? initialSelection;
   final CompanionRepository? repository;
-  const CompanionPage({super.key, this.initialSelection, this.repository});
+  final String? initialNodeId;
+  const CompanionPage({super.key, this.initialSelection, this.repository, this.initialNodeId});
   @override
   State<CompanionPage> createState() => _CompanionPageState();
 }
@@ -189,6 +191,14 @@ class _CompanionPageState extends State<CompanionPage>
                 s['nodes'],
               ).indexWhere((n) => n['id'] == found['id']);
         focusLine = found == null ? '' : old['lineId'] as String? ?? '';
+        if (widget.initialNodeId != null) {
+          bool located = false;
+          for (int si = 0; si < b.services.length; si++) {
+            final i = companionList(b.services[si]['nodes']).indexWhere((n) => n['id'] == widget.initialNodeId);
+            if (i >= 0) {serviceIndex = si; nodeIndex = i; phase = 'during'; focusLine = ''; located = true; break;}
+          }
+          if (!located) message = 'Точное место заметки в текущем составе не найдено.';
+        }
         if (resume) scrollFocus();
         if (old.isNotEmpty && found == null)
           message =
@@ -953,6 +963,11 @@ class _CompanionPageState extends State<CompanionPage>
                     if (node['audibleCue'] != null)
                       Text('Узнать по словам: ${node['audibleCue']}'),
                     note(companionMap(node['explanation'])),
+                    if (repo != null && opened != null)
+                      CompanionNotes(
+                        key: ValueKey('${repo!.userId}:${service['sessionKey']}:${node['id']}'),
+                        repository: repo!, service: service, node: node, selection: opened!,
+                      ),
                     ExpansionTile(
                       title: const Text('Почему это место здесь?'),
                       children: [

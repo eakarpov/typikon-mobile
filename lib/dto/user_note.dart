@@ -45,6 +45,8 @@ class UserNote {
   final String textId;
   final NoteSelection selection;
   final String note;
+  final Map<String, dynamic>? companion;
+  final Map<String, dynamic>? target;
   final String? textName; // только в списке "все заметки" (профиль)
 
   const UserNote({
@@ -53,6 +55,8 @@ class UserNote {
     required this.selection,
     required this.note,
     this.textName,
+    this.companion,
+    this.target,
   });
 
   factory UserNote.fromJson(Map<String, dynamic> json) {
@@ -62,6 +66,12 @@ class UserNote {
       selection: NoteSelection.fromJson(json['selection'] ?? {}),
       note: json['note'] ?? '',
       textName: json['textName'],
+      target: json['target'] is Map
+          ? Map<String, dynamic>.from(json['target'])
+          : null,
+      companion: json['companion'] is Map
+          ? Map<String, dynamic>.from(json['companion'])
+          : null,
     );
   }
 }

@@ -1,3 +1,4 @@
+import '../components/note_sharing.dart';
 import '../components/study_source_text.dart';
 import '../components/script_toggle.dart';
 import '../components/pinch_zoom.dart';
@@ -1589,6 +1590,7 @@ class _StudyPageState extends State<StudyPage> with WidgetsBindingObserver {
       '${r['originalQuote'] ?? studyMap(r['target'])['quote'] ?? ''}',
     ),
     Text('${r['note'] ?? ''}'),
+    if (repo.userId != null) NoteSharingButton(noteId: '${r['id']}'),
     Text((r['tags'] as List? ?? []).join(', ')),
     if (r['unresolved'] == true)
       const Text('Старая привязка: при открытии проверьте точное место.'),
