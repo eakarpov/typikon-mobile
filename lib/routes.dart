@@ -126,7 +126,7 @@ Route<dynamic>? generateRoute(
       skipUpdateWindow: skipUpdateWindow,
     );
   }
-  final bibleLink = deepLinkArgument(name, "/bible/");
+  final bibleLink = bibleLinkArgument(name);
   if (bibleLink != null) {
     return generateRoute(
       RouteSettings(name: "/bible", arguments: bibleLink),
@@ -150,6 +150,7 @@ Route<dynamic>? generateRoute(
               canonId: target.canonId,
               chapter: target.chapter,
               highlight: target.ranges,
+              verseLink: target.verseLink,
             );
           },
         );

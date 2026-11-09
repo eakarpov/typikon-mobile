@@ -53,6 +53,16 @@ Future<void> pumpChapter(WidgetTester tester, List<PericopeVerse> verses) async 
 }
 
 void main() {
+  testWidgets('dictionary selection is labelled as verses rather than a pericope', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Builder(
+      builder: (context) => pericopeFrame(context,
+        child: const Text('стих'), rangesLabel: 'гл. 3, ст. 16–18',
+        fontSize: 16, isFirst: true, isLast: true, verseLink: true),
+    ))));
+    expect(find.text('Выделенные стихи (гл. 3, ст. 16–18)'), findsOneWidget);
+    expect(find.text('Конец выделенного отрывка'), findsOneWidget);
+    expect(find.textContaining('зачала'), findsNothing);
+  });
   testWidgets("в первой главе зачало начинается, но не кончается", (tester) async {
     // Шестая глава несёт начало зачала; конец его — в седьмой.
     await tester.pumpWidget(const MaterialApp(home: Scaffold()));

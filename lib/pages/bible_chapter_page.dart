@@ -67,6 +67,7 @@ class BibleChapterPage extends StatefulWidget {
     required this.canonId,
     required this.chapter,
     this.highlight = const [],
+    this.verseLink = false,
   });
 
   final String canonId;
@@ -74,6 +75,7 @@ class BibleChapterPage extends StatefulWidget {
 
   /// Границы зачала, если пришли со страницы дня. Пусто — обычное чтение главы.
   final List<PericopeRange> highlight;
+  final bool verseLink;
 
   @override
   State<BibleChapterPage> createState() => _BibleChapterPageState();
@@ -179,8 +181,10 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
     );
   }
 
-  List<String> get _chosenEditions =>
-      StoreProvider.of<AppState>(context, listen: false).state.settings.bibleEditions;
+  List<String> get _chosenEditions => StoreProvider.of<AppState>(
+    context,
+    listen: false,
+  ).state.settings.bibleEditions;
 
   Future<void> _pickEditions() async {
     if (available.list.isEmpty) return;
@@ -247,15 +251,36 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
           ),
         ),
         actions: [
-          FutureBuilder<BibleChapter>(future:chapter,builder:(context,snapshot)=>IconButton(tooltip:"Вдумчивое чтение",icon:const Icon(Icons.auto_stories_outlined),onPressed:snapshot.hasData&&snapshot.data!.editions.isNotEmpty?()=>Navigator.pushNamed(context,"/study",arguments:{"kind":"bible","id":widget.canonId,"chapter":widget.chapter,"edition":snapshot.data!.editions.first.code}):null)),
+          FutureBuilder<BibleChapter>(
+            future: chapter,
+            builder: (context, snapshot) => IconButton(
+              tooltip: "Вдумчивое чтение",
+              icon: const Icon(Icons.auto_stories_outlined),
+              onPressed: snapshot.hasData && snapshot.data!.editions.isNotEmpty
+                  ? () => Navigator.pushNamed(
+                      context,
+                      "/study",
+                      arguments: {
+                        "kind": "bible",
+                        "id": widget.canonId,
+                        "chapter": widget.chapter,
+                        "edition": snapshot.data!.editions.first.code,
+                      },
+                    )
+                  : null,
+            ),
+          ),
           // Кнопка есть, только когда среди изданий есть уставное: румынское
           // или греческое переписывать нечем и незачем.
           FutureBuilder<BibleChapter>(
             future: chapter,
             builder: (context, future) => ScriptToggle(
-              source: future.hasData &&
-                      future.data!.editions
-                          .any((edition) => bibleScript(edition.language) == TextScript.church)
+              source:
+                  future.hasData &&
+                      future.data!.editions.any(
+                        (edition) =>
+                            bibleScript(edition.language) == TextScript.church,
+                      )
                   ? TextScript.church
                   : TextScript.other,
               onChanged: () => setState(() {}),
@@ -281,20 +306,28 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
           ),
         ],
       ),
-      body: PinchZoom(child: Container(
-        color: readingBackgroundColor(context),
-        // Ширину колонки читатель выбирает сам; без выбора обёртка не делает
-        // ничего — на телефоне ограничивать нечего.
-        child: ReadingColumn(child: FutureBuilder<BibleChapter>(
-          future: chapter,
-          builder: (context, future) {
-            if (future.hasError) return _error(future.error);
-            if (!future.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            return _chapter(context, future.data!, settings.fontSize.toDouble());
-          },
-        ))),
+      body: PinchZoom(
+        child: Container(
+          color: readingBackgroundColor(context),
+          // Ширину колонки читатель выбирает сам; без выбора обёртка не делает
+          // ничего — на телефоне ограничивать нечего.
+          child: ReadingColumn(
+            child: FutureBuilder<BibleChapter>(
+              future: chapter,
+              builder: (context, future) {
+                if (future.hasError) return _error(future.error);
+                if (!future.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return _chapter(
+                  context,
+                  future.data!,
+                  settings.fontSize.toDouble(),
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -342,24 +375,36 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
                 : [
                     for (final verse in data.versesFor(0))
                       TextContainer.verse(
-                          chapter: verse.chapter, verse: verse.verse, text: verse.content),
+                        chapter: verse.chapter,
+                        verse: verse.verse,
+                        text: verse.content,
+                      ),
                   ],
             extraItems: data.editions.length > 1
                 ? null
-                : (phrase, container) =>
-                    bibleVerseMenuItems(context, widget.canonId, phrase, container),
+                : (phrase, container) => bibleVerseMenuItems(
+                    context,
+                    widget.canonId,
+                    phrase,
+                    container,
+                  ),
             child: data.editions.length > 1
                 ? BibleParallelView(
                     chapter: data,
                     fontSize: fontSize,
                     highlight: widget.highlight,
                     rangesLabel: _rangesLabel,
+                    verseLink: widget.verseLink,
                     firstKey: _pericopeKey,
                   )
                 : _single(context, data, fontSize),
           ),
           ScriptCaveat(
-            source: data.editions.any((edition) => bibleScript(edition.language) == TextScript.church)
+            source:
+                data.editions.any(
+                  (edition) =>
+                      bibleScript(edition.language) == TextScript.church,
+                )
                 ? TextScript.church
                 : TextScript.other,
           ),
@@ -387,7 +432,11 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
 
     if (widget.highlight.isEmpty) {
       return VerseListView(
-          verses: verses, fontSize: fontSize, fontFamily: fontFamily, script: script);
+        verses: verses,
+        fontSize: fontSize,
+        fontFamily: fontFamily,
+        script: script,
+      );
     }
 
     return Column(
@@ -399,6 +448,7 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
         fontSize: fontSize,
         fontFamily: fontFamily,
         rangesLabel: _rangesLabel,
+        verseLink: widget.verseLink,
         firstKey: _pericopeKey,
         script: script,
       ),
@@ -416,19 +466,28 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
       child: ExpansionTile(
-        title: Text("Места главы (${_places.length})",
-            style: const TextStyle(fontFamily: "OldStandard")),
+        title: Text(
+          "Места главы (${_places.length})",
+          style: const TextStyle(fontFamily: "OldStandard"),
+        ),
         children: [
           for (final place in _places)
             ListTile(
               dense: true,
-              title: Text(place.name, style: const TextStyle(fontFamily: "OldStandard")),
+              title: Text(
+                place.name,
+                style: const TextStyle(fontFamily: "OldStandard"),
+              ),
               subtitle: Text("стихи: ${place.verses.join(", ")}"),
               trailing: place.hasPage ? const Icon(Icons.chevron_right) : null,
               // Место со скрытой страницей показываем именем: вести к ответу
               // «такого места нет» хуже, чем не вести никуда.
               onTap: place.hasPage
-                  ? () => Navigator.pushNamed(context, "/places", arguments: place.slug)
+                  ? () => Navigator.pushNamed(
+                      context,
+                      "/places",
+                      arguments: place.slug,
+                    )
                   : null,
             ),
         ],
@@ -436,7 +495,8 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
     );
   }
 
-  String get _rangesLabel => widget.highlight.map((range) => range.label).join("; ");
+  String get _rangesLabel =>
+      widget.highlight.map((range) => range.label).join("; ");
 
   /// Оговорка про счёт.
   ///
@@ -445,7 +505,9 @@ class _BibleChapterPageState extends State<BibleChapterPage> {
   /// своей 24-й главы там, где привык. Замолчать это нельзя — режим счёта самого
   /// издания в первой итерации не сделан, и цену отказа надо назвать.
   List<Widget> _numberingNotes(BuildContext context, BibleChapter data) {
-    final others = data.editions.where((edition) => !edition.isReference).toList();
+    final others = data.editions
+        .where((edition) => !edition.isReference)
+        .toList();
     if (others.isEmpty) return const [];
 
     final names = others.map((edition) => "«${edition.shortTitle}»").join(", ");

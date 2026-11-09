@@ -13,6 +13,9 @@ android/build/
 .swiftpm/
 migrate_working_dir/
 
+docs/network-investigation-2026-10-27/
+tool/
+
 NOTES.md
 
 *.env

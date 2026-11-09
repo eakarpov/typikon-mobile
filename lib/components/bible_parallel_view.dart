@@ -25,6 +25,7 @@ class BibleParallelView extends StatelessWidget {
     this.highlight = const [],
     this.rangesLabel = "",
     this.firstKey,
+    this.verseLink = false,
   });
 
   final BibleChapter chapter;
@@ -38,6 +39,7 @@ class BibleParallelView extends StatelessWidget {
   final List<PericopeRange> highlight;
   final String rangesLabel;
   final GlobalKey? firstKey;
+  final bool verseLink;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +49,9 @@ class BibleParallelView extends StatelessWidget {
     if (highlight.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: chapter.rows.map((row) => _row(context, row, color, muted)).toList(),
+        children: chapter.rows
+            .map((row) => _row(context, row, color, muted))
+            .toList(),
       );
     }
 
@@ -73,22 +77,32 @@ class BibleParallelView extends StatelessWidget {
     void flush() {
       if (run.isEmpty) return;
       final rows = run.map((row) => _row(context, row, color, muted)).toList();
-      final body = Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
+      final body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: rows,
+      );
 
       if (!runInside) {
         blocks.add(body);
       } else {
-        final first = startsPericope(highlight, chapter.chapter, run.first.verse);
+        final first = startsPericope(
+          highlight,
+          chapter.chapter,
+          run.first.verse,
+        );
         final last = endsPericope(highlight, chapter.chapter, run.last.verse);
-        blocks.add(pericopeFrame(
-          context,
-          child: body,
-          rangesLabel: rangesLabel,
-          fontSize: fontSize,
-          isFirst: first,
-          isLast: last,
-          anchorKey: first ? firstKey : null,
-        ));
+        blocks.add(
+          pericopeFrame(
+            context,
+            child: body,
+            rangesLabel: rangesLabel,
+            verseLink: verseLink,
+            fontSize: fontSize,
+            isFirst: first,
+            isLast: last,
+            anchorKey: first ? firstKey : null,
+          ),
+        );
       }
       run = <BibleRow>[];
     }
@@ -183,11 +197,17 @@ class BibleParallelView extends StatelessWidget {
                   )
                 : Text(
                     presentScript(
-                        cell.content, bibleScript(edition.language), readerScript(context)),
+                      cell.content,
+                      bibleScript(edition.language),
+                      readerScript(context),
+                    ),
                     textAlign: TextAlign.justify,
                     style: TextStyle(
-                      fontFamily: presentFont(bibleFontFamily(edition.language),
-                          bibleScript(edition.language), readerScript(context)),
+                      fontFamily: presentFont(
+                        bibleFontFamily(edition.language),
+                        bibleScript(edition.language),
+                        readerScript(context),
+                      ),
                       fontSize: fontSize,
                       color: color,
                     ),

@@ -6,6 +6,47 @@ import 'package:typikon/utils/bible_route.dart';
 // заметна: экран откроется, просто не на том месте.
 
 void main() {
+  group('dictionary Scripture links', () {
+    test('query keeps a verse range; fragment-only links also work', () {
+      final t = parseBibleArgument('ioanna/3?highlight=16-18#v16');
+      expect(t.chapter, 3);
+      expect(t.contains(3, 16), true);
+      expect(t.contains(3, 18), true);
+      expect(t.contains(3, 19), false);
+      expect(parseBibleArgument('ioanna/3#v16').contains(3, 16), true);
+    });
+    test('invalid and reversed ranges do not invent a highlight', () {
+      for (final q in [
+        '0',
+        '18-16',
+        '-3',
+        '999999999999999999999999999999',
+        '1-1001',
+      ]) {
+        expect(parseBibleArgument('ioanna/3?highlight=$q').ranges, isEmpty);
+      }
+    });
+    test(
+      'incoming route preserves query and hash, and rejects foreign hosts',
+      () {
+        expect(
+          bibleLinkArgument('/bible/ioanna/3?highlight=16#v16'),
+          'ioanna/3?highlight=16#v16',
+        );
+        expect(
+          bibleLinkArgument(
+            'https://www.typikon.info/bible/ioanna/3?highlight=16#v16',
+          ),
+          'ioanna/3?highlight=16#v16',
+        );
+        expect(
+          bibleLinkArgument('https://evil.example/bible/ioanna/3'),
+          isNull,
+        );
+      },
+    );
+  });
+
   group("сборка и разбор", () {
     test("книга без главы открывается на первой", () {
       final target = parseBibleArgument("matfeya");
@@ -26,8 +67,18 @@ void main() {
 
     test("границы зачала кодируются и разбираются обратно", () {
       final ranges = [
-        const PericopeRange(chapterFrom: 6, verseFrom: 31, chapterTo: 6, verseTo: 34),
-        const PericopeRange(chapterFrom: 7, verseFrom: 9, chapterTo: 7, verseTo: 11),
+        const PericopeRange(
+          chapterFrom: 6,
+          verseFrom: 31,
+          chapterTo: 6,
+          verseTo: 34,
+        ),
+        const PericopeRange(
+          chapterFrom: 7,
+          verseFrom: 9,
+          chapterTo: 7,
+          verseTo: 11,
+        ),
       ];
 
       final argument = bibleRouteArgument("marka", chapter: 6, ranges: ranges);

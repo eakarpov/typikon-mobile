@@ -43,6 +43,7 @@ Widget pericopeFrame(
   required bool isFirst,
   required bool isLast,
   GlobalKey? anchorKey,
+  bool verseLink = false,
 }) {
   final scheme = Theme.of(context).colorScheme;
   final labelStyle = TextStyle(
@@ -67,14 +68,25 @@ Widget pericopeFrame(
         Padding(
           padding: const EdgeInsets.only(bottom: 4.0),
           child: Text(
-            isFirst ? "Начало зачала ($rangesLabel)" : "Зачало, продолжение",
+            verseLink
+                ? "Выделенные стихи ($rangesLabel)"
+                : isFirst
+                ? "Начало зачала ($rangesLabel)"
+                : "Зачало, продолжение",
             style: labelStyle,
           ),
         ),
         child,
         Padding(
           padding: const EdgeInsets.only(top: 4.0),
-          child: Text(isLast ? "Конец зачала" : "Продолжение ниже", style: labelStyle),
+          child: Text(
+            verseLink
+                ? "Конец выделенного отрывка"
+                : isLast
+                ? "Конец зачала"
+                : "Продолжение ниже",
+            style: labelStyle,
+          ),
         ),
       ],
     ),
@@ -89,10 +101,15 @@ List<Widget> buildPericopeBlocks(
   required String fontFamily,
   required String rangesLabel,
   GlobalKey? firstKey,
+  bool verseLink = false,
   TextScript script = TextScript.other,
 }) {
-  Widget plain(List<PericopeVerse> verses) =>
-      VerseListView(verses: verses, fontSize: fontSize, fontFamily: fontFamily, script: script);
+  Widget plain(List<PericopeVerse> verses) => VerseListView(
+    verses: verses,
+    fontSize: fontSize,
+    fontFamily: fontFamily,
+    script: script,
+  );
 
   if (ranges.isEmpty || verses.isEmpty) {
     return [plain(verses)];
@@ -105,18 +122,29 @@ List<Widget> buildPericopeBlocks(
       continue;
     }
 
-    final first = startsPericope(ranges, run.verses.first.chapter, run.verses.first.verse);
-    final last = endsPericope(ranges, run.verses.last.chapter, run.verses.last.verse);
+    final first = startsPericope(
+      ranges,
+      run.verses.first.chapter,
+      run.verses.first.verse,
+    );
+    final last = endsPericope(
+      ranges,
+      run.verses.last.chapter,
+      run.verses.last.verse,
+    );
 
-    blocks.add(pericopeFrame(
-      context,
-      child: plain(run.verses),
-      rangesLabel: rangesLabel,
-      fontSize: fontSize,
-      isFirst: first,
-      isLast: last,
-      anchorKey: first ? firstKey : null,
-    ));
+    blocks.add(
+      pericopeFrame(
+        context,
+        child: plain(run.verses),
+        rangesLabel: rangesLabel,
+        verseLink: verseLink,
+        fontSize: fontSize,
+        isFirst: first,
+        isLast: last,
+        anchorKey: first ? firstKey : null,
+      ),
+    );
   }
   return blocks;
 }
@@ -137,7 +165,10 @@ class VerseRun {
 ///
 /// Берёт границы, а не адрес: границам всё равно, откуда они приехали, и одна и
 /// та же нарезка годится и сплошному тексту, и построчному чередованию.
-List<VerseRun> splitVerseRuns(List<PericopeVerse> verses, List<PericopeRange> ranges) {
+List<VerseRun> splitVerseRuns(
+  List<PericopeVerse> verses,
+  List<PericopeRange> ranges,
+) {
   final runs = <VerseRun>[];
   if (verses.isEmpty) return runs;
   if (ranges.isEmpty) return [VerseRun(verses, false)];

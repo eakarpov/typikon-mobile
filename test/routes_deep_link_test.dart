@@ -15,10 +15,10 @@ import 'package:typikon/store/rootReducer.dart';
 // маршрута — здесь то, что имя становится экраном, а не onUnknownRoute.
 
 Route<dynamic>? resolve(String name) => generateRoute(
-      RouteSettings(name: name),
-      hasSkippedUpdate: true,
-      skipUpdateWindow: (_) {},
-    );
+  RouteSettings(name: name),
+  hasSkippedUpdate: true,
+  skipUpdateWindow: (_) {},
+);
 
 void main() {
   group("разбор адреса входящей ссылки", () {
@@ -29,7 +29,10 @@ void main() {
     test("query-часть и конечный слэш отбрасываются", () {
       expect(deepLinkArgument("/reading/abc?x=1", "/reading/"), "abc");
       expect(deepLinkArgument("/reading/abc/?x=1", "/reading/"), "abc");
-      expect(deepLinkArgument("/bible/matfeya/19?utm=share", "/bible/"), "matfeya/19");
+      expect(
+        deepLinkArgument("/bible/matfeya/19?utm=share", "/bible/"),
+        "matfeya/19",
+      );
     });
 
     test("пустой хвост — не ссылка", () {
@@ -42,22 +45,24 @@ void main() {
   group("ссылка разрешается в экран", () {
     Future<void> openLink(WidgetTester tester, String link) async {
       final store = Store<AppState>(appReducer, initialState: AppState.init());
-      await tester.pumpWidget(StoreProvider<AppState>(
-        store: store,
-        child: MaterialApp(
-          onGenerateRoute: (settings) => generateRoute(
-            settings,
-            hasSkippedUpdate: true,
-            skipUpdateWindow: (_) {},
-          ),
-          home: Builder(
-            builder: (context) => TextButton(
-              onPressed: () => Navigator.pushNamed(context, link),
-              child: const Text("открыть"),
+      await tester.pumpWidget(
+        StoreProvider<AppState>(
+          store: store,
+          child: MaterialApp(
+            onGenerateRoute: (settings) => generateRoute(
+              settings,
+              hasSkippedUpdate: true,
+              skipUpdateWindow: (_) {},
+            ),
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => Navigator.pushNamed(context, link),
+                child: const Text("открыть"),
+              ),
             ),
           ),
         ),
-      ));
+      );
       await tester.tap(find.text("открыть"));
       // Страницы грузят текст по сети: двух кадров хватает, чтобы она встала
       // в дерево, а дальше её FutureBuilder покажет ошибку загрузки — нам
@@ -71,7 +76,25 @@ void main() {
       expect(find.byType(TextPage), findsOneWidget);
     });
 
-    testWidgets("/bible/<книга>/<глава> открывает главу Библии", (tester) async {
+    testWidgets(
+      'dictionary link opens the chapter with the requested verse range',
+      (tester) async {
+        await openLink(tester, '/bible/ioanna/3?highlight=16-18#v16');
+        final page = tester.widget<BibleChapterPage>(
+          find.byType(BibleChapterPage),
+        );
+        expect(page.canonId, 'ioanna');
+        expect(page.chapter, 3);
+        expect(page.verseLink, true);
+        expect(page.highlight.single.contains(3, 16), true);
+        expect(page.highlight.single.contains(3, 18), true);
+        expect(page.highlight.single.contains(3, 19), false);
+      },
+    );
+
+    testWidgets("/bible/<книга>/<глава> открывает главу Библии", (
+      tester,
+    ) async {
       await openLink(tester, "/bible/matfeya/19");
       expect(find.byType(BibleChapterPage), findsOneWidget);
     });
